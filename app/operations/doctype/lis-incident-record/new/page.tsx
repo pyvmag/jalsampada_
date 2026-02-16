@@ -90,7 +90,7 @@ export default function NewLisIncidentRecordPage() {
           },
 
           // Row 2: Asset No, Issue Type, Priority, Status
-          { name: "custom_asset_no", label: "Asset No", type: "Data", defaultValue: getValue("custom_asset_no"), readOnlyValue: getValue("custom_asset_no") }, // Read-only logic usually handled by fetchFrom
+          { name: "custom_asset_no", label: "Asset No", type: "Data",fetchFrom: { sourceField: "custom_asset", targetDoctype: "Asset", targetField: "custom_asset_no" }, readOnlyValue: getValue("custom_asset_no") }, // Read-only logic usually handled by fetchFrom
           { name: "issue_type", label: "Issue Type", type: "Link", linkTarget: "Issue Type", defaultValue: getValue("issue_type") },
           { name: "priority", label: "Priority", type: "Link", linkTarget: "Issue Priority", defaultValue: getValue("priority") },
           { name: "status", label: "Status", type: "Select", options: "Open\nReplied\nOn Hold\nResolved\nClosed", defaultValue: getValue("status", "Open") },

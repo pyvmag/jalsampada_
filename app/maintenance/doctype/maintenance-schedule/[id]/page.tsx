@@ -116,9 +116,29 @@ export default function MaintenanceScheduleDetailPage() {
       {
         name: "Details",
         fields: fields([
-          { name: "custom_lis", label: "LIS Name", type: "Link", linkTarget: "Lift Irrigation Scheme",},
-          { name: "custom_stage", label: "Stage", type: "Link", linkTarget: "Stage No" },
-          { name: "asset_name", label: "Asset Name", type: "Link", linkTarget: "Asset" },
+          { name: "custom_lis", label: "LIS Name", type: "Link", linkTarget: "Lift Irrigation Scheme", },
+          {
+            name: "custom_stage",
+            label: "Stage",
+            type: "Link",
+            linkTarget: "Stage No",
+            filterMapping: [
+              { sourceField: "custom_lis", targetField: "lis_name" }
+            ]
+          },
+          {
+            name: "asset_name",
+            label: "Asset Name",
+            type: "Link",
+            linkTarget: "Asset",
+            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+            filters: (getValue) => ({
+              custom_stage_no: getValue("custom_stage"),
+              custom_lis_name: getValue("custom_lis")
+            }),
+            referenceDoctype: "Asset Maintenance",
+            doctype: "Asset"
+          },
           // { name: "company", label: "Company", type: "Link", linkTarget: "Company" },
           { name: "maintenance_team", label: "Maintenance Team", type: "Link", linkTarget: "Asset Maintenance Team" },
           { name: "custom_contact_no", label: "Contact No", type: "Text" },
@@ -210,6 +230,8 @@ export default function MaintenanceScheduleDetailPage() {
 
       toast.success("Changes saved!");
       if (resp.data?.data) setRecord(resp.data.data);
+
+      return { status: "Saved", statusCode: 200 };
     } catch (err: any) {
       toast.error("Failed to save", {
         description: err.response?.data?.message || err.message,
@@ -246,6 +268,7 @@ export default function MaintenanceScheduleDetailPage() {
         docName: docname,
         redirectUrl: "/maintenance/doctype/maintenance-schedule",
       }}
+      doctype={doctypeName}
     />
   );
 }

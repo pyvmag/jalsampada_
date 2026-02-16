@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { LinkInput } from "@/components/LinkInput";
 import { useAuth } from "@/context/AuthContext";
-import DatePicker from "react-datepicker"; 
+import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 // --- API Configuration ---
@@ -43,25 +43,30 @@ type ColumnConfig = {
   // Sticky Logic Properties
   isSticky?: boolean;
   stickyLeft?: number;
+  isLastSticky?: boolean;
 };
 
 // --- CONFIG: Define Fixed Columns Order & Widths ---
 // Only first column (tender_number) is fixed
 const FIXED_COLUMNS_ORDER = [
-    { fieldname: "tender_number", label: "Tender Number", width: 150 },
+  { fieldname: "tender_number", label: "Tender Number", width: 150 },
+  { fieldname: "bill_type", label: "Bill Type", width: 100 },
+  { fieldname: "bill_number", label: "Bill No.", width: 150 },
+  { fieldname: "bill_date", label: "Bill Date", width: 100 },
 ];
 
 // Default column widths for remaining columns
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   fiscal_year: 120,
-  lis: 150,
-  stage: 100,
+  lis: 120,
+  stage: 140,
   work_type: 150,
   work_subtype: 150,
   asset_no: 100,
+  bill_type: 150,
   bill_amount: 150,
-  bill_number: 120,
-  bill_date: 120,
+  bill_number: 150,
+  bill_date: 130,
   remarks: 300,
 };
 
@@ -76,14 +81,14 @@ const formatDateForAPI = (date: Date | null): string => {
 };
 
 const formatDate = (dateString: string | null): string => {
-  if (!dateString) return "-";
+  if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("en-GB");
 };
 
 const formatCurrency = (value: number | string): string => {
-   if (!value) return "-";
-   return `₹ ${parseFloat(String(value)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  if (!value) return "";
+  return `₹ ${parseFloat(String(value)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 };
 
 const getToday = () => new Date().toISOString().split('T')[0];
@@ -99,7 +104,7 @@ export default function ExpenditureDetailsReport() {
 
   // --- State ---
   const [reportData, setReportData] = useState<ReportData[]>([]);
-  const [apiFields, setApiFields] = useState<ReportField[]>([]); 
+  const [apiFields, setApiFields] = useState<ReportField[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState<boolean>(false);
@@ -114,17 +119,24 @@ export default function ExpenditureDetailsReport() {
     tender_number: "",
   });
 
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState({
+    isGrabbing: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
+
   // --- Dynamic Column Configuration ---
   const getFieldFormatter = (fieldtype: string, fieldname: string) => {
-      switch (fieldtype) {
-          case "Date": 
-          case "Datetime": 
-            return formatDate;
-          case "Currency": 
-            return formatCurrency;
-          default: 
-            return undefined;
-      }
+    switch (fieldtype) {
+      case "Date":
+      case "Datetime":
+        return formatDate;
+      case "Currency":
+        return formatCurrency;
+      default:
+        return undefined;
+    }
   };
 
   // --- MODIFIED: Column Logic with Sticky Calculations ---
@@ -134,48 +146,52 @@ export default function ExpenditureDetailsReport() {
     // 1. Separate Fixed columns from Scrollable columns
     let fixedCols: ColumnConfig[] = [];
     let scrollableCols: ColumnConfig[] = [];
-    
+
     // Create a map for quick lookup of API fields
     const apiFieldMap = new Map(apiFields.map(f => [f.fieldname, f]));
 
     // Process Fixed Columns based on defined order (only first column)
     FIXED_COLUMNS_ORDER.forEach(fixedDef => {
-        const apiField = apiFieldMap.get(fixedDef.fieldname);
-        if (apiField) {
-            fixedCols.push({
-                fieldname: apiField.fieldname,
-                label: apiField.label,
-                width: `${fixedDef.width}px`,
-                widthInt: fixedDef.width,
-                formatter: getFieldFormatter(apiField.fieldtype, apiField.fieldname),
-                isSticky: true,
-                stickyLeft: 0 // Will calculate below
-            });
-            apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
-        }
+      const apiField = apiFieldMap.get(fixedDef.fieldname);
+      if (apiField) {
+        fixedCols.push({
+          fieldname: apiField.fieldname,
+          label: apiField.label,
+          width: `${fixedDef.width}px`,
+          widthInt: fixedDef.width,
+          formatter: getFieldFormatter(apiField.fieldtype, apiField.fieldname),
+          isSticky: true,
+          stickyLeft: 0 // Will calculate below
+        });
+        apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
+      }
     });
 
     // Process remaining fields as Scrollable
     apiFields.forEach(field => {
-        if (apiFieldMap.has(field.fieldname)) {
-            const width = DEFAULT_COLUMN_WIDTHS[field.fieldname] || field.width || 150;
-            scrollableCols.push({
-                fieldname: field.fieldname,
-                label: field.label,
-                width: `${width}px`,
-                widthInt: width,
-                formatter: getFieldFormatter(field.fieldtype, field.fieldname),
-                isSticky: false
-            });
-        }
+      if (apiFieldMap.has(field.fieldname)) {
+        const width = DEFAULT_COLUMN_WIDTHS[field.fieldname] || field.width || 150;
+        scrollableCols.push({
+          fieldname: field.fieldname,
+          label: field.label,
+          width: `${width}px`,
+          widthInt: width,
+          formatter: getFieldFormatter(field.fieldtype, field.fieldname),
+          isSticky: false
+        });
+      }
     });
 
     // 2. Calculate Left Offsets for Sticky Columns (only one column in this case)
     let currentLeftOffset = 0;
-    fixedCols = fixedCols.map(col => {
-        const updatedCol = { ...col, stickyLeft: currentLeftOffset };
-        currentLeftOffset += col.widthInt;
-        return updatedCol;
+    fixedCols = fixedCols.map((col, index) => {
+      const updatedCol = {
+        ...col,
+        stickyLeft: currentLeftOffset,
+        isLastSticky: index === fixedCols.length - 1
+      };
+      currentLeftOffset += col.widthInt;
+      return updatedCol;
     });
 
     // 3. Combine
@@ -223,7 +239,7 @@ export default function ExpenditureDetailsReport() {
       const result = await response.json();
 
       if (result.message) {
-        setApiFields(result.message.columns || []); 
+        setApiFields(result.message.columns || []);
         setReportData(result.message.result || []);
       } else {
         setApiFields([]);
@@ -249,18 +265,18 @@ export default function ExpenditureDetailsReport() {
   // --- Export Handlers ---
   const handleExportCSV = () => {
     if (reportData.length === 0) return;
-    
+
     const headers = columnConfig.map(c => c.label).join(",");
     const rows = reportData.map(row => {
       return columnConfig.map(col => {
         let val = row[col.fieldname];
         if (col.formatter) {
-             val = col.formatter(val, row);
+          val = col.formatter(val, row);
         } else {
-             val = val === null || val === undefined ? "" : String(val);
+          val = val === null || val === undefined ? "" : String(val);
         }
         if (val.includes(",") || val.includes("\n") || val.includes('"')) {
-            val = `"${val.replace(/"/g, '""')}"`;
+          val = `"${val.replace(/"/g, '""')}"`;
         }
         return val;
       }).join(",");
@@ -282,7 +298,7 @@ export default function ExpenditureDetailsReport() {
 
     try {
       const { jsPDF } = await import('jspdf');
-      
+
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -309,7 +325,7 @@ export default function ExpenditureDetailsReport() {
       const totalSpecifiedWidth = columnConfig.reduce((sum, col) => {
         return sum + col.widthInt;
       }, 0);
-      
+
       columnConfig.forEach(col => {
         const proportionalWidth = (col.widthInt / totalSpecifiedWidth) * usableWidth;
         columnWidths.push(proportionalWidth);
@@ -338,7 +354,7 @@ export default function ExpenditureDetailsReport() {
         if (currentY > pdf.internal.pageSize.getHeight() - 20) {
           pdf.addPage();
           currentY = 20;
-          
+
           // Redraw headers on new page
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
@@ -361,15 +377,15 @@ export default function ExpenditureDetailsReport() {
         columnConfig.forEach((col, index) => {
           const x = margin + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
           let value = row[col.fieldname];
-          
+
           if (value === null || value === undefined || value === '') {
-            value = '-';
+            value = '';
           } else if (col.formatter) {
             value = col.formatter(value);
           } else {
             value = String(value);
           }
-          
+
           // Split text if too long
           const textLines = pdf.splitTextToSize(value, columnWidths[index] - 4);
           pdf.text(textLines, x + 2, currentY);
@@ -391,16 +407,52 @@ export default function ExpenditureDetailsReport() {
     setFilters((prev) => {
       const newFilters = { ...prev, [field]: value };
       // Clear dependent filters
-      if (field === 'lift_irrigation_scheme') { 
-        newFilters.stage = ""; 
-        newFilters.tender_number = ""; 
+      if (field === 'lift_irrigation_scheme') {
+        newFilters.stage = "";
+        newFilters.tender_number = "";
       }
-      if (field === 'stage') { 
-        newFilters.tender_number = ""; 
+      if (field === 'stage') {
+        newFilters.tender_number = "";
       }
       return newFilters;
     });
   };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tableRef.current) return;
+    setDragState({
+      isGrabbing: true,
+      startX: e.pageX - tableRef.current.offsetLeft,
+      scrollLeft: tableRef.current.scrollLeft,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState.isGrabbing || !tableRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableRef.current.offsetLeft;
+    const walk = (x - dragState.startX) * 1.5;
+    tableRef.current.scrollLeft = dragState.scrollLeft - walk;
+  };
+
+  const handleMouseUp = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState.isGrabbing) {
+        setDragState(prev => ({ ...prev, isGrabbing: false }));
+      }
+    };
+
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [dragState.isGrabbing]);
 
   const totalTableWidth = useMemo(() => {
     return columnConfig.reduce((total, col) => total + col.widthInt, 0);
@@ -408,7 +460,7 @@ export default function ExpenditureDetailsReport() {
 
   const renderCellValue = (row: ReportData, col: ColumnConfig) => {
     const value = row[col.fieldname];
-    if (value === null || value === undefined || value === "") return "-";
+    if (value === null || value === undefined || value === "") return "";
     if (col.formatter) return col.formatter(value, row);
     return String(value);
   };
@@ -422,23 +474,23 @@ export default function ExpenditureDetailsReport() {
         </div>
         <div className="flex gap-2">
           <button className="btn btn--primary" onClick={() => fetchReportData(filters)} disabled={loading}>
-            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
+            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i>
             {loading ? "Refreshing..." : "Refresh"}
           </button>
           <div className="export-buttons flex gap-2 ml-2">
-            <button 
-              className="btn btn--outline" 
+            <button
+              className="btn btn--outline"
               onClick={handleExportCSV}
               disabled={reportData.length === 0}
             >
               <i className="fas fa-file-csv"></i> CSV
             </button>
-            <button 
-              className="btn btn--danger" 
-              onClick={handleExportPDF} 
+            <button
+              className="btn btn--danger"
+              onClick={handleExportPDF}
               disabled={pdfLoading || reportData.length === 0}
             >
-              <i className={`fas ${pdfLoading ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i> 
+              <i className={`fas ${pdfLoading ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
               {pdfLoading ? 'Generating...' : 'PDF'}
             </button>
           </div>
@@ -450,109 +502,123 @@ export default function ExpenditureDetailsReport() {
         {loading && !reportData.length && <div className="alert alert--info mb-5"><i className="fas fa-spinner fa-spin"></i> Loading...</div>}
 
         <div className="filters-grid grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
-          
+
           <div className="form-group z-[150]">
             <label className="text-sm font-medium mb-1 block">From Date</label>
-            <DatePicker 
-                selected={filters.from_date ? new Date(filters.from_date) : null} 
-                onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))} 
-                placeholderText="DD/MM/YYYY" 
-                dateFormat="dd/MM/yyyy" 
-                className="form-control w-full" 
+            <DatePicker
+              selected={filters.from_date ? new Date(filters.from_date) : null}
+              onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))}
+              placeholderText="DD/MM/YYYY"
+              dateFormat="dd/MM/yyyy"
+              className="form-control w-full"
             />
           </div>
-          
+
           <div className="form-group z-[150]">
             <label className="text-sm font-medium mb-1 block">To Date</label>
-            <DatePicker 
-                selected={filters.to_date ? new Date(filters.to_date) : null} 
-                onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))} 
-                placeholderText="DD/MM/YYYY" 
-                dateFormat="dd/MM/yyyy" 
-                className="form-control w-full" 
+            <DatePicker
+              selected={filters.to_date ? new Date(filters.to_date) : null}
+              onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))}
+              placeholderText="DD/MM/YYYY"
+              dateFormat="dd/MM/yyyy"
+              className="form-control w-full"
             />
           </div>
 
           <div className="form-group z-[140]">
             <label className="text-sm font-medium mb-1 block">Fiscal Year</label>
-            <LinkInput 
-                value={filters.fiscal_year} 
-                onChange={(v) => handleFilterChange("fiscal_year", v)} 
-                placeholder="Select Year..." 
-                linkTarget="Fiscal Year" 
-                className="w-full relative" 
+            <LinkInput
+              value={filters.fiscal_year}
+              onChange={(v) => handleFilterChange("fiscal_year", v)}
+              placeholder="Select Year..."
+              linkTarget="Fiscal Year"
+              className="w-full relative"
             />
           </div>
 
           <div className="form-group z-[130]">
             <label className="text-sm font-medium mb-1 block">Lift Irrigation Scheme</label>
-            <LinkInput 
-                value={filters.lift_irrigation_scheme} 
-                onChange={(v) => handleFilterChange("lift_irrigation_scheme", v)} 
-                placeholder="Select LIS..." 
-                linkTarget="Lift Irrigation Scheme" 
-                className="w-full relative" 
+            <LinkInput
+              value={filters.lift_irrigation_scheme}
+              onChange={(v) => handleFilterChange("lift_irrigation_scheme", v)}
+              placeholder="Select LIS..."
+              linkTarget="Lift Irrigation Scheme"
+              className="w-full relative"
             />
           </div>
 
           <div className="form-group relative z-[120]">
             <label className="text-sm font-medium mb-1 block">Stage</label>
-            <LinkInput 
-                value={filters.stage} 
-                onChange={(v) => handleFilterChange("stage", v)} 
-                placeholder="Select Stage..." 
-                linkTarget="Stage No" 
-                className="w-full" 
-                filters={{ lis_name: filters.lift_irrigation_scheme || undefined }} 
+            <LinkInput
+              value={filters.stage}
+              onChange={(v) => handleFilterChange("stage", v)}
+              placeholder="Select Stage..."
+              linkTarget="Stage No"
+              className="w-full"
+              filters={{ lis_name: filters.lift_irrigation_scheme || undefined }}
             />
           </div>
 
           <div className="form-group z-[110]">
             <label className="text-sm font-medium mb-1 block">Tender Number</label>
-            <LinkInput 
-                value={filters.tender_number} 
-                onChange={(v) => handleFilterChange("tender_number", v)} 
-                placeholder="Select Tender..." 
-                linkTarget="Project" 
-                className="w-full relative" 
-                filters={{ 
-                  custom_lis_name: filters.lift_irrigation_scheme || undefined,
-                  custom_stage_no: filters.stage || undefined 
-                }} 
+            <LinkInput
+              value={filters.tender_number}
+              onChange={(v) => handleFilterChange("tender_number", v)}
+              placeholder="Select Tender..."
+              linkTarget="Project"
+              className="w-full relative"
+              filters={{
+                custom_lis_name: filters.lift_irrigation_scheme || undefined,
+                custom_stage_no: filters.stage || undefined
+              }}
             />
           </div>
 
           <div className="form-group z-[100]">
             <label className="text-sm font-medium mb-1 block">Work Type</label>
-            <LinkInput 
-                value={filters.work_type} 
-                onChange={(v) => handleFilterChange("work_type", v)} 
-                placeholder="Select Work Type..." 
-                linkTarget="Work Type" 
-                className="w-full relative" 
+            <LinkInput
+              value={filters.work_type}
+              onChange={(v) => handleFilterChange("work_type", v)}
+              placeholder="Select Work Type..."
+              linkTarget="Work Type"
+              className="w-full relative"
             />
           </div>
         </div>
 
         {/* --- TABLE CONTAINER --- */}
-        <div className="stock-table-container border rounded-md relative z-10" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
+        <div
+          ref={tableRef}
+          className="stock-table-container border rounded-md relative z-10"
+          style={{
+            overflowX: "auto",
+            overflowY: "auto",
+            maxHeight: "70vh",
+            cursor: dragState.isGrabbing ? "grabbing" : "grab",
+            userSelect: dragState.isGrabbing ? "none" : "auto"
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
           <table className="stock-table sticky-header-table" style={{ minWidth: `${totalTableWidth}px`, borderCollapse: "separate", borderSpacing: 0 }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
               <tr>
                 {columnConfig.map((column) => (
-                  <th 
-                    key={column.fieldname} 
-                    style={{ 
-                        width: column.width,
-                        minWidth: column.width,
-                        // Sticky Logic for Header - Only first column is sticky
-                        position: column.isSticky ? "sticky" : "relative",
-                        left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                        zIndex: column.isSticky ? 30 : 20,
-                        backgroundColor: "#3683f6",
-                        color: "white",
-                        borderRight: column.isSticky ? "1px solid #ddd" : "none",
-                        boxShadow: column.isSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                  <th
+                    key={column.fieldname}
+                    style={{
+                      width: column.width,
+                      minWidth: column.width,
+                      // Sticky Logic for Header - Only first column is sticky
+                      position: column.isSticky ? "sticky" : "relative",
+                      left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                      zIndex: column.isSticky ? 30 : 20,
+                      backgroundColor: "#3683f6",
+                      color: "white",
+                      borderRight: "none",
+                      boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                     }}
                   >
                     {column.label}
@@ -571,16 +637,16 @@ export default function ExpenditureDetailsReport() {
                 reportData.map((row, index) => (
                   <tr key={index} className={index % 2 === 1 ? "bg-gray-25" : ""}>
                     {columnConfig.map((column) => (
-                      <td 
+                      <td
                         key={`${index}-${column.fieldname}`}
                         style={{
-                            // Sticky Logic for Body - Only first column is sticky
-                            position: column.isSticky ? "sticky" : "relative",
-                            left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                            zIndex: column.isSticky ? 10 : 1,
-                            backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
-                            borderRight: column.isSticky ? "1px solid #eee" : "none",
-                            boxShadow: column.isSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                          // Sticky Logic for Body - Only first column is sticky
+                          position: column.isSticky ? "sticky" : "relative",
+                          left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                          zIndex: column.isSticky ? 10 : 1,
+                          backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
+                          borderRight: "none",
+                          boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                         }}
                       >
                         {renderCellValue(row, column)}

@@ -100,7 +100,7 @@ export default function EditLisIncidentRecordPage() {
           },
 
           // Row 2: Asset No, Issue Type, Priority, Status
-          { name: "custom_asset_no", label: "Asset No", type: "Data", defaultValue: getValue("custom_asset_no"), readOnlyValue: getValue("custom_asset_no") },
+          { name: "custom_asset_no", label: "Asset No", type: "Data", defaultValue: getValue("custom_asset_no"), fetchFrom: { sourceField: "custom_asset", targetDoctype: "Asset", targetField: "custom_asset_no" }, readOnlyValue: getValue("custom_asset_no") },
           { name: "issue_type", label: "Issue Type", type: "Link", linkTarget: "Issue Type", defaultValue: getValue("issue_type") },
           { name: "priority", label: "Priority", type: "Link", linkTarget: "Issue Priority", defaultValue: getValue("priority") },
           { name: "status", label: "Status", type: "Select", options: "Open\nReplied\nOn Hold\nResolved\nClosed", defaultValue: getValue("status", "Open") },
@@ -355,6 +355,9 @@ export default function EditLisIncidentRecordPage() {
       setRecord(responseData.data);
       setIsLoading(true);
       setTimeout(() => setIsLoading(false), 50);
+
+      // Return status to update DynamicForm state
+      return { status: "Saved", statusCode: 200 };
 
     } catch (err: any) {
       console.error("Save Error:", err);

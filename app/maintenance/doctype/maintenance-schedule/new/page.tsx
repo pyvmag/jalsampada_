@@ -349,7 +349,7 @@ export default function NewMaintenanceSchedulePage() {
     return (
         <DynamicForm
             tabs={formTabs}
-            onFormInit={handleFormInit}   
+            onFormInit={handleFormInit}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             title={`New ${doctypeName}`}
