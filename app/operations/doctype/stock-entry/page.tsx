@@ -577,7 +577,7 @@ export default function StockEntryListPage() {
                   label: "",
                   type: "Link" as const,
                   linkTarget: "Stock Entry Type",
-                  placeholder: "Select Type",
+                  placeholder: "Stock Entry Type",
                   required: false,
                   defaultValue: "",
                 };

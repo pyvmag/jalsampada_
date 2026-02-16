@@ -57,11 +57,11 @@ interface ExpenditureData {
   bill_type?: string;               // Select
   posting_date?: string;            // Date
   bill_amount?: number;             // Currency
-  
+
   // 🟢 Corrected Field Names (From our fix)
   previous_page_no?: string;        // Data (Previous)
   previous_mb_no?: string;          // Data (Previous)
-  
+
   page_no?: string;                 // Data (Current)
   mb_no?: string;                   // Data (Current)
 
@@ -127,7 +127,7 @@ export default function RecordDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
-  
+
   const isProgrammaticUpdate = React.useRef(false);
   const [formVersion, setFormVersion] = React.useState(0);
 
@@ -241,32 +241,32 @@ export default function RecordDetailPage() {
     if (!formInstance || !expenditure?.tender_number) return;
 
     const currentPrevMB = formInstance.getValues("previous_mb_no");
-    
+
     if (!currentPrevMB) {
-        const fetchInitialPrevDetails = async () => {
-             if (!apiKey || !apiSecret) return;
-             try {
-                 const prevDetails = await fetchPreviousBillDetails(
-                    expenditure.tender_number!, 
-                    docname,
-                    apiKey, 
-                    apiSecret
-                 );
-                 if (prevDetails) {
-                    isProgrammaticUpdate.current = true; // Don't mark as dirty for initial load
-                    
-                    formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
-                    formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
-                    // Map 'mb_no' from old record -> 'previous_mb_no'
-                    formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
-                    // Map 'page_no' from old record -> 'previous_page_no'
-                    formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
-                    
-                    setTimeout(() => { isProgrammaticUpdate.current = false; }, 100);
-                 }
-             } catch(e) { console.error(e); }
-        };
-        fetchInitialPrevDetails();
+      const fetchInitialPrevDetails = async () => {
+        if (!apiKey || !apiSecret) return;
+        try {
+          const prevDetails = await fetchPreviousBillDetails(
+            expenditure.tender_number!,
+            docname,
+            apiKey,
+            apiSecret
+          );
+          if (prevDetails) {
+            isProgrammaticUpdate.current = true; // Don't mark as dirty for initial load
+
+            formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+            formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
+            // Map 'mb_no' from old record -> 'previous_mb_no'
+            formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
+            // Map 'page_no' from old record -> 'previous_page_no'
+            formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
+
+            setTimeout(() => { isProgrammaticUpdate.current = false; }, 100);
+          }
+        } catch (e) { console.error(e); }
+      };
+      fetchInitialPrevDetails();
     }
   }, [formInstance, expenditure, docname, apiKey, apiSecret]);
 
@@ -296,9 +296,9 @@ export default function RecordDetailPage() {
         const fetchPreviousBill = async () => {
           try {
             const prevDetails = await fetchPreviousBillDetails(
-              value.tender_number, 
+              value.tender_number,
               docname || null,
-              apiKey, 
+              apiKey,
               apiSecret
             );
 
@@ -319,7 +319,7 @@ export default function RecordDetailPage() {
 
         await Promise.all([fetchWorkName(), fetchPreviousBill()]);
       }
-      
+
       // 🟢 Watch for form changes to mark as dirty
       if (name && !isProgrammaticUpdate.current) {
         setFormDirty(true);
@@ -348,11 +348,15 @@ export default function RecordDetailPage() {
 
         // Calculate bill_upto = bill_amount + prev_bill_amt
         const billUpto = billAmount + prevBillAmt;
-        formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
+        if (Number(formInstance.getValues("bill_upto")) !== billUpto) {
+          formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
+        }
 
         // Calculate remaining_amount = tender_amount - bill_upto
         const remainingAmount = tenderAmount - billUpto;
-        formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
+        if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
+          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
+        }
       }
     });
 
@@ -386,13 +390,13 @@ export default function RecordDetailPage() {
     });
   }, [formDirty, expenditure?.docstatus]);
 
-/* -------------------------------------------------
-  4. Build tabs once when data is ready
-  ------------------------------------------------- */
-// ... (rest of the code remains the same)
+  /* -------------------------------------------------
+    4. Build tabs once when data is ready
+    ------------------------------------------------- */
+  // ... (rest of the code remains the same)
 
-const formTabs: TabbedLayout[] = React.useMemo(() => {
-  if (!expenditure) return [];
+  const formTabs: TabbedLayout[] = React.useMemo(() => {
+    if (!expenditure) return [];
 
     const fields = (list: FormField[]): FormField[] =>
       list.map((f) => ({
@@ -438,7 +442,7 @@ const formTabs: TabbedLayout[] = React.useMemo(() => {
           {
             name: "tender_amount",
             label: "Tender Amount",
-            type: "Currency",
+            type: "Read Only",
             fieldColumns: 1,
             precision: 2,
             fetchFrom: {
@@ -451,7 +455,7 @@ const formTabs: TabbedLayout[] = React.useMemo(() => {
           {
             name: "lift_irrigation_scheme",
             label: "Lift Irrigation Scheme",
-            type: "Link",
+            type: "Read Only",
             linkTarget: "Lift Irrigation Scheme",
             required: true,
             fieldColumns: 1,
@@ -533,14 +537,14 @@ const formTabs: TabbedLayout[] = React.useMemo(() => {
           {
             name: "bill_upto",
             label: "Bill Upto Amount",
-            type: "Currency",
+            type: "Read Only",
             precision: 2,
             defaultValue: "0.00",
           },
           {
             name: "remaining_amount",
             label: "Bill Remaining Amount",
-            type: "Currency",
+            type: "Read Only",
             precision: 2,
           },
 
@@ -605,7 +609,7 @@ const formTabs: TabbedLayout[] = React.useMemo(() => {
                 type: "Link",
                 linkTarget: "Asset",
                 displayDependsOn: "work_type==Repair || work_type==Auxilary || have_asset==1",
-                  customSearchParams: {
+                customSearchParams: {
                   filters: [
                     ["Asset", "lift_irrigation_scheme", "=", ""],
                     ["Asset", "stage_no_sub_scheme", "=", ""],
@@ -694,19 +698,16 @@ const formTabs: TabbedLayout[] = React.useMemo(() => {
     const amtToBeMatched = savedAmount + totalChildBillAmt;
 
     // Rule 2: Balance Check
-    if (billAmount !== amtToBeMatched) {
-      const lowOrHigh = billAmount < amtToBeMatched ? "LOWER" : "HIGHER";
+    if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+      const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
 
-      toast.error("Mismatch detected in amounts", {
-        description: `Calculated Invoice Amount: ${amtToBeMatched}
-Entered Bill Amount: ${billAmount}
-
-The entered Bill Amount is ${lowOrHigh} than the calculated Invoice Amount.
-Please ensure that the Invoice Amount and the Total Bill Amount are equal.`, duration: Infinity
+      toast.error("Amount Mismatch", {
+        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Calculated Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+        duration: Infinity
       });
       return;
     }
-    
+
     // If validation passes, proceed to save
     setIsSaving(true);
 
