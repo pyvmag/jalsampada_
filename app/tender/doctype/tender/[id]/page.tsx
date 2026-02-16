@@ -114,6 +114,8 @@ interface TenderProjectData {
 
   }>;
 
+  custom_contractor_name?: string;
+
 }
 
 
@@ -352,9 +354,9 @@ export default function RecordDetailPage() {
 
         // Handle both string and object responses
 
-        const message = typeof response.data.message === 'string' 
+        const message = typeof response.data.message === 'string'
 
-          ? response.data.message 
+          ? response.data.message
 
           : response.data.message.message || 'Unknown status';
 
@@ -391,32 +393,68 @@ export default function RecordDetailPage() {
 
 
   // Show toast when extension message is available
-
   React.useEffect(() => {
+    if (extensionMessage && record) {
+      // 0. Suppress if Completed or Cancelled
+      if (record.custom_tender_status === "Completed" || record.custom_tender_status === "Cancelled") {
+        return;
+      }
 
-    if (extensionMessage) {
+      // 1. Calculate Effective Date (taking into account extensions)
+      let effectiveDateStr = record.custom_expected_date;
+      if (record.custom_tender_extension_history && record.custom_tender_extension_history.length > 0) {
+        const lastExt = record.custom_tender_extension_history[record.custom_tender_extension_history.length - 1];
+        if (lastExt.extension_upto) {
+          effectiveDateStr = lastExt.extension_upto;
+        }
+      }
 
-      toast.error("Project Status Alert", {
+      if (!effectiveDateStr) return;
 
-        description: extensionMessage,
+      // 2. Check if date is safely in the future (> 2 days)
+      const effectiveDate = new Date(effectiveDateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      effectiveDate.setHours(0, 0, 0, 0);
 
+      const diffInMs = effectiveDate.getTime() - today.getTime();
+      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+      if (diffInDays > 2) {
+        return; // Suppress alert if new date provides enough time
+      }
+
+      // Helper to format date
+      const formatDate = (dateString?: string) => {
+        if (!dateString) return "";
+        const d = new Date(dateString);
+        return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
+      };
+
+      const scheduledDate = formatDate(effectiveDateStr);
+      const tenderId = record.custom_tender_id || "";
+      const contractorName = record.custom_contractor_name || ""; // Assuming name or ID is here
+
+      // 1. Tender Extension Alert
+      toast.error("Tender Extension Alert", {
+        description: `Tender ${tenderId}, scheduled for ${scheduledDate}, requires an extension.`,
         duration: Infinity,
-
       });
 
+      // 2. Contractor Alert Message
+      // Use a slight delay or just another toast call. Sonner handles multiple toasts.
+      setTimeout(() => {
+        toast.error("Tender Status Alert", {
+          description: `Contractor ${contractorName} is required to complete Tender ${tenderId} by ${scheduledDate}`,
+          duration: Infinity,
+        });
+      }, 500);
     }
-
-  }, [extensionMessage]);
-
-
+  }, [extensionMessage, record]);
 
   /* -------------------------------------------------
-
      6. Build tabs
-
   ------------------------------------------------- */
-
-
 
   const formTabs: TabbedLayout[] = React.useMemo(() => {
 
@@ -564,7 +602,7 @@ export default function RecordDetailPage() {
 
       },
 
-      
+
 
       {
 
@@ -688,7 +726,7 @@ export default function RecordDetailPage() {
 
       {
 
-        name: "section_break_contractor_details", 
+        name: "section_break_contractor_details",
 
         label: "Contractor Details",
 
@@ -948,7 +986,7 @@ export default function RecordDetailPage() {
 
     const subscription = watch((value: any, { name, type }: any) => {
 
-      
+
 
       // 1. Toggle ON -> Add first row (01) if empty
 
@@ -956,35 +994,35 @@ export default function RecordDetailPage() {
 
       if (name === 'custom_is_extension' && (value?.custom_is_extension === 1 || value?.custom_is_extension === true)) {
 
-          const currentHistory = getValues(tableName) || [];
+        const currentHistory = getValues(tableName) || [];
 
-          
 
-          if (currentHistory.length === 0) {
 
-            setValue(tableName, [
+        if (currentHistory.length === 0) {
 
-              {
+          setValue(tableName, [
 
-                extension_count: "01",
+            {
 
-                extension_upto: "",
+              extension_count: "01",
 
-                sanction_letter: "",
+              extension_upto: "",
 
-                attach: ""
+              sanction_letter: "",
 
-              }
+              attach: ""
 
-            ], { shouldDirty: true });
+            }
 
-            
+          ], { shouldDirty: true });
 
-            
 
-            return; 
 
-          }
+
+
+          return;
+
+        }
 
       }
 
@@ -996,39 +1034,39 @@ export default function RecordDetailPage() {
 
       if (!name || name === tableName || name.startsWith(tableName)) {
 
-          // slight delay to ensure getValues gets the *new* row added by the UI
+        // slight delay to ensure getValues gets the *new* row added by the UI
 
-          setTimeout(() => {
+        setTimeout(() => {
 
-              const rows = getValues(tableName);
+          const rows = getValues(tableName);
 
-              
 
-              if (Array.isArray(rows) && rows.length > 0) {
 
-                  let hasUpdated = false;
+          if (Array.isArray(rows) && rows.length > 0) {
 
-                  rows.forEach((row: any, index: number) => {
+            let hasUpdated = false;
 
-                      const expected = (index + 1).toString().padStart(2, '0');
+            rows.forEach((row: any, index: number) => {
 
-                      
+              const expected = (index + 1).toString().padStart(2, '0');
 
-                      // Only update if strictly different to avoid render loops
 
-                      if (row.extension_count !== expected) {
 
-                          setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
+              // Only update if strictly different to avoid render loops
 
-                          hasUpdated = true;
+              if (row.extension_count !== expected) {
 
-                      }
+                setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
 
-                  });
+                hasUpdated = true;
 
               }
 
-          }, 50);
+            });
+
+          }
+
+        }, 50);
 
       }
 
@@ -1180,7 +1218,7 @@ export default function RecordDetailPage() {
 
             "custom_contractor_company",
 
-            "custom_mobile_no", 
+            "custom_mobile_no",
 
             "custom_supplier_address",
 
@@ -1268,7 +1306,7 @@ export default function RecordDetailPage() {
 
       } else {
 
-        toast.error(messages.message, { description: messages.description , duration: Infinity});
+        toast.error(messages.message, { description: messages.description, duration: Infinity });
 
       }
 
@@ -1294,7 +1332,11 @@ export default function RecordDetailPage() {
 
 
 
-      router.push(`/tender/doctype/tender/${docname}`);
+      // Only navigate if the name changed (renamed doc)
+
+      if (resp.data.data.name && resp.data.data.name !== docname) {
+        router.push(`/tender/doctype/tender/${encodeURIComponent(resp.data.data.name)}`);
+      }
 
       return { status: savedStatus };
 
@@ -1314,49 +1356,49 @@ export default function RecordDetailPage() {
 
         "Failed to save",
 
-          (error) => {
+        (error) => {
 
-            // Custom handler for save errors
+          // Custom handler for save errors
 
-            if (error.response?.status === 404) return "Record not found";
+          if (error.response?.status === 404) return "Record not found";
 
-            if (error.response?.status === 403) return "Unauthorized";
+          if (error.response?.status === 403) return "Unauthorized";
 
-            if (error.response?.status === 417) {
+          if (error.response?.status === 417) {
 
-              // Extract actual validation message from server response
+            // Extract actual validation message from server response
 
-              const serverMessages = error.response?.data?._server_messages;
+            const serverMessages = error.response?.data?._server_messages;
 
-              if (serverMessages) {
+            if (serverMessages) {
 
-                try {
+              try {
 
-                  const parsed = JSON.parse(serverMessages);
+                const parsed = JSON.parse(serverMessages);
 
-                  if (Array.isArray(parsed) && parsed.length > 0) {
+                if (Array.isArray(parsed) && parsed.length > 0) {
 
-                    const messageObj = typeof parsed[0] === 'string' ? JSON.parse(parsed[0]) : parsed[0];
+                  const messageObj = typeof parsed[0] === 'string' ? JSON.parse(parsed[0]) : parsed[0];
 
-                    return messageObj.message || error.response?.data?.exception || "Validation failed";
-
-                  }
-
-                } catch (e) {
-
-                  console.error("Failed to parse server messages:", e);
+                  return messageObj.message || error.response?.data?.exception || "Validation failed";
 
                 }
 
-              }
+              } catch (e) {
 
-              return error.response?.data?.exception || "Validation failed - Server cannot meet requirements";
+                console.error("Failed to parse server messages:", e);
+
+              }
 
             }
 
-            return "Failed to save";
+            return error.response?.data?.exception || "Validation failed - Server cannot meet requirements";
 
           }
+
+          return "Failed to save";
+
+        }
 
       );
 
@@ -1364,7 +1406,7 @@ export default function RecordDetailPage() {
 
       if (!messages.success) {
 
-        toast.error(messages.message, { description: messages.description, duration: Infinity});
+        toast.error(messages.message, { description: messages.description, duration: Infinity });
 
       }
 
