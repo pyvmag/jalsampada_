@@ -634,31 +634,35 @@ export default function ExpenditureDetailsReport() {
                   </td>
                 </tr>
               ) : (
-                reportData.map((row, index) => (
-                  <tr key={index} className={index % 2 === 1 ? "bg-gray-25" : ""}>
-                    {columnConfig.map((column) => (
-                      <td
-                        key={`${index}-${column.fieldname}`}
-                        style={{
-                          // Sticky Logic for Body - Only first column is sticky
-                          position: column.isSticky ? "sticky" : "relative",
-                          left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                          zIndex: column.isSticky ? 10 : 1,
-                          backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
-                          borderRight: "none",
-                          boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
-                        }}
-                      >
-                        {renderCellValue(row, column)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                reportData.map((row, index) => {
+                  const isTotal = !!row.bold || !!row.is_total || [row.tender_number, row.bill_type, row.bill_number].some(val => String(val || "").toLowerCase().includes("total"));
+                  return (
+                    <tr key={index} className={`${index % 2 === 1 ? "bg-gray-25" : ""} ${isTotal ? "font-bold" : ""}`}>
+                      {columnConfig.map((column) => (
+                        <td
+                          key={`${index}-${column.fieldname}`}
+                          style={{
+                            // Sticky Logic for Body - Only first column is sticky
+                            position: column.isSticky ? "sticky" : "relative",
+                            left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                            zIndex: column.isSticky ? 10 : 1,
+                            backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
+                            borderRight: "none",
+                            boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none",
+                            fontWeight: isTotal ? "bold" : "normal"
+                          }}
+                        >
+                          {renderCellValue(row, column)}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
