@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: jalsampada-ui
-    restart: always
+    restart: unless-stopped
     ports:
       - "2225:2225"
     environment:
@@ -16,3 +16,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M

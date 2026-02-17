@@ -167,14 +167,14 @@ export default function NewRepairWorkRequirementPage() {
                 type: "Data",
                 fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "custom_equipement_rating" }
               },
-              { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date" },
+              { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "available_for_use_date" } },
               {
                 name: "is_in_warranty_period",
                 label: "Is in Warranty period",
                 type: "Select",
                 options: "Yes\nNo",
               },
-              { name: "running_hours", label: "Running Hours", type: "Float" },
+              { name: "running_hours", label: "Running Hours", type: "Float", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "custom_cumulative_hours" } },
               {
                 name: "present_status",
                 label: "Present Status",

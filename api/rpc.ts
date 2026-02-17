@@ -26,3 +26,25 @@ export async function bulkDeleteRPC(
 
   return response.data;
 }
+
+export async function checkProjectExtension(
+  projectName: string,
+  baseUrl: string,
+  apiKey: string,
+  apiSecret: string
+) {
+  const url = `${baseUrl}/api/method/check_project_extension`;
+  
+  const params = new URLSearchParams();
+  params.append("project_name", projectName);
+
+  const response = await axios.post(url, params, {
+    headers: {
+      Authorization: `token ${apiKey}:${apiSecret}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    withCredentials: true,
+  });
+
+  return response.data;
+}

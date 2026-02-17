@@ -3,5 +3,9 @@
 module.exports = {
   outputFileTracingRoot: __dirname,
   output: 'standalone',
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'http://103.219.3.169:2225' : undefined,
+  // In Docker, we want to bind to 0.0.0.0
+  hostname: process.env.HOSTNAME || 'localhost',
+  port: parseInt(process.env.PORT || '2225', 10),
 };
+
+

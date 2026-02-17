@@ -328,6 +328,34 @@ function buildDefaultValues(fields: FormField[]) {
         dv[f.name] = { hours: 0, minutes: 0, seconds: 0 };
       if (f.type === "Table") dv[f.name] = [];
       if (f.type === "Table MultiSelect") dv[f.name] = [];
+      if (
+        [
+          "Data",
+          "Small Text",
+          "Text",
+          "Long Text",
+          "Select",
+          "Link",
+          "Attach",
+          "Color",
+          "Password",
+          "Int",
+          "Float",
+          "Currency",
+          "Percent",
+          "Rating",
+          "Barcode",
+          "Markdown Editor",
+          "Code",
+          "Read Only",
+        ].includes(f.type)
+      ) {
+        dv[f.name] = "";
+      }
+
+      if (["Date", "DateTime", "Time"].includes(f.type)) {
+        dv[f.name] = null;
+      }
     }
 
     // Apply precision formatting to Currency and Float fields during initialization
@@ -556,11 +584,12 @@ export function DynamicForm({
       }
 
       setLoadingNeighbors(true);
-      const doctype = formatSlug(doctypeSlug);
+      // Use the passed doctype prop if available, otherwise infer from URL
+      const targetDoctype = doctype || formatSlug(doctypeSlug);
 
       try {
         // 1. Get current document creation time
-        const currentDocRes = await axios.get(`${DEFAULT_API_BASE_URL}/${doctype}/${currentDocName}`, {
+        const currentDocRes = await axios.get(`${DEFAULT_API_BASE_URL}/${targetDoctype}/${currentDocName}`, {
           params: { fields: JSON.stringify(["creation"]) },
           headers: { Authorization: `token ${apiKey}:${apiSecret}` },
           withCredentials: true,
@@ -577,7 +606,7 @@ export function DynamicForm({
         // Next (Older): Creation < Current (limit 1, Order Descending)
 
         const [prevRes, nextRes] = await Promise.all([
-          axios.get(`${DEFAULT_API_BASE_URL}/${doctype}`, {
+          axios.get(`${DEFAULT_API_BASE_URL}/${targetDoctype}`, {
             params: {
               fields: JSON.stringify(["name"]),
               filters: JSON.stringify([["creation", ">", currentCreation]]),
@@ -587,7 +616,7 @@ export function DynamicForm({
             headers: { Authorization: `token ${apiKey}:${apiSecret}` },
             withCredentials: true,
           }),
-          axios.get(`${DEFAULT_API_BASE_URL}/${doctype}`, {
+          axios.get(`${DEFAULT_API_BASE_URL}/${targetDoctype}`, {
             params: {
               fields: JSON.stringify(["name"]),
               filters: JSON.stringify([["creation", "<", currentCreation]]),
@@ -619,7 +648,7 @@ export function DynamicForm({
   // Navigation Redirect
   const navigateToRecord = (recordName: string) => {
     const segments = pathname.split("/");
-    segments[segments.length - 1] = recordName;
+    segments[segments.length - 1] = encodeURIComponent(recordName);
     router.push(segments.join("/"));
   };
 

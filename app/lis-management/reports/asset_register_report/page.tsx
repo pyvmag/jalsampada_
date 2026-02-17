@@ -165,6 +165,7 @@ export default function AssetRegisterReport() {
         }
     }
 
+
     // --- Dependent Filters Logic ---
     const stageNoFilters = useMemo(() => {
         const depFilters: Record<string, string> = {};
@@ -175,6 +176,20 @@ export default function AssetRegisterReport() {
 
         return Object.keys(depFilters).length > 0 ? depFilters : undefined;
     }, [filters.custom_lis_name]);
+
+    const assetIdFilters = useMemo(() => {
+        const depFilters: Record<string, string> = {};
+
+        // Use 'custom_lis_name' as it's a custom field in Asset for LIS
+        if (filters.custom_lis_name) depFilters["custom_lis_name"] = filters.custom_lis_name;
+
+        // Use 'custom_stage_no' as it's a custom field in Asset for Stage
+        if (filters.custom_stage_no) depFilters["custom_stage_no"] = filters.custom_stage_no;
+
+        if (filters.asset_category) depFilters["asset_category"] = filters.asset_category;
+
+        return Object.keys(depFilters).length > 0 ? depFilters : undefined;
+    }, [filters.custom_lis_name, filters.custom_stage_no, filters.asset_category]);
 
     // --- Actions ---
     const fetchReportData = useCallback(async () => {
@@ -563,6 +578,7 @@ export default function AssetRegisterReport() {
                             onChange={(value) => handleFilterChange("custom_doctype_name", value)}
                             placeholder="Select Asset..."
                             linkTarget="Asset"
+                            filters={assetIdFilters}
                             className="w-full relative"
                         />
                     </div>
@@ -587,21 +603,20 @@ export default function AssetRegisterReport() {
                 >
                     <table
                         className="stock-table sticky-header-table"
-                        style={{ minWidth: `${totalTableWidth}px` }}
+                        style={{ minWidth: `${totalTableWidth}px`, borderCollapse: 'separate', borderSpacing: 0 }}
                     >
-                        <thead style={{ position: "sticky", top: 0, zIndex: 10, backgroundColor: "#3683f6" }}>
+                        <thead style={{ zIndex: 40 }}>
                             <tr>
                                 {columnConfig.map((column) => (
                                     <th
                                         key={column.fieldname}
                                         style={{
                                             width: column.width,
-                                            position: STICKY_COLUMNS.includes(column.fieldname) ? "sticky" : "static",
-                                            left: stickyLeftMap[column.fieldname] || "auto",
-                                            zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 40 : 15,
-                                            backgroundColor: STICKY_COLUMNS.includes(column.fieldname)
-                                                ? "#3683f6"
-                                                : "inherit",
+                                            position: "sticky",
+                                            top: 0,
+                                            left: STICKY_COLUMNS.includes(column.fieldname) ? (stickyLeftMap[column.fieldname] || "0") : "auto",
+                                            zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 50 : 20,
+                                            backgroundColor: "#3683f6", // Always blue for header
                                         }}
                                     >
                                         {column.label}

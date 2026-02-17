@@ -20,6 +20,10 @@ import { TimeAgo } from "@/components/TimeAgo";
 
 const API_BASE_URL = "http://103.219.3.169:2223"; // 🟢 Changed: Removed /api/resource so RPC helper can append /api/method
 
+// 🟢 CONFIG: Settings for Frappe-like pagination
+const INITIAL_PAGE_SIZE = 25;
+const LOAD_MORE_SIZE = 10;
+
 // ── Debounce Hook ────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = React.useState(value);
@@ -55,9 +59,13 @@ export default function DoctypePage() {
 
   const [tenders, setTenders] = React.useState<Tender[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  const [loading, setLoading] = React.useState(true);
+  
+  // 🟢 Loading & Pagination States
+  const [loading, setLoading] = React.useState(true);       // Full page load
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
+  const [hasMore, setHasMore] = React.useState(true);       // Are there more records?
+  const [totalCount, setTotalCount] = React.useState(0);    // 🟢 Total count of records
   const [error, setError] = React.useState<string | null>(null);
-  const [totalCount, setTotalCount] = React.useState(0);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [lisOptions, setLisOptions] = React.useState<LisOption[]>([]);
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -129,73 +137,98 @@ export default function DoctypePage() {
     fetchFilterOptions();
   }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
 
-  // ── Fetch Data ────────────────────────────────────────────────
-  const fetchTenders = React.useCallback(async () => {
-    if (!isInitialized) return;
-    if (!isAuthenticated || !apiKey || !apiSecret) {
-      setLoading(false);
-      return;
-    }
+  // ── 🟢 Fetch Logic (Refactored for Pagination and Total Count) ───────────────────
+  const fetchTenders = React.useCallback(
+    async (start = 0, isReset = false) => {
+      if (!isInitialized) return;
+      if (!isAuthenticated || !apiKey || !apiSecret) {
+        setLoading(false);
+        return;
+      }
 
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        if (isReset) {
+          setLoading(true);
+          setError(null);
+        } else {
+          setIsLoadingMore(true);
+        }
 
-      const params = {
-        fields: JSON.stringify([
-          "name",
-          "custom_tender_status",
-          "custom_prapan_suchi",
-          "custom_lis_name",
-          "modified",
-        ]),
-        limit_page_length: 20,
-        order_by: "creation desc",
-      };
+        const limit = isReset ? INITIAL_PAGE_SIZE : LOAD_MORE_SIZE;
+        const filters: any[] = [];
+        if (debouncedSearch) filters.push(["Project", "name", "like", `%${debouncedSearch}%`]);
+        if (selectedLis) filters.push(["Project", "custom_lis_name", "=", selectedLis]);
 
-      // 🟢 Note: Added /api/resource here since we changed API_BASE_URL to root
-      const resp = await axios.get(`${API_BASE_URL}/api/resource/${doctypeName}`, {
-        params,
-        headers: {
-          Authorization: `token ${apiKey}:${apiSecret}`,
-        },
-        withCredentials: true,
-      });
+        const commonHeaders = { Authorization: `token ${apiKey}:${apiSecret}` };
+        
+        // Parallel requests for Data and Total Count
+        const [dataResp, countResp] = await Promise.all([
+          axios.get(`${API_BASE_URL}/api/resource/${doctypeName}`, {
+            params: {
+              fields: JSON.stringify([
+                "name",
+                "custom_tender_status",
+                "custom_prapan_suchi",
+                "custom_lis_name",
+                "modified",
+              ]),
+              limit_start: start,
+              limit_page_length: limit,
+              order_by: "creation desc",
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined,
+            },
+            headers: commonHeaders,
+            withCredentials: true,
+          }),
+          // Only fetch count during initial load or filter change
+          isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
+            params: { doctype: doctypeName, filters: filters.length > 0 ? JSON.stringify(filters) : undefined },
+            headers: commonHeaders,
+          }) : Promise.resolve(null)
+        ]);
 
-      // Get total count
-      const countResp = await axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-        params: { doctype: doctypeName },
-        headers: {
-          Authorization: `token ${apiKey}:${apiSecret}`,
-        },
-      });
+        const raw = dataResp.data?.data ?? [];
+        const mapped: Tender[] = raw.map((r: any) => ({
+          name: r.name,
+          status: r.custom_tender_status ?? "",
+          tender_name: r.custom_prapan_suchi ?? "",
+          lis_name: r.custom_lis_name ?? "",
+          modified: r.modified,
+        }));
 
-      const raw = resp.data?.data ?? [];
-      const mapped: Tender[] = raw.map((r: any) => ({
-        name: r.name,
-        status: r.custom_tender_status ?? "",
-        tender_name: r.custom_prapan_suchi ?? "",
-        lis_name: r.custom_lis_name ?? "",
-        modified: r.modified,
-      }));
+        if (isReset) {
+          setTenders(mapped);
+          if (countResp) setTotalCount(countResp.data.message || 0);
+        } else {
+          setTenders((prev) => [...prev, ...mapped]);
+        }
 
-      setTenders(mapped);
-      setTotalCount(countResp.data.message || 0);
-    } catch (err: any) {
-      console.error("API error", err);
-      setError(
-        err.response?.status === 403
-          ? "Unauthorized - check API key/secret"
-          : `Failed to fetch ${doctypeName}`
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [isInitialized, isAuthenticated, apiKey, apiSecret, doctypeName]);
+        setHasMore(mapped.length === limit);
+
+      } catch (err: any) {
+        console.error("API error:", err);
+        if (isReset) setError(
+          err.response?.status === 403
+            ? "Unauthorized - check API key/secret"
+            : `Failed to fetch ${doctypeName}`
+        );
+      } finally {
+        setLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [apiKey, apiSecret, isAuthenticated, isInitialized, debouncedSearch, selectedLis, doctypeName]
+  );
 
   React.useEffect(() => {
-    fetchTenders();
+    fetchTenders(0, true);
   }, [fetchTenders]);
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchTenders(tenders.length, false);
+    }
+  };
 
   // 🟢 2. Handle Bulk Delete Action
   const handleBulkDelete = async () => {
@@ -243,7 +276,7 @@ export default function DoctypePage() {
 
       // Clear selection and refresh list
       clearSelection();
-      fetchTenders();
+      fetchTenders(0, true);
 
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
@@ -473,8 +506,15 @@ export default function DoctypePage() {
         </div>
       </div>
 
-      <div className="view-container" style={{ marginTop: "0.5rem" }}>
+      <div className="view-container" style={{ marginTop: "0.5rem", paddingBottom: "2rem" }}>
         {view === "grid" ? renderGridView() : renderListView()}
+        {hasMore && filteredTenders.length > 0 && (
+          <div className="mt-6 flex justify-end">
+            <button onClick={handleLoadMore} disabled={isLoadingMore} className="btn btn--secondary flex items-center gap-2 px-6 py-2" style={{ minWidth: "140px" }}>
+              {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

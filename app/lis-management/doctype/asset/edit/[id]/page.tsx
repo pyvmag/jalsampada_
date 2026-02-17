@@ -417,6 +417,13 @@ export default function RecordDetailPage() {
     const [error, setError] = React.useState<string | null>(null);
     const [isSaving, setIsSaving] = React.useState(false);
 
+    // 🟢 Track which button to show (SAME AS LOGBOOK)
+    const [activeButton, setActiveButton] = React.useState<"SAVE" | "SUBMIT" | "CANCEL" | null>(null);
+    const [formDirty, setFormDirty] = React.useState(false);
+    const [formInstance, setFormInstance] = React.useState<any>(null);
+    const isProgrammaticUpdate = React.useRef(false);
+    const [formVersion, setFormVersion] = React.useState(0);
+
     // Expenditure State
     const [expenditureList, setExpenditureList] = React.useState<ExpenditureData[]>([]);
     const [expenditureLoading, setExpenditureLoading] = React.useState(false);
@@ -441,7 +448,19 @@ export default function RecordDetailPage() {
                     withCredentials: true,
                 });
 
-                setAsset(resp.data.data);
+                const data = resp.data.data;
+                setAsset(data);
+
+                // Initialize button state based on document status (SAME AS LOGBOOK)
+                if (data.docstatus === 0) {
+                    // Draft
+                    setActiveButton("SUBMIT");
+                } else if (data.docstatus === 1) {
+                    // Submitted
+                    setActiveButton("CANCEL");
+                }
+
+                setFormDirty(false);
             } catch (err: any) {
                 console.error("API Error:", err);
                 setError(
@@ -456,6 +475,53 @@ export default function RecordDetailPage() {
 
         fetchAsset();
     }, [docname, apiKey, apiSecret, isAuthenticated, isInitialized]);
+
+    // 🟢 Watch for form changes (SAME AS LOGBOOK)
+    React.useEffect(() => {
+        if (!formInstance) return;
+
+        const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
+            // Watch for form changes to mark as dirty
+            if (name && !isProgrammaticUpdate.current) {
+                setFormDirty(true);
+                // When form becomes dirty, show SAVE button
+                if (asset?.docstatus === 0) {
+                    setActiveButton("SAVE");
+                }
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [formInstance, asset]);
+
+    const handleFormInit = React.useCallback((form: any) => {
+        setFormInstance(form);
+    }, []);
+
+    // 🟢 Badge Status Logic (LIKE LOGBOOK)
+    const getCurrentStatus = () => {
+        if (!asset) return "";
+
+        // 1. If Cancelled
+        if (asset.docstatus === 2) return "Cancelled";
+
+        // 2. If Submitted (Show status)
+        if (asset.docstatus === 1) {
+            return asset.status || "Submitted";
+        }
+
+        // 3. If Draft (docstatus === 0)
+        if (asset.docstatus === 0) {
+            if (formDirty) {
+                return "Not Saved";
+            }
+            return "Draft";
+        }
+
+        return "";
+    };
 
     /* --- Fetch Expenditure --- */
     React.useEffect(() => {
@@ -747,18 +813,25 @@ export default function RecordDetailPage() {
     /* -------------------------------------------------
        7. SUBMIT
        ------------------------------------------------- */
-    const handleSubmit = async (formData: Record<string, any>, isDirty: boolean) => {
-        if (!isDirty) {
+    // 🟢 SAVE (UPDATE) DOCUMENT (SAME AS LOGBOOK)
+    const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
+        if (!isDirty && !formDirty) {
             toast.info("No changes to save.");
-            return { status: asset?.status };
+            return;
+        }
+
+        if (!asset) {
+            toast.error("Record not loaded. Cannot save.", { duration: Infinity });
+            return;
         }
 
         setIsSaving(true);
+        isProgrammaticUpdate.current = true;
         try {
             const doctypeName = "Asset";
             const docname = params.id as string;
 
-            let finalPayload = { ...formData };
+            let finalPayload = { ...data };
 
             if (!asset) {
                 alert("Error: Asset data not loaded. Cannot save.");
@@ -808,13 +881,20 @@ export default function RecordDetailPage() {
             }
 
             if (resp.data && resp.data.data) {
-                setAsset(resp.data.data);
-                // Return the status from API response
-                return { status: resp.data.data.status };
+                // Update state with new data
+                const updatedData = resp.data.data as AssetData;
+                setAsset(updatedData);
+                setFormDirty(false);
+
+                // Update button state after save
+                if (updatedData.docstatus === 0) {
+                    // Still draft
+                    setActiveButton("SUBMIT");
+                }
+
+                // Force form remount
+                setFormVersion((v) => v + 1);
             }
-
-            return { status: asset?.status }; // Fallback to current asset status
-
         } catch (err: any) {
             console.error("Save error:", err);
 
@@ -837,40 +917,50 @@ export default function RecordDetailPage() {
             return { status: asset?.status };
         } finally {
             setIsSaving(false);
+            // Reset programmatic update flag with a small delay (LIKE LOGBOOK)
+            // to ensure mount-time form events are ignored
+            setTimeout(() => {
+                isProgrammaticUpdate.current = false;
+            }, 100);
         }
     };
 
+    // 🟢 SUBMIT DOCUMENT (SAME AS LOGBOOK)
     const handleSubmitDocument = async () => {
+        if (!asset) return;
+
         setIsSaving(true);
+
         try {
-            const doctypeName = "Asset";
-            const docname = params.id as string;
+            // Prepare payload similar to handleSubmit
+            const payload: Record<string, any> = { ...asset };
 
-            // Use REST API PUT method to update docstatus to 1 (Submitted)
-            const resp = await axios.put(`${API_BASE_URL}/${doctypeName}/${docname}`, {
-                docstatus: 1
-            }, {
-                headers: {
-                    Authorization: `token ${apiKey}:${apiSecret}`,
-                    "Content-Type": "application/json",
-                },
-                withCredentials: true,
-            });
+            // Set docstatus to 1 (submitted)
+            payload.docstatus = 1;
 
-            const messages = getApiMessages(resp, null, "Document submitted successfully!", "Failed to submit document");
-            if (messages.success) {
-                toast.success(messages.message, { description: messages.description });
-            } else {
-                toast.error(messages.message, { description: messages.description, duration: Infinity });
-            }
+            const response = await axios.put(
+                `${API_BASE_URL}/${doctypeName}/${docname}`,
+                payload,
+                {
+                    headers: {
+                        Authorization: `token ${apiKey}:${apiSecret}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-            if (resp.data && resp.data.data) {
-                setAsset(resp.data.data);
-                return { status: resp.data.data.status };
-            }
+            toast.success("Document submitted successfully!");
 
-            return { status: "Submitted" };
+            // Update local state without reload
+            const updatedData = response.data.data as AssetData;
+            setAsset(updatedData);
+            setFormDirty(false);
 
+            // Update button to CANCEL after submission
+            setActiveButton("CANCEL");
+
+            // Force form remount with new docstatus
+            setFormVersion((v) => v + 1);
         } catch (err: any) {
             console.error("Submit error:", err);
 
@@ -895,37 +985,39 @@ export default function RecordDetailPage() {
         }
     };
 
+    // 🟢 CANCEL DOCUMENT (SAME AS LOGBOOK)
     const handleCancelDocument = async () => {
+        if (!asset) return;
+
+        if (!window.confirm(`Are you sure you want to cancel this ${doctypeName}? This action cannot be undone.`)) {
+            return;
+        }
+
         setIsSaving(true);
+
         try {
-            const doctypeName = "Asset";
-            const docname = params.id as string;
+            const payload = {
+                docstatus: 2,
+                modified: asset.modified,
+            };
 
-            // Use REST API PUT method to update docstatus to 2 (Cancelled)
-            const resp = await axios.put(`${API_BASE_URL}/${doctypeName}/${docname}`, {
-                docstatus: 2
-            }, {
-                headers: {
-                    Authorization: `token ${apiKey}:${apiSecret}`,
-                    "Content-Type": "application/json",
-                },
-                withCredentials: true,
-            });
+            const resp = await axios.put(
+                `${API_BASE_URL}/${doctypeName}/${docname}`,
+                payload,
+                {
+                    headers: {
+                        Authorization: `token ${apiKey}:${apiSecret}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-            const messages = getApiMessages(resp, null, "Document cancelled successfully!", "Failed to cancel document");
-            if (messages.success) {
-                toast.success(messages.message, { description: messages.description });
-            } else {
-                toast.error(messages.message, { description: messages.description, duration: Infinity });
-            }
+            toast.success("Document cancelled successfully!");
 
-            if (resp.data && resp.data.data) {
-                setAsset(resp.data.data);
-                return { status: resp.data.data.status };
-            }
-
-            return { status: "Cancelled" };
-
+            // Update local state without reload
+            const updatedRecord = resp.data.data as AssetData;
+            setAsset(updatedRecord);
+            setActiveButton(null); // Remove cancel button after cancellation
         } catch (err: any) {
             console.error("Cancel error:", err);
 
@@ -953,7 +1045,7 @@ export default function RecordDetailPage() {
     const handleCancel = () => router.push('/lis-management/doctype/asset');
 
     /* -------------------------------------------------
-       8. DUPLICATE 
+       8. DUPLICATE
        ------------------------------------------------- */
     const handleDuplicate = React.useCallback(() => {
         if (!asset) {
@@ -1028,23 +1120,56 @@ export default function RecordDetailPage() {
         );
     }
 
+    // Determine submit label based on active button (SAME AS LOGBOOK)
+    const getSubmitLabel = () => {
+        if (isSaving) {
+            switch (activeButton) {
+                case "SAVE":
+                    return "Saving...";
+                case "SUBMIT":
+                    return "Submitting...";
+                case "CANCEL":
+                    return "Cancelling...";
+                default:
+                    return "Processing...";
+            }
+        }
+
+        switch (activeButton) {
+            case "SAVE":
+                return "Save";
+            case "SUBMIT":
+                return "Submit";
+            case "CANCEL":
+                return "Cancel";
+            default:
+                return undefined;
+        }
+    };
+
+    const isSubmitted = asset.docstatus === 1;
+    const isDraft = asset.docstatus === 0;
+    const formKey = `${asset.name}-${asset.docstatus}-${formVersion}`;
+
     /* -------------------------------------------------
-       10. RENDER FORM
+       10. RENDER FORM (SAME AS LOGBOOK)
        ------------------------------------------------- */
     return (
         <DynamicForm
+            key={formKey}
             tabs={formTabs}
-            onSubmit={handleSubmit}
+            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+            onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+            onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
             onCancel={handleCancel}
             title={`${asset.name}`}
             description={`Status: ${asset?.status || 'Unknown'}`}
-            submitLabel={isSaving ? "Saving..." : "Save"}
+            submitLabel={getSubmitLabel()}
             cancelLabel="Cancel"
-            initialStatus={asset?.status || 'Draft'}
+            initialStatus={getCurrentStatus()}
             docstatus={asset.docstatus}
-            isSubmittable={true}
-            onSubmitDocument={handleSubmitDocument}
-            onCancelDocument={handleCancelDocument}
+            isSubmittable={activeButton === "SUBMIT" || asset.docstatus === 1}
+            onFormInit={handleFormInit}
             deleteConfig={{
                 doctypeName: doctypeName,
                 docName: docname,

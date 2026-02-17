@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { LinkInput } from "@/components/LinkInput";
 import { useAuth } from "@/context/AuthContext";
 import jsPDF from 'jspdf';
-
 
 // --- API Configuration ---
 const API_BASE_URL = "http://103.219.3.169:2223/";
@@ -36,8 +35,11 @@ type ColumnConfig = {
   fieldname: string;
   label: string;
   width: string;
+  widthInt: number;
   isHtml?: boolean;
   formatter?: (value: any) => string;
+  isSticky?: boolean;
+  stickyLeft?: number;
 };
 
 // --- Helper Functions ---
@@ -54,23 +56,30 @@ const formatDateTime = (dateString: string | null): string => {
 };
 
 const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
-  name: "150px",
-  custom_incident_subject: "200px",
+  name: "130px",
+  opening_date: "120px",
+  custom_incident_subject: "140px",
+  priority: "60px",
   customer: "150px",
-  raised_by: "250px",
+  raised_by: "130px",
   custom_lis: "120px",
-  custom_stage: "100px",
+  custom_stage: "150px",
   custom_asset: "120px",
   custom_asset_no: "100px",
-  status: "100px",
-  workflow_state: "180px",
-  priority: "100px",
+  status: "60px",
+  workflow_state: "100px",
   issue_type: "120px",
   description: "350px",
   first_responded_on: "180px",
   resolution_details: "350px",
-  opening_date: "120px",
 };
+
+const FIXED_COLUMNS_ORDER = [
+  { fieldname: "name", label: "Incident Id", width: 130 },
+  { fieldname: "opening_date", label: "Date", width: 100 },
+  { fieldname: "custom_incident_subject", label: "Subject", width: 140 },
+  { fieldname: "priority", label: "Priority", width: 60 }
+];
 
 const HTML_FIELDS = ["description", "resolution_details"];
 
@@ -92,6 +101,13 @@ export default function LISIncidentReportPage() {
     custom_stage: "",
     asset: "",
     status: "",
+  });
+
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState({
+    isGrabbing: false,
+    startX: 0,
+    scrollLeft: 0,
   });
 
   // --- Dependent Filters Logic ---
@@ -122,16 +138,63 @@ export default function LISIncidentReportPage() {
     return Object.keys(depFilters).length > 0 ? depFilters : undefined;
   }, [filters.custom_lis, filters.custom_stage]);
 
-
   // --- Configuration ---
   const columnConfig = useMemo((): ColumnConfig[] => {
-    return apiFields.map((field) => ({
-      fieldname: field.fieldname,
-      label: field.label,
-      width: DEFAULT_COLUMN_WIDTHS[field.fieldname] || `${field.width || 150}px`,
-      isHtml: HTML_FIELDS.includes(field.fieldname),
-      formatter: getFieldFormatter(field.fieldtype),
-    }));
+    if (apiFields.length === 0) return [];
+
+    // 1. Separate Fixed columns from Scrollable columns
+    let fixedCols: ColumnConfig[] = [];
+    let scrollableCols: ColumnConfig[] = [];
+
+    // Create a map for quick lookup of API fields
+    const apiFieldMap = new Map(apiFields.map(f => [f.fieldname, f]));
+
+    // Process Fixed Columns based on defined order
+    FIXED_COLUMNS_ORDER.forEach(fixedDef => {
+      const apiField = apiFieldMap.get(fixedDef.fieldname);
+      // We include it even if API didn't return it (optional), or only if it exists
+      if (apiField) {
+        fixedCols.push({
+          fieldname: apiField.fieldname,
+          label: apiField.label, // Use label from API or Config
+          width: `${fixedDef.width}px`,
+          widthInt: fixedDef.width,
+          isHtml: HTML_FIELDS.includes(apiField.fieldname),
+          formatter: getFieldFormatter(apiField.fieldtype),
+          isSticky: true,
+          stickyLeft: 0 // Will calculate below
+        });
+        apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
+      }
+    });
+
+    // Process remaining fields as Scrollable
+    apiFields.forEach(field => {
+      if (apiFieldMap.has(field.fieldname)) {
+        const width = parseInt(DEFAULT_COLUMN_WIDTHS[field.fieldname]?.replace("px", "")) || field.width || 150;
+        scrollableCols.push({
+          fieldname: field.fieldname,
+          label: field.label,
+          width: `${width}px`,
+          widthInt: width,
+          isHtml: HTML_FIELDS.includes(field.fieldname),
+          formatter: getFieldFormatter(field.fieldtype),
+          isSticky: false
+        });
+      }
+    });
+
+    // 2. Calculate Left Offsets for Sticky Columns
+    let currentLeftOffset = 0;
+    fixedCols = fixedCols.map(col => {
+      const updatedCol = { ...col, stickyLeft: currentLeftOffset };
+      currentLeftOffset += col.widthInt;
+      return updatedCol;
+    });
+
+    // 3. Combine
+    return [...fixedCols, ...scrollableCols];
+
   }, [apiFields]);
 
   function getFieldFormatter(fieldType: string): ((value: any) => string) | undefined {
@@ -207,7 +270,6 @@ export default function LISIncidentReportPage() {
     }
   }, [apiKey, apiSecret, isAuthenticated, isInitialized]);
 
-
   // --- Effects ---
   useEffect(() => {
     if (!isInitialized || !isAuthenticated) return;
@@ -219,6 +281,16 @@ export default function LISIncidentReportPage() {
     return () => clearTimeout(timer);
   }, [filters, fetchReportData, isInitialized, isAuthenticated]);
 
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState.isGrabbing) {
+        setDragState(prev => ({ ...prev, isGrabbing: false }));
+      }
+    };
+
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [dragState.isGrabbing]);
 
   // --- Event Handlers ---
   const handleExportCSV = () => {
@@ -452,11 +524,34 @@ export default function LISIncidentReportPage() {
     }));
   };
 
+  // --- Horizontal Scroll Drag Handlers ---
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tableRef.current) return;
+    setDragState({
+      isGrabbing: true,
+      startX: e.pageX - tableRef.current.offsetLeft,
+      scrollLeft: tableRef.current.scrollLeft,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState.isGrabbing || !tableRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableRef.current.offsetLeft;
+    const walk = (x - dragState.startX) * 1.5; // Optimized scroll speed
+    tableRef.current.scrollLeft = dragState.scrollLeft - walk;
+  };
+
+  const handleMouseUp = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
   const totalTableWidth = useMemo(() => {
-    return columnConfig.reduce((total, col) => {
-      const width = parseInt(col.width.replace("px", ""));
-      return total + (isNaN(width) ? 150 : width);
-    }, 0);
+    return columnConfig.reduce((total, col) => total + col.widthInt, 0);
   }, [columnConfig]);
 
   const renderCellValue = (row: ReportData, col: ColumnConfig) => {
@@ -563,7 +658,6 @@ export default function LISIncidentReportPage() {
             />
           </div>
 
-          {/* UPDATED: Added filters prop to Stage No */}
           <div className="form-group z-[50]">
             <label className="text-sm font-medium mb-1 block">Stage No</label>
             <LinkInput
@@ -577,7 +671,6 @@ export default function LISIncidentReportPage() {
             />
           </div>
 
-          {/* UPDATED: Added filters prop to Asset */}
           <div className="form-group z-[50]">
             <label className="text-sm font-medium mb-1 block">Asset</label>
             <LinkInput
@@ -589,7 +682,6 @@ export default function LISIncidentReportPage() {
               className="w-full relative"
             />
           </div>
-
 
           <div className="form-group z-[50]">
             <label className="text-sm font-medium mb-1 block">Status</label>
@@ -608,23 +700,43 @@ export default function LISIncidentReportPage() {
           </div>
         </div>
 
-        {/* Table Section */}
         <div
+          ref={tableRef}
           className="stock-table-container border rounded-md relative z-10"
           style={{
             overflowX: "auto",
             overflowY: "auto",
             maxHeight: "70vh",
+            cursor: dragState.isGrabbing ? "grabbing" : "grab",
+            userSelect: dragState.isGrabbing ? "none" : "auto",
+            willChange: dragState.isGrabbing ? "transform" : "auto",
           }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
         >
           <table
             className="stock-table sticky-header-table"
-            style={{ minWidth: `${totalTableWidth}px` }}
+            style={{ minWidth: `${totalTableWidth}px`, borderCollapse: "separate", borderSpacing: 0 }}
           >
-            <thead style={{ position: "sticky", top: 0, zIndex: 20, backgroundColor: "white" }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
               <tr>
                 {columnConfig.map((column) => (
-                  <th key={column.fieldname} style={{ width: column.width }}>
+                  <th
+                    key={column.fieldname}
+                    style={{
+                      width: column.width,
+                      minWidth: column.width,
+                      position: column.isSticky ? "sticky" : "relative",
+                      left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                      zIndex: column.isSticky ? 30 : 20,
+                      backgroundColor: "#3683f6",
+                      color: "white",
+                      borderRight: column.isSticky ? "none" : "none",
+                      boxShadow: column.isSticky && column.fieldname === "priority" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                    }}
+                  >
                     {column.label}
                   </th>
                 ))}
@@ -644,7 +756,17 @@ export default function LISIncidentReportPage() {
                 filteredData.map((row, index) => (
                   <tr key={index}>
                     {columnConfig.map((column) => (
-                      <td key={`${index}-${column.fieldname}`}>
+                      <td
+                        key={`${index}-${column.fieldname}`}
+                        style={{
+                          position: column.isSticky ? "sticky" : "relative",
+                          left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                          zIndex: column.isSticky ? 10 : 1,
+                          backgroundColor: "white",
+                          borderRight: column.isSticky ? "none" : "none",
+                          boxShadow: column.isSticky && column.fieldname === "priority" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                        }}
+                      >
                         {renderCellValue(row, column)}
                       </td>
                     ))}

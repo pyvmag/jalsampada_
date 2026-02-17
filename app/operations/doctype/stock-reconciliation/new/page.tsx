@@ -38,7 +38,7 @@ interface StockReconciliationData {
     scan_barcode?: string;                // Data
     scan_mode?: 0 | 1;                    // Check
     items?: StockReconciliationItemRow[]; // Table -> Items
-    difference_account?: string;          // Link -> Account
+    expense_account?: string;          // Link -> Account
     cost_center?: string;                 // Link -> Cost Center
 
     docstatus?: 0 | 1;
@@ -72,16 +72,29 @@ export default function NewStockReconciliationPage() {
     const handleFormInit = React.useCallback((form: any) => {
         setFormInstance(form);
 
-        // Set default values for posting date and time
         form.setValue("posting_date", getCurrentDate());
         form.setValue("posting_time", getCurrentTime());
 
-        // Watch for set_posting_time checkbox changes
         const subscription = form.watch((value: any, { name }: { name?: string }) => {
+
             if (name === "set_posting_time" || name === undefined) {
                 const isEditable = form.getValues("set_posting_time");
                 setEditDateTime(!!isEditable);
             }
+
+            // ✅ AUTO FILL CHILD WAREHOUSE
+            if (name === "set_warehouse") {
+                const warehouse = form.getValues("set_warehouse");
+                const items = form.getValues("items") || [];
+
+                const updatedItems = items.map((row: any) => ({
+                    ...row,
+                    warehouse: warehouse
+                }));
+
+                form.setValue("items", updatedItems);
+            }
+
         });
 
         return () => subscription.unsubscribe();
@@ -133,6 +146,15 @@ export default function NewStockReconciliationPage() {
                         linkTarget: "Warehouse",
                         required: true,
                         fieldColumns: 1,
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
+                        customSearchParams: {
+                            filters: [
+                                ["Warehouse", "company", "=", "quantbit"],
+                                ["Warehouse", "is_group", "=", 0]
+                            ]
+                        },
+                        referenceDoctype: "Stock Reconciliation Item",
+                        doctype: "Warehouse"
                     },
 
                     {
@@ -167,7 +189,12 @@ export default function NewStockReconciliationPage() {
                                     ]
                                 },
                                 referenceDoctype: "Stock Reconciliation Item",
-                                doctype: "Warehouse"
+                                doctype: "Warehouse",
+                                fetchFrom: {
+                                    sourceField: "parent.set_warehouse",
+                                    targetDoctype: "Warehouse",
+                                    targetField: "name"
+                                }
                             },
                             {
                                 name: "current_qty",
@@ -236,7 +263,7 @@ export default function NewStockReconciliationPage() {
                         type: "Section Break",
                     },
                     {
-                        name: "difference_account",
+                        name: "expense_account",
                         label: "Difference Account",
                         type: "Link",
                         linkTarget: "Account",

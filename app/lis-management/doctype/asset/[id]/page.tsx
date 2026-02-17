@@ -421,11 +421,6 @@ export default function AssetDetailPage() {
               <div className="flex flex-col items-center justify-center py-8 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
                 <ImageIcon size={36} className="mb-2 opacity-50" />
                 <p className="text-sm font-medium">No drawings attached</p>
-                <Link href={`/lis-management/doctype/asset/edit/${docname}`}>
-                  <button className="btn btn--primary btn--sm mt-3 text-xs">
-                    Upload Now
-                  </button>
-                </Link>
               </div>
             )}
           </div>

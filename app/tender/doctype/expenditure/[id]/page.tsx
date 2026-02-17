@@ -335,6 +335,36 @@ export default function RecordDetailPage() {
     };
   }, [formInstance, apiKey, apiSecret, docname, expenditure?.docstatus]);
 
+  // Calculate bill_upto and remaining_amount when relevant fields change
+  React.useEffect(() => {
+    if (!formInstance) return;
+
+    const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
+      // Recalculate when bill_amount or prev_bill_amt changes
+      if (name === "bill_amount" || name === "prev_bill_amt" || name === "tender_amount" || name === undefined) {
+        const billAmount = Number(value.bill_amount) || 0;
+        const prevBillAmt = Number(value.prev_bill_amt) || 0;
+        const tenderAmount = Number(value.tender_amount) || 0;
+
+        // Calculate bill_upto = bill_amount + prev_bill_amt
+        const billUpto = billAmount + prevBillAmt;
+        if (Number(formInstance.getValues("bill_upto")) !== billUpto) {
+          formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
+        }
+
+        // Calculate remaining_amount = tender_amount - bill_upto
+        const remainingAmount = tenderAmount - billUpto;
+        if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
+          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [formInstance]);
+
   const handleFormInit = React.useCallback((form: any) => {
     setFormInstance(form);
 
@@ -361,8 +391,9 @@ export default function RecordDetailPage() {
   }, [formDirty, expenditure?.docstatus]);
 
   /* -------------------------------------------------
-  4. Build tabs once when data is ready
-  ------------------------------------------------- */
+    4. Build tabs once when data is ready
+    ------------------------------------------------- */
+  // ... (rest of the code remains the same)
 
   const formTabs: TabbedLayout[] = React.useMemo(() => {
     if (!expenditure) return [];
@@ -411,7 +442,7 @@ export default function RecordDetailPage() {
           {
             name: "tender_amount",
             label: "Tender Amount",
-            type: "Currency",
+            type: "Read Only",
             fieldColumns: 1,
             precision: 2,
             fetchFrom: {
@@ -424,7 +455,7 @@ export default function RecordDetailPage() {
           {
             name: "lift_irrigation_scheme",
             label: "Lift Irrigation Scheme",
-            type: "Link",
+            type: "Read Only",
             linkTarget: "Lift Irrigation Scheme",
             required: true,
             fieldColumns: 1,
@@ -438,7 +469,7 @@ export default function RecordDetailPage() {
           {
             name: "prev_bill_no",
             label: "Previous Bill Number",
-            type: "Data",
+            type: "Read Only",
             defaultValue: 0,
             fieldColumns: 1,
           },
@@ -446,7 +477,7 @@ export default function RecordDetailPage() {
           {
             name: "prev_bill_amt",
             label: "Previous Bill Amount",
-            type: "Currency",
+            type: "Read Only",
             precision: 2,
             defaultValue: "0.00",
             fieldColumns: 1,
@@ -456,7 +487,7 @@ export default function RecordDetailPage() {
           {
             name: "previous_mb_no",
             label: "Previous MB No",
-            type: "Data",
+            type: "Read Only",
             defaultValue: 0,
             fieldColumns: 1,
           },
@@ -464,7 +495,7 @@ export default function RecordDetailPage() {
           {
             name: "previous_page_no",
             label: "Previous Page No",
-            type: "Data",
+            type: "Read Only",
             defaultValue: 0,
             fieldColumns: 1,
           },
@@ -473,7 +504,7 @@ export default function RecordDetailPage() {
             name: "bill_number",
             label: "Bill Number",
             type: "Data",
-            defaultValue: "0.00",
+            defaultValue: "0",
             fieldColumns: 1,
           },
 
@@ -506,14 +537,14 @@ export default function RecordDetailPage() {
           {
             name: "bill_upto",
             label: "Bill Upto Amount",
-            type: "Currency",
+            type: "Read Only",
             precision: 2,
             defaultValue: "0.00",
           },
           {
             name: "remaining_amount",
             label: "Bill Remaining Amount",
-            type: "Currency",
+            type: "Read Only",
             precision: 2,
           },
 
@@ -577,7 +608,14 @@ export default function RecordDetailPage() {
                 label: "Asset",
                 type: "Link",
                 linkTarget: "Asset",
-                displayDependsOn: "work_type==Repair || work_type==Auxilary || have_asset==1"
+                displayDependsOn: "work_type==Repair || work_type==Auxilary || have_asset==1",
+                customSearchParams: {
+                  filters: [
+                    ["Asset", "lift_irrigation_scheme", "=", ""],
+                    ["Asset", "stage_no_sub_scheme", "=", ""],
+                    ["Asset", "obsolete", "=", "No"]
+                  ]
+                },
               },
               {
                 name: "asset_name",
@@ -660,15 +698,12 @@ export default function RecordDetailPage() {
     const amtToBeMatched = savedAmount + totalChildBillAmt;
 
     // Rule 2: Balance Check
-    if (billAmount !== amtToBeMatched) {
-      const lowOrHigh = billAmount < amtToBeMatched ? "LOWER" : "HIGHER";
+    if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+      const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
 
-      toast.error("Mismatch detected in amounts", {
-        description: `Calculated Invoice Amount: ${amtToBeMatched}
-Entered Bill Amount: ${billAmount}
-
-The entered Bill Amount is ${lowOrHigh} than the calculated Invoice Amount.
-Please ensure that the Invoice Amount and the Total Bill Amount are equal.`, duration: Infinity
+      toast.error("Amount Mismatch", {
+        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Calculated Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+        duration: Infinity
       });
       return;
     }

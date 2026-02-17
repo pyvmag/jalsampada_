@@ -29,6 +29,9 @@ interface ContractorData {
   country: string;
   email_address: string;
   phone: string;
+  custom_contractor_company?: string;
+  custom_gst?: string;
+  custom_pan?: string;
   docstatus: 0 | 1 | 2;
 }
 
@@ -145,8 +148,7 @@ export default function ContractorDetailsPage({
             name: "address_type",
             label: "Address Type",
             type: "Select",
-            options:
-              "Billing\nShipping\nOffice\nPersonal\nPlant\nPostal\nShop\nSubsidiary\nWarehouse\nCurrent\nPermanent\nOther",
+            options: "Current\nPermanent",
           },
           {
             name: "city",
@@ -176,6 +178,21 @@ export default function ContractorDetailsPage({
             label: "Phone",
             type: "Data",
             required: true,
+          },
+          {
+            name: "custom_contractor_company",
+            label: "Contractor Company",
+            type: "Data",
+          },
+          {
+            name: "custom_gst",
+            label: "GST",
+            type: "Data",
+          },
+          {
+            name: "custom_pan",
+            label: "PAN",
+            type: "Data",
           },
           {
             name: "address",

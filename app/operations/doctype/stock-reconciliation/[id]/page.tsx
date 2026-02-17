@@ -21,7 +21,7 @@ const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 interface StockReconciliationItemRow {
   name?: string;
   item_code?: string; // Link -> Item
-  store_location?: string; // Link -> Store Location
+  warehouse?: string; // Link -> Store Location
   current_qty?: number; // Float
   qty?: number; // Float
   stock_uom?: string; // Data
@@ -48,7 +48,7 @@ interface StockReconciliationData {
   scan_barcode?: string;
   scan_mode?: 0 | 1;
   items?: StockReconciliationItemRow[];
-  difference_account?: string;
+  expense_account?: string;
   cost_center?: string;
   docstatus: 0 | 1 | 2 | number;
   modified: string;
@@ -315,6 +315,32 @@ export default function StockReconciliationDetailPage() {
 
   const handleFormInit = React.useCallback((form: any) => {
     setFormInstance(form);
+
+    const subscription = form.watch(
+      (value: any, { name }: { name?: string }) => {
+
+        // 🔹 Handle posting time toggle
+        if (name === "set_posting_time" || name === undefined) {
+          const isEditable = form.getValues("set_posting_time");
+          setEditDateTime(!!isEditable);
+        }
+
+        if (name === "set_warehouse") {
+          const defaultWh = form.getValues("set_warehouse");
+          const items = form.getValues("items") || [];
+
+          const updatedItems = items.map((row: any) => ({
+            ...row,
+            warehouse: defaultWh
+          }));
+
+          form.setValue("items", updatedItems);
+        }
+
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   /* -------------------------------------------------
@@ -374,6 +400,15 @@ export default function StockReconciliationDetailPage() {
             linkTarget: "Warehouse",
             fieldColumns: 1,
             defaultValue: stockReconciliation.set_warehouse || "",
+            customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
+            customSearchParams: {
+              filters: [
+                ["Warehouse", "company", "=", "quantbit"],
+                ["Warehouse", "is_group", "=", 0]
+              ]
+            },
+            referenceDoctype: "Stock Reconciliation Item",
+            doctype: "Warehouse"
           },
           {
             name: "scan_mode",
@@ -397,10 +432,24 @@ export default function StockReconciliationDetailPage() {
                 required: true,
               },
               {
-                name: "store_location",
+                name: "warehouse",
                 label: "Store Location",
                 type: "Link",
-                linkTarget: "Warehouse"
+                linkTarget: "Warehouse",
+                customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
+                customSearchParams: {
+                  filters: [
+                    ["Warehouse", "company", "=", "quantbit"],
+                    ["Warehouse", "is_group", "=", 0]
+                  ]
+                },
+                referenceDoctype: "Stock Reconciliation Item",
+                doctype: "Warehouse",
+                fetchFrom: {
+                  sourceField: "parent.set_warehouse",
+                  targetDoctype: "Warehouse",
+                  targetField: "name"
+                }
               },
               {
                 name: "current_qty",
@@ -475,11 +524,11 @@ export default function StockReconciliationDetailPage() {
             ],
           },
           {
-            name: "difference_account",
+            name: "expense_account",
             label: "Difference Account",
             type: "Link",
             linkTarget: "Account",
-            defaultValue: stockReconciliation.difference_account || "",
+            defaultValue: stockReconciliation.expense_account || "",
           },
           {
             name: "cost_center",

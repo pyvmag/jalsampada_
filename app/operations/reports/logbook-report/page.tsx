@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { LinkInput } from "@/components/LinkInput";
 import { useAuth } from "@/context/AuthContext";
 import DatePicker from "react-datepicker";
@@ -39,7 +39,7 @@ type ColumnConfig = {
   widthInt: number; // 150 (numeric for calculations)
   isHtml?: boolean;
   formatter?: (value: any, row?: ReportData) => string;
-  // New properties for Sticky Logic
+  // Sticky Logic
   isSticky?: boolean;
   stickyLeft?: number;
 };
@@ -99,6 +99,13 @@ export default function LogBookSheetReportPage() {
   const [apiFields, setApiFields] = useState<ReportField[]>([]); 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState({
+    isGrabbing: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
 
   const [filters, setFilters] = useState<Filters>({
     from_date: "",
@@ -295,6 +302,44 @@ export default function LogBookSheetReportPage() {
     return String(value);
   };
 
+  // --- Horizontal Scroll Drag Handlers ---
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tableRef.current) return;
+    setDragState({
+      isGrabbing: true,
+      startX: e.pageX - tableRef.current.offsetLeft,
+      scrollLeft: tableRef.current.scrollLeft,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState.isGrabbing || !tableRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableRef.current.offsetLeft;
+    const walk = (x - dragState.startX) * 1.5; // Optimized scroll speed
+    tableRef.current.scrollLeft = dragState.scrollLeft - walk;
+  };
+
+  const handleMouseUp = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setDragState(prev => ({ ...prev, isGrabbing: false }));
+  }, []);
+
+  // Global mouse up handler for better UX
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState.isGrabbing) {
+        setDragState(prev => ({ ...prev, isGrabbing: false }));
+      }
+    };
+
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [dragState.isGrabbing]);
+
   return (
     <div className="module active">
       <div className="module-header">
@@ -362,13 +407,28 @@ export default function LogBookSheetReportPage() {
         </div>
 
         {/* --- TABLE CONTAINER --- */}
-        <div className="stock-table-container border rounded-md relative z-10" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
+        <div
+          ref={tableRef}
+          className="stock-table-container border rounded-md relative z-10"
+          style={{
+            overflowX: "auto",
+            overflowY: "auto",
+            maxHeight: "70vh",
+            cursor: dragState.isGrabbing ? "grabbing" : "grab",
+            userSelect: dragState.isGrabbing ? "none" : "auto",
+            willChange: dragState.isGrabbing ? "transform" : "auto",
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
           <table className="stock-table sticky-header-table" style={{ minWidth: `${totalTableWidth}px`, borderCollapse: "separate", borderSpacing: 0 }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
               <tr>
                 {columnConfig.map((column) => (
                   <th 
-                    key={column.fieldname} 
+                    key={column.fieldname}
                     style={{ 
                         width: column.width,
                         minWidth: column.width,
@@ -378,7 +438,7 @@ export default function LogBookSheetReportPage() {
                         zIndex: column.isSticky ? 30 : 20, // Sticky headers higher than normal headers
                         backgroundColor: "#3683f6", // Blue background matching stock-table style
                         color: "white", // White text for blue background
-                        borderRight: column.isSticky ? "1px solid #ddd" : "none", // Divider
+                        borderRight: column.isSticky ? "none" : "none", // Remove border divider
                         boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none" // Shadow on last sticky col
                     }}
                   >
@@ -402,7 +462,7 @@ export default function LogBookSheetReportPage() {
                             left: column.isSticky ? `${column.stickyLeft}px` : "auto",
                             zIndex: column.isSticky ? 10 : 1, // Sticky body higher than normal body
                             backgroundColor: "white", // CRITICAL: Opaque background so text doesn't overlap
-                            borderRight: column.isSticky ? "1px solid #eee" : "none",
+                            borderRight: column.isSticky ? "none" : "none",
                             boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                         }}
                       >

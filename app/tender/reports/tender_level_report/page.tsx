@@ -51,21 +51,23 @@ const formatCurrency = (amount: number | string | null) => {
 
 const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
   name: "200px",
-  custom_lis_name: "200px",
   custom_fiscal_year: "120px",
-  // custom_posting_date: "120px",
-  custom_prapan_suchi: "250px",
+  custom_lis_name: "200px",
   custom_stage: "250px",
+  custom_prapan_suchi: "250px",
   custom_work_order: "150px",
-  expected_start_date: "120px",
-  custom_tender_status: "120px",
   custom_tender_amount: "150px",
+  custom_tender_status: "120px",
+  expected_start_date: "120px",
   custom_expected_date: "120px",
   notes: "250px",
+  custom_contractor_company: "200px",
   custom_contractor_name: "200px",
   custom_mobile_no: "120px",
-  custom_supplier_address: "250px",
   custom_email_id: "200px",
+  custom_gst: "120px",
+  custom_pan: "120px",
+  custom_supplier_address: "250px",
   custom_is_extension: "120px",
   extension_count: "120px",
   extension_upto: "120px",
@@ -82,16 +84,13 @@ const COLUMN_ORDER = [
   "custom_tender_status",
   "expected_start_date",
   "custom_expected_date",
-  "custom_is_extension",
-  "extension_count",
-  "extension_upto",
   "notes",
-  "custom_company_name",
+  "custom_contractor_company",
   "custom_contractor_name",
   "custom_mobile_no",
   "custom_email_id",
-  "custom_gst_no",
-  "custom_pan_no",
+  "custom_gst",
+  "custom_pan",
   "custom_supplier_address",
 ];
 
@@ -233,7 +232,7 @@ export default function TenderLevelReport() {
       const cleanedFilters: Record<string, string> = {};
       Object.entries(currentFilters).forEach(([key, value]) => {
         if (value && value.trim() !== "") {
-          // Skip custom_prapan_suchi filter for server-side since it doesn't work
+          // Skip custom_prapan_suchi filter for server-side since it's handled client-side
           if (key !== 'custom_prapan_suchi') {
             cleanedFilters[key] = value;
           }
@@ -284,16 +283,26 @@ export default function TenderLevelReport() {
   }, [apiKey, apiSecret, isAuthenticated, isInitialized]);
 
   // --- Effects ---
-  // Auto-refresh when filters change (Debounced 500ms)
+  // Auto-refresh when server-side filters change (Debounced 500ms)
   useEffect(() => {
     if (!isInitialized || !isAuthenticated) return;
 
+    // Only trigger server refresh for filters that are handled server-side
+    const serverFilters: Filters = {
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+      custom_lis_name: filters.custom_lis_name,
+      custom_fiscal_year: filters.custom_fiscal_year,
+      custom_tender_status: filters.custom_tender_status,
+      custom_prapan_suchi: "" // Empty since it's handled client-side
+    };
+
     const timer = setTimeout(() => {
-      fetchReportData(filters);
+      fetchReportData(serverFilters);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [filters, fetchReportData, isInitialized, isAuthenticated]);
+  }, [filters.from_date, filters.to_date, filters.custom_lis_name, filters.custom_fiscal_year, filters.custom_tender_status, fetchReportData, isInitialized, isAuthenticated]);
 
   // --- Client-side filtering effect ---
   useEffect(() => {
@@ -580,19 +589,22 @@ export default function TenderLevelReport() {
             className="stock-table sticky-header-table"
             style={{ minWidth: `${totalTableWidth}px` }}
           >
-            <thead style={{ position: "sticky", top: 0, zIndex: 10, backgroundColor: "#3683f6" }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 30, backgroundColor: "#3683f6" }}>
               <tr>
                 {columnConfig.map((column) => (
                   <th
                     key={column.fieldname}
                     style={{
                       width: column.width,
-                      position: STICKY_COLUMNS.includes(column.fieldname) ? "sticky" : "static",
+                      position: STICKY_COLUMNS.includes(column.fieldname) ? "sticky" : "relative",
                       left: stickyLeftMap[column.fieldname] || "auto",
-                      zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 40 : 15,
-                      backgroundColor: STICKY_COLUMNS.includes(column.fieldname)
-                        ? "#3683f6"
-                        : "inherit",
+                      zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 30 : 20,
+                      backgroundColor: "#3683f6",
+                      color: "white",
+                      borderRight: "none",
+                      boxShadow: STICKY_COLUMNS.includes(column.fieldname) && 
+                                 column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1] 
+                                 ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                     }}
                   >
                     {column.label}
@@ -617,12 +629,14 @@ export default function TenderLevelReport() {
                       <td
                         key={`${index}-${column.fieldname}`}
                         style={{
-                          position: STICKY_COLUMNS.includes(column.fieldname) ? "sticky" : "static",
+                          position: STICKY_COLUMNS.includes(column.fieldname) ? "sticky" : "relative",
                           left: stickyLeftMap[column.fieldname] || "auto",
-                          zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 30 : 10,
-                          backgroundColor: STICKY_COLUMNS.includes(column.fieldname)
-                            ? "white"
-                            : "inherit",
+                          zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 10 : 1,
+                          backgroundColor: "white",
+                          borderRight: "none",
+                          boxShadow: STICKY_COLUMNS.includes(column.fieldname) && 
+                                     column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1] 
+                                     ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                         }}
                       >
                         {renderCellValue(row, column)}

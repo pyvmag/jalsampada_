@@ -62,6 +62,7 @@ interface Logbook {
   stop_datetime?: string;
   lis_name?: string;
   modified?: string;
+  docstatus?: number;
 }
 
 type SortDirection = "asc" | "desc"; // 🟢 Fixed typo 'dsc' -> 'desc' to match API expectation
@@ -166,6 +167,7 @@ export default function LogbookPage() {
             "stop_datetime",
             "lis_name",
             "modified",
+            "docstatus",
           ]),
           limit_start: start,
           limit_page_length: limit,
@@ -224,6 +226,7 @@ export default function LogbookPage() {
           stop_datetime: r.stop_datetime,
           lis_name: r.lis_name,
           modified: r.modified,
+          docstatus: r.docstatus,
         }));
 
         if (isReset) {
@@ -255,6 +258,24 @@ export default function LogbookPage() {
     if (!isLoadingMore && hasMore) {
       fetchLogbooks(logbooks.length, false);
     }
+  };
+
+  // Helper function to determine status display based on document status
+  const getStatusDisplay = (logbook: Logbook) => {
+    // 1. If Cancelled
+    if (logbook.docstatus === 2) return "Cancelled";
+    
+    // 2. If Submitted (Show Operational Status)
+    if (logbook.docstatus === 1) {
+      return logbook.status || "Submitted";
+    }
+    
+    // 3. If Draft (docstatus === 0) - show Draft instead of operational status
+    if (logbook.docstatus === 0) {
+      return "Draft";
+    }
+    
+    return logbook.status || "—";
   };
 
   // 🟢 2. Handle Bulk Delete
@@ -332,7 +353,8 @@ export default function LogbookPage() {
 
   const getFieldsForLogbook = (l: Logbook): RecordCardField[] => {
     const fields: RecordCardField[] = [];
-    if (l.status) fields.push({ label: "Status", value: l.status });
+    const statusDisplay = getStatusDisplay(l);
+    if (statusDisplay) fields.push({ label: "Status", value: statusDisplay });
     if (l.lis_name) fields.push({ label: "LIS", value: l.lis_name });
     if (l.stop_datetime) fields.push({ label: "Stop Datetime", value: l.stop_datetime });
     return fields;
@@ -417,18 +439,22 @@ export default function LogbookPage() {
                     <span
                       style={{
                         color:
-                          l.status === "Stopped"
+                          l.docstatus === 2
+                            ? "#dc2626" // red-600 for Cancelled
+                            : l.docstatus === 0
+                            ? "#6b7280" // gray-500 for Draft
+                            : l.status === "Stopped"
                             ? "#dc2626" // red-600
                             : l.status === "Running"
                               ? "#16a34a" // green-600
                               : "inherit",
                         fontWeight:
-                          l.status === "Stopped" || l.status === "Running"
+                          l.docstatus === 2 || l.docstatus === 0 || l.status === "Stopped" || l.status === "Running"
                             ? 600
                             : "normal",
                       }}
                     >
-                      {l.status || "—"}
+                      {getStatusDisplay(l)}
                     </span>
                   </td>
                   <td>{l.stop_datetime || "—"}</td>

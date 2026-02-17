@@ -7,6 +7,8 @@ import { RecordCard, RecordCardField } from "@/components/RecordCard";
 import { useAuth } from "@/context/AuthContext";
 
 import { useSelection } from "@/hooks/useSelection";
+import { LinkField } from "@/components/LinkField"; // Added
+import { Controller, useForm } from "react-hook-form"; // Added
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { bulkDeleteRPC } from "@/api/rpc";
 import { toast } from "sonner";
@@ -42,6 +44,9 @@ interface MaintenanceLog {
   completion_date?: string;
   creation?: string;
   modified?: string;
+  lis?: string;
+  stage?: string;
+  asset_name?: string;
 }
 
 type ViewMode = "grid" | "list";
@@ -53,7 +58,7 @@ export default function MaintenanceLogListPage() {
 
   const [records, setRecords] = React.useState<MaintenanceLog[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -61,20 +66,40 @@ export default function MaintenanceLogListPage() {
   const [totalCount, setTotalCount] = React.useState(0);    // 🟢 Total count of records
   const [error, setError] = React.useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const debouncedSearch = useDebounce(searchTerm, 300);
+  /* ── Search ─────────────────────────────────── */
+  // 🟢 Filter states
+  const { control, watch } = useForm({
+    defaultValues: {
+      lis: "",
+      stage: "",
+      asset_name: "",
+    },
+  });
+
+  const selectedLis = watch("lis");
+  const selectedStage = watch("stage");
+  const selectedAsset = watch("asset_name");
 
   const title = "Maintenance Log";
 
-  /* ── Search ─────────────────────────────────── */
   const filteredRecords = React.useMemo(() => {
-    if (!debouncedSearch) return records;
-    return records.filter((r) =>
-      r.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      r.maintenance_status?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      r.completion_date?.toLowerCase().includes(debouncedSearch.toLowerCase())
-    );
-  }, [records, debouncedSearch]);
+    let filtered = records;
+
+    // Client-side filtering for LIS and Stage
+    if (selectedLis) {
+      filtered = filtered.filter(r => r.lis === selectedLis);
+    }
+
+    if (selectedStage) {
+      filtered = filtered.filter(r => r.stage === selectedStage);
+    }
+
+    if (selectedAsset) {
+      filtered = filtered.filter(r => r.asset_name === selectedAsset);
+    }
+
+    return filtered;
+  }, [records, selectedLis, selectedStage, selectedAsset]);
 
   /* ── Selection ───────────────────────────────── */
   const {
@@ -106,11 +131,6 @@ export default function MaintenanceLogListPage() {
 
         const limit = isReset ? INITIAL_PAGE_SIZE : LOAD_MORE_SIZE;
         const filters: any[] = [];
-        if (debouncedSearch) {
-          filters.push(["Asset Maintenance Log", "name", "like", `%${debouncedSearch}%`]);
-          filters.push(["Asset Maintenance Log", "maintenance_status", "like", `%${debouncedSearch}%`]);
-          filters.push(["Asset Maintenance Log", "completion_date", "like", `%${debouncedSearch}%`]);
-        }
 
         const commonHeaders = {
           Authorization: `token ${apiKey}:${apiSecret}`,
@@ -123,8 +143,10 @@ export default function MaintenanceLogListPage() {
               fields: JSON.stringify([
                 "name",
                 "maintenance_status",
-                // "next_due_date",  // ⛔ COMMENTED — causing 417 error
                 "completion_date",
+                "lis",
+                "stage",
+                "asset_name",
                 "creation",
                 "modified",
               ]),
@@ -138,9 +160,9 @@ export default function MaintenanceLogListPage() {
           }),
           // Only fetch count during initial load or filter change
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: doctypeName, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+            params: {
+              doctype: doctypeName,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -150,8 +172,10 @@ export default function MaintenanceLogListPage() {
         const mapped: MaintenanceLog[] = raw.map((r: any) => ({
           name: r.name,
           maintenance_status: r.maintenance_status ?? "",
-          // next_due_date: r.next_due_date ?? "",  // ⛔ DISABLED
           completion_date: r.completion_date ?? "",
+          lis: r.lis ?? "",
+          stage: r.stage ?? "",
+          asset_name: r.asset_name ?? "",
           creation: r.creation ?? "",
           modified: r.modified ?? "",
         }));
@@ -178,7 +202,7 @@ export default function MaintenanceLogListPage() {
         setIsLoadingMore(false);
       }
     },
-    [doctypeName, apiKey, apiSecret, isAuthenticated, isInitialized, debouncedSearch]
+    [doctypeName, apiKey, apiSecret, isAuthenticated, isInitialized]
   );
 
   React.useEffect(() => {
@@ -222,7 +246,7 @@ export default function MaintenanceLogListPage() {
 
       toast.success(`Deleted ${count} records`);
       clearSelection();
-      fetchRecords();
+      fetchRecords(0, true);
     } catch (err: any) {
       const messages = getApiMessages(
         null,
@@ -246,8 +270,10 @@ export default function MaintenanceLogListPage() {
 
   const getFieldsForRecord = (record: MaintenanceLog): RecordCardField[] => [
     { label: "Status", value: record.maintenance_status || "-" },
-    // { label: "Due Date", value: record.next_due_date || "-" }, // ⛔ WAITING FOR BACKEND
     { label: "Completion Date", value: record.completion_date || "-" },
+    { label: "LIS", value: record.lis || "-" },
+    { label: "Stage", value: record.stage || "-" },
+    { label: "Asset", value: record.asset_name || "-" },
     { label: "Created", value: formatTimeAgo(record.creation) },
   ];
 
@@ -262,8 +288,10 @@ export default function MaintenanceLogListPage() {
             </th>
             <th>ID</th>
             <th>Status</th>
-            {/* <th>Due Date</th> ⛔ DISABLED */}
             <th>Completion Date</th>
+            <th>LIS</th>
+            <th>Stage</th>
+            <th>Asset</th>
             <th className="text-right pr-4" style={{ width: "120px" }}>
               <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
                 {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
@@ -291,8 +319,10 @@ export default function MaintenanceLogListPage() {
                   </td>
                   <td>{r.name}</td>
                   <td>{r.maintenance_status}</td>
-                  {/* <td>{r.next_due_date}</td> ⛔ DISABLED */}
                   <td>{r.completion_date}</td>
+                  <td>{r.lis}</td>
+                  <td>{r.stage}</td>
+                  <td>{r.asset_name}</td>
                   <td className="text-right pr-4">
                     <TimeAgo date={r.modified} />
                   </td>
@@ -301,7 +331,7 @@ export default function MaintenanceLogListPage() {
             })
           ) : (
             <tr>
-              <td colSpan={5} style={{ textAlign: "center", padding: 32 }}>
+              <td colSpan={8} style={{ textAlign: "center", padding: 32 }}>
                 No records found
               </td>
             </tr>
@@ -329,8 +359,8 @@ export default function MaintenanceLogListPage() {
     </div>
   );
 
-  if (loading) return <p style={{ padding: "2rem" }}>Loading Maintenance Log...</p>;
-  if (error) return <p style={{ padding: "2rem", color: "red" }}>{error}</p>;
+  if (loading && records.length === 0) return <p style={{ padding: "2rem" }}>Loading Maintenance Log...</p>;
+  if (error && records.length === 0) return <p style={{ padding: "2rem", color: "red" }}>{error}</p>;
 
   return (
     <div className="module active">
@@ -357,15 +387,93 @@ export default function MaintenanceLogListPage() {
         )}
       </div>
 
-      <div className="search-filter-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem" }}>
-        <input
-          type="text"
-          placeholder={`Search ${title}...`}
-          className="form-control"
-          style={{ width: 240 }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="search-filter-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", gap: "8px" }}>
+
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }}>
+          {/* LIS Filter */}
+          <div style={{ minWidth: "200px" }}>
+            <Controller
+              control={control}
+              name="lis"
+              render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  {/* Using import { LinkField } from "@/components/LinkField" */}
+                  <LinkField
+                    control={control}
+                    field={{
+                      name: "lis",
+                      label: "",
+                      type: "Link",
+                      linkTarget: "Lift Irrigation Scheme",
+                      placeholder: "Filter by LIS",
+                      defaultValue: value
+                    }}
+                    error={null}
+                    className="[&>label]:hidden"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          {/* Stage Filter */}
+          <div style={{ minWidth: "200px" }}>
+            <Controller
+              control={control}
+              name="stage"
+              render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <LinkField
+                    control={control}
+                    field={{
+                      name: "stage",
+                      label: "",
+                      type: "Link",
+                      linkTarget: "Stage No",
+                      placeholder: "Filter by Stage",
+                      defaultValue: value
+                    }}
+                    error={null}
+                    className="[&>label]:hidden"
+                    // Pass filters prop if needed, similar to Maintenance Schedule
+                    filters={selectedLis ? { lis_name: selectedLis } : {}}
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          {/* Asset Filter */}
+          <div style={{ minWidth: "200px" }}>
+            <Controller
+              control={control}
+              name="asset_name"
+              render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <LinkField
+                    control={control}
+                    field={{
+                      name: "asset_name",
+                      label: "",
+                      type: "Link",
+                      linkTarget: "Asset",
+                      placeholder: "Filter by Asset",
+                      defaultValue: value
+                    }}
+                    filters={{
+                      ...(selectedLis ? { custom_lis_name: selectedLis } : {}),
+                      ...(selectedStage ? { custom_stage_no: selectedStage } : {})
+                    }}
+                    error={null}
+                    className="[&>label]:hidden"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+
+        </div>
 
         <button
           className="btn btn--outline btn--sm flex items-center justify-center"
@@ -377,12 +485,12 @@ export default function MaintenanceLogListPage() {
 
       <div className="view-container" style={{ marginTop: "0.5rem", paddingBottom: "2rem" }}>
         {view === "grid" ? renderGridView() : renderListView()}
-        {hasMore && records.length > 0 && (
+        {hasMore && filteredRecords.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

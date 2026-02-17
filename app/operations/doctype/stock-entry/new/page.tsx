@@ -10,6 +10,8 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { get } from "lodash";
+import { useFormContext } from "react-hook-form";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -35,7 +37,7 @@ interface StockEntryItemRow {
     batch_no?: string;              // Data
     expense_account?: string;       // Link -> Account
     cost_center?: string;           // Link -> Cost Center
-    tender?: string;                // Link -> Tender
+    custom_tender?: string;                // Link -> Tender
     allow_zero_valuation_rate?: 0 | 1; // Check
 }
 
@@ -54,7 +56,7 @@ interface StockEntryData {
     stock_entry_type?: string;        // Link -> Stock Entry Type
     apply_putaway_rule?: 0 | 1;       // Check
     add_to_transit?: 0 | 1;           // Check
-    tender?: string;                  // Link -> Tender (Accounting Dimension)
+    custom_tender?: string;                  // Link -> Tender (Accounting Dimension)
     from_warehouse?: string;          // Link -> Warehouse (Default Source)
     to_warehouse?: string;            // Link -> Warehouse (Default Target)
     scan_barcode?: string;            // Data
@@ -125,16 +127,42 @@ export default function NewStockEntryPage() {
     const handleFormInit = React.useCallback((form: any) => {
         setFormInstance(form);
 
-        // Set default values for posting date and time
         form.setValue("posting_date", getCurrentDate());
         form.setValue("posting_time", getCurrentTime());
 
-        // Watch for set_posting_time checkbox changes
         const subscription = form.watch((value: any, { name }: { name?: string }) => {
+
+            // Handle posting time toggle
             if (name === "set_posting_time" || name === undefined) {
                 const isEditable = form.getValues("set_posting_time");
                 setEditDateTime(!!isEditable);
             }
+
+            if (name === "from_warehouse") {
+                const fromWh = form.getValues("from_warehouse");
+                const items = form.getValues("items") || [];
+
+                const updatedItems = items.map((row: any) => ({
+                    ...row,
+                    s_warehouse: fromWh
+                }));
+
+                form.setValue("items", updatedItems);
+            }
+
+            // 🔥 When Default Target Warehouse changes
+            if (name === "to_warehouse") {
+                const toWh = form.getValues("to_warehouse");
+                const items = form.getValues("items") || [];
+
+                const updatedItems = items.map((row: any) => ({
+                    ...row,
+                    t_warehouse: toWh
+                }));
+
+                form.setValue("items", updatedItems);
+            }
+
         });
 
         return () => subscription.unsubscribe();
@@ -210,11 +238,11 @@ export default function NewStockEntryPage() {
                         type: "Section Break",
                     },
                     {
-                        name: "tender",
+                        name: "custom_tender",
                         label: "Tender",
                         type: "Link",
                         linkTarget: "Project",
-                        defaultValue: getValue("tender"),
+                        defaultValue: getValue("custom_tender"),
                     },
                     {
                         name: "cb2",
@@ -290,12 +318,22 @@ export default function NewStockEntryPage() {
                                 label: "Source Warehouse",
                                 type: "Link",
                                 linkTarget: "Warehouse",
+                                fetchFrom: {
+                                    sourceField: "parent.from_warehouse",
+                                    targetDoctype: "Warehouse",
+                                    targetField: "name"
+                                }
                             },
                             {
                                 name: "t_warehouse",
                                 label: "Target Warehouse",
                                 type: "Link",
                                 linkTarget: "Warehouse",
+                                fetchFrom: {
+                                    sourceField: "parent.to_warehouse",
+                                    targetDoctype: "Warehouse",
+                                    targetField: "name"
+                                }
                             },
 
                             {
@@ -387,12 +425,12 @@ export default function NewStockEntryPage() {
                                 defaultValue: ""
                             },
                             {
-                                name: "tender",
+                                name: "custom_tender",
                                 label: "Tender",
                                 type: "Link",
                                 linkTarget: "Project",
                                 fetchFrom: {
-                                    sourceField: "parent.tender",
+                                    sourceField: "parent.custom_tender",
                                     targetDoctype: "Project", // Added targetDoctype
                                     targetField: "name"
                                 },

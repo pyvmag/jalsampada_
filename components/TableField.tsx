@@ -503,16 +503,18 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
   const allSelected = fields.length > 0 && selectedIndices.size === fields.length;
   const someSelected = selectedIndices.size > 0 && selectedIndices.size < fields.length;
 
+  const visibleColumns = (field.columns || []).filter(
+    (c) => c.type !== "Column Break" && c.type !== "Section Break"
+  );
+
   return (
     <>
       <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-       <label className={`form-label ${field.className || ""}`}>
-  {field.label}
-</label>
-
-        <div className="stock-table-container">
-
-          <table className="stock-table child-form-table">
+        <label className={`form-label ${field.className || ""}`}>
+          {field.label}
+        </label>
+        <div className="stock-table-container data-driven-table-wrapper">
+          <table className="stock-table child-form-table auto-width-data-table">
             <thead>
               <tr>
                 <th style={{ width: 40 }} className="child-table-checkbox-cell">
@@ -530,7 +532,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                   />
                 </th>
 
-                {(field.columns || []).map((c) => (
+                {visibleColumns?.map((c) => (
                   <th key={c.name}>{c.label}</th>
                 ))}
                 <th style={{ width: 60, position: 'sticky', right: 0, zIndex: 10 }} className="child-table-edit-cell">
@@ -541,6 +543,8 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
             <tbody>
               {fields.map((fieldItem, idx) => {
                 const currentRowData = rows[idx] || {};
+
+                const isRowDisabled = disabled || (field.name === 'custom_tender_extension_history' && idx < rows.length - 1);
 
                 return (
                   <tr
@@ -559,7 +563,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                       />
                     </td>
 
-                    {(field.columns || []).map((c) => (
+                    {visibleColumns?.map((c) => (
                       <td key={c.name} className="child-table-input-cell">
                         {c.type === "Attach" ? (
                           <AttachmentCell
@@ -568,7 +572,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             rowIndex={idx}
                             columnName={c.name}
                             onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
-                            disabled={disabled}
+                            disabled={isRowDisabled}
                           />
                         ) : c.type === "Link" ? (
                           <TableLinkCell
@@ -576,7 +580,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             fieldName={`${field.name}.${idx}.${c.name}`}
                             column={c}
                             onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
-                            disabled={disabled}
+                            disabled={isRowDisabled}
                           />
                         ) : c.type === "Date" ? (
                           <DatePicker
@@ -592,14 +596,14 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             yearDropdownItemNumber={100}
                             withPortal
                             portalId="root"
-                            disabled={disabled}
+                            disabled={isRowDisabled}
                           />
                         ) : c.type === "Data" || c.type === "Small Text" || c.type === "Text" ? (
-                          renderTableInput(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Long Text" || c.type === "Markdown Editor" ? (
-                          renderTableTextarea(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableTextarea(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Code" ? (
-                          renderTableTextarea(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableTextarea(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Password" ? (
                           <input
                             className="form-control-borderless"
@@ -607,14 +611,14 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             placeholder={c.label}
                             value={currentRowData[c.name] || ""}
                             onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
-                            disabled={disabled}
+                            disabled={isRowDisabled}
                           />
                         ) : c.type === "Int" ? (
-                          renderTableNumber(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableNumber(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Float" || c.type === "Currency" || c.type === "Percent" ? (
-                          renderTableNumber(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableNumber(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Color" ? (
-                          renderTableColor(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableColor(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "DateTime" || c.type === "Time" ? (
                           <input
                             className="form-control-borderless"
@@ -622,24 +626,24 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             placeholder={c.label}
                             value={currentRowData[c.name] || ""}
                             onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
-                            disabled={disabled}
+                            disabled={isRowDisabled}
                           />
                         ) : c.type === "Duration" ? (
-                          renderTableDuration(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableDuration(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Check" ? (
-                          renderTableCheckbox(c, idx, rows, handleTableInputChange, formMethods.getValues("pump_operation") === "stop", disabled)
+                          renderTableCheckbox(c, idx, rows, handleTableInputChange, formMethods.getValues("pump_operation") === "stop", isRowDisabled)
                         ) : c.type === "Select" ? (
-                          renderTableSelect(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableSelect(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Barcode" ? (
-                          renderTableInput(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Read Only" ? (
                           renderTableReadOnly(c, idx, rows)
                         ) : c.type === "Rating" ? (
-                          renderTableRating(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableRating(c, idx, rows, handleTableInputChange, isRowDisabled)
                         ) : c.type === "Button" ? (
                           renderTableButton(c, idx, rows)
                         ) : (
-                          renderTableInput(c, idx, rows, handleTableInputChange, disabled)
+                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
                         )}
                       </td>
                     ))}
@@ -652,6 +656,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                         className="h-8 w-8"
                         onClick={() => handleEdit(idx)}
                         title="Edit row"
+                        disabled={isRowDisabled}
                       >
                         <Edit size={16} />
                       </Button>

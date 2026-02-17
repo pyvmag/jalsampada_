@@ -239,7 +239,7 @@ export default function NewTenderPage() {
         options: "Extension Period Details",
         columns: [
           { name: "extension_count", label: "Extension Count", type: "Read Only" },
-          { name: "extension_upto", label: "Extension Upto", type: "Date", },
+          { name: "extension_upto", label: "Extension Upto", type: "Date" },
           { name: "sanction_letter", label: "Sanction Letter", type: "Data" },
           { name: "attach", label: "Attach", type: "Attach" },
         ],
@@ -267,14 +267,14 @@ export default function NewTenderPage() {
         linkTarget: "Contractor",
       },
       {
-        name: "custom_mobile_no",
-        label: "Mobile No",
+        name: "custom_contractor_company",
+        label: "Contractor Company",
         type: "Read Only",
         fetchFrom: {
           sourceField: "custom_contractor_name",
           targetDoctype: "Contractor",
-          targetField: "phone"
-        }
+          targetField: "custom_contractor_company"
+        },
       },
       {
         name: "custom_supplier_address",
@@ -287,6 +287,16 @@ export default function NewTenderPage() {
         }
       },
       {
+        name: "custom_mobile_no",
+        label: "Mobile No",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "phone"
+        }
+      },
+      {
         name: "custom_email_id",
         label: "Email ID",
         type: "Read Only",
@@ -294,6 +304,26 @@ export default function NewTenderPage() {
           sourceField: "custom_contractor_name",
           targetDoctype: "Contractor",
           targetField: "email_address"
+        },
+      },
+      {
+        name: "custom_gst",
+        label: "GST",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "custom_gst"
+        },
+      },
+      {
+        name: "custom_pan",
+        label: "PAN",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "custom_pan"
         },
       },
     ];
@@ -496,9 +526,20 @@ export default function NewTenderPage() {
           if (
             field.type === "Section Break" ||
             field.type === "Column Break" ||
-            field.type === "Button" ||
-            field.type === "Read Only"
+            field.type === "Button"
           ) {
+            nonDataFields.add(field.name);
+          }
+          // Don't exclude contractor fields even if they are Read Only
+          // because they need to be saved with the tender record
+          if (field.type === "Read Only" && ![
+            "custom_contractor_company",
+            "custom_mobile_no", 
+            "custom_supplier_address",
+            "custom_email_id",
+            "custom_gst",
+            "custom_pan"
+          ].includes(field.name)) {
             nonDataFields.add(field.name);
           }
         });

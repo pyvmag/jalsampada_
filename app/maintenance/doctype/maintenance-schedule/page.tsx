@@ -43,7 +43,7 @@ export default function MaintenanceScheduleListPage() {
 
   const [records, setRecords] = React.useState<MaintenanceSchedule[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   const [loading, setLoading] = React.useState(true);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(true);
@@ -71,7 +71,7 @@ export default function MaintenanceScheduleListPage() {
       const matchesLis = !selectedLis || r.custom_lis === selectedLis;
       const matchesStage = !selectedStage || r.custom_stage === selectedStage;
       const matchesAsset = !selectedAsset || r.asset_name === selectedAsset;
-      
+
       return matchesLis && matchesStage && matchesAsset;
     });
   }, [records, selectedLis, selectedStage, selectedAsset]);
@@ -104,9 +104,9 @@ export default function MaintenanceScheduleListPage() {
         }
 
         const limit = isReset ? INITIAL_PAGE_SIZE : LOAD_MORE_SIZE;
-        
+
         // 🟢 Removed server-side filters - now using client-side filtering only
-        
+
         const commonHeaders = {
           Authorization: `token ${apiKey}:${apiSecret}`,
         };
@@ -131,7 +131,7 @@ export default function MaintenanceScheduleListPage() {
             withCredentials: true,
           }),
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
+            params: {
               doctype: doctypeName
             },
             headers: commonHeaders,
@@ -243,12 +243,12 @@ export default function MaintenanceScheduleListPage() {
   const getFieldsForRecord = (
     record: MaintenanceSchedule
   ): RecordCardField[] => [
-    { label: "Asset Name", value: record.asset_name || "-" },
-    { label: "LIS", value: record.custom_lis || "-" },
-    { label: "Stage", value: record.custom_stage || "-" },
-    { label: "Maintenance Team", value: record.maintenance_team || "-" },
-    { label: "Created", value: formatTimeAgo(record.creation) },
-  ];
+      { label: "Asset Name", value: record.asset_name || "-" },
+      { label: "LIS", value: record.custom_lis || "-" },
+      { label: "Stage", value: record.custom_stage || "-" },
+      { label: "Maintenance Team", value: record.maintenance_team || "-" },
+      { label: "Created", value: formatTimeAgo(record.creation) },
+    ];
 
   /* ── Views ───────────────────────────────────── */
   const renderListView = () => (
@@ -383,7 +383,7 @@ export default function MaintenanceScheduleListPage() {
       </div>
 
       <div className="search-filter-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", gap: "8px" }}>
-        
+
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }}>
           <div style={{ minWidth: "200px" }}>
             <Controller
@@ -449,12 +449,11 @@ export default function MaintenanceScheduleListPage() {
                       type: "Link",
                       linkTarget: "Asset",
                       placeholder: "Filter by Asset",
-                      defaultValue: value,
-                      // Filter assets based on LIS and Stage if selected
-                      filterMapping: [
-                        { sourceField: "custom_lis", targetField: "custom_lis_name" },
-                        { sourceField: "custom_stage", targetField: "custom_stage_no" }
-                      ]
+                      defaultValue: value
+                    }}
+                    filters={{
+                      ...(selectedLis ? { custom_lis_name: selectedLis } : {}),
+                      ...(selectedStage ? { custom_stage_no: selectedStage } : {})
                     }}
                     error={null}
                     className="[&>label]:hidden"
@@ -477,10 +476,10 @@ export default function MaintenanceScheduleListPage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && filteredRecords.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

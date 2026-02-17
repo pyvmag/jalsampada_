@@ -213,7 +213,8 @@ export function TableLinkCell({ control, fieldName, column, filters = {}, onValu
         };
     }, [isOpen, updateDropdownPosition]);
 
-    // UPDATED: Sync IMMEDIATELY, removed requestAnimationFrame
+    const selectedOptionRef = React.useRef<TableLinkOption | null>(null);
+
     const handleChange = React.useCallback((newValue: string) => {
         if (disabled) return;
         if (onValueChange) {
@@ -228,9 +229,56 @@ export function TableLinkCell({ control, fieldName, column, filters = {}, onValu
                 name={fieldName}
                 rules={{ required: column.required ? "This field is required" : false }}
                 render={({ field: { onChange, onBlur, value } }) => {
+
+                    // 1. Initial Load: Fetch Label if we have an ID but no Label
                     React.useEffect(() => {
-                        if (value !== searchTerm && !isOpen) {
-                            setSearchTerm(value || "");
+                        if (value && !selectedOptionRef.current && (!searchTerm || searchTerm === value)) {
+                            // Temporarily show ID
+                            if (!searchTerm) setSearchTerm(value);
+
+                            const fetchLabel = async () => {
+                                if (!isAuthenticated || !apiKey) return;
+                                try {
+                                    const fieldsToFetch = ["name"];
+                                    if (searchKey !== "name") fieldsToFetch.push(searchKey);
+
+                                    const resp = await axios.get(`${API_BASE_URL}/${column.linkTarget}`, {
+                                        params: {
+                                            filters: JSON.stringify([["name", "=", value]]),
+                                            fields: JSON.stringify(fieldsToFetch)
+                                        },
+                                        headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+                                    });
+
+                                    if (resp.data?.data?.[0]) {
+                                        const row = resp.data.data[0];
+                                        const label = row[searchKey] || row.name;
+
+                                        // Update cache
+                                        selectedOptionRef.current = { value: row.name, label: label };
+                                        // Update display
+                                        setSearchTerm(label);
+                                    }
+                                } catch (e) {
+                                    console.error("Autofetch label failed", e);
+                                }
+                            };
+                            fetchLabel();
+                        }
+                    }, []);
+
+                    // 2. Sync Logic
+                    React.useEffect(() => {
+                        if (!isOpen) {
+                            if (selectedOptionRef.current && selectedOptionRef.current.value === value) {
+                                if (searchTerm !== selectedOptionRef.current.label) {
+                                    setSearchTerm(selectedOptionRef.current.label);
+                                }
+                            } else if (value && value !== searchTerm && !selectedOptionRef.current) {
+                                setSearchTerm(value);
+                            } else if (!value && searchTerm) {
+                                setSearchTerm("");
+                            }
                         }
                     }, [value, isOpen]);
 
@@ -242,15 +290,22 @@ export function TableLinkCell({ control, fieldName, column, filters = {}, onValu
                         updateDropdownPosition();
                         debouncedSearch(newValue);
 
-                        const exactMatch = options.find(opt => opt.label === newValue);
-                        const finalValue = exactMatch ? exactMatch.value : "";
-                        onChange(finalValue);
-                        handleChange(finalValue);
+                        // Clear cache if user types
+                        if (!newValue) selectedOptionRef.current = null;
+
+                        // Optimization: If they typed the exact label of an option we know (unlikely but possible)
+                        // But mostly we rely on selection. 
+                        // Unlike LinkField, we don't auto-set value on typing unless it's a clear match or strict mode.
+                        // Here we just let them type and search.
                     };
 
                     const handleOptionSelect = (option: TableLinkOption) => {
                         if (disabled) return;
+                        // 1. Update Visuals
                         setSearchTerm(option.label);
+                        // 2. Update Cache
+                        selectedOptionRef.current = option;
+                        // 3. Update Data
                         onChange(option.value);
                         setIsOpen(false);
                         handleChange(option.value);

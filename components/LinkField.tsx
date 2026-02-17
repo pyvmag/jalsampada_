@@ -53,12 +53,21 @@ export function LinkField({ control, field, error, className, filters = {}, getQ
       // Use custom search URL if provided
       if (field.customSearchUrl) {
         // Resolve dynamic filters
-        const dynamicFilters = typeof field.filters === 'function'
+        const rawFilters = typeof field.filters === 'function'
           ? field.filters((name: string) => {
+            // Fallback to internal form values if needed, but prefer passed filters
             const formValues = control._formValues || {};
             return formValues[name];
           })
           : (typeof field.filters === 'object' ? field.filters : {});
+
+        // Create a new object to avoid mutating the field definition
+        const dynamicFilters = { ...rawFilters };
+
+        // 🟢 MERGE: respect the 'filters' prop passed to this component
+        if (filters && Object.keys(filters).length > 0) {
+          Object.assign(dynamicFilters, filters);
+        }
 
         // Merge filters: prioritize array format from customSearchParams
         let mergedFilters = field.customSearchParams?.filters;

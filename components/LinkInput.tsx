@@ -159,8 +159,10 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
                 if (response.data?.data) {
                     let formattedOptions = response.data.data.map((item: any) => {
                         const label = linkTarget === "Prapan Suchi" ? (item.work_name || item.name) : (item[searchKey] || item.name);
+                        // For Prapan Suchi, store work_name as value instead of name
+                        const value = linkTarget === "Prapan Suchi" ? (item.work_name || item.name) : item.name;
                         return {
-                            value: item.name,
+                            value,
                             label,
                         };
                     });
@@ -185,8 +187,10 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
                             if (nameResponse.data?.data) {
                                 formattedOptions = nameResponse.data.data.map((item: any) => {
                                     const label = item.work_name || item.name;
+                                    // For Prapan Suchi, store work_name as value instead of name
+                                    const value = item.work_name || item.name;
                                     return {
-                                        value: item.name,
+                                        value,
                                         label,
                                     };
                                 });

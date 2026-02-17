@@ -16,7 +16,7 @@ interface AssetInterchangeData {
     lis_name?: string;
     stage?: string;
     posting_date?: string;
-    which_asset_to_interchange?: "Motor" | "Pump";
+    select_asset?: "Motor" | "Pump";
 
     pump_asset?: string;
     pump_no?: string;
@@ -54,7 +54,7 @@ export default function AssetInterchangeDetailPage() {
     const [formInstance, setFormInstance] = React.useState<any>(null);
     const [formVersion, setFormVersion] = React.useState(0);
     const isProgrammaticUpdate = React.useRef(false);
-    
+
     // Button state
     const [activeButton, setActiveButton] = React.useState<"SAVE" | "SUBMIT" | "CANCEL" | null>(null);
 
@@ -76,9 +76,9 @@ export default function AssetInterchangeDetailPage() {
             });
             const data = resp.data.data;
             setRecord(data);
-            setSelectedAsset(data.which_asset_to_interchange || "");
+            setSelectedAsset(data.select_asset || "");
             setFormDirty(false);
-            
+
             // Initialize button state based on document status
             if (data.docstatus === 0) { // Draft
                 setActiveButton("SUBMIT");
@@ -92,8 +92,8 @@ export default function AssetInterchangeDetailPage() {
         }
     };
 
-    React.useEffect(() => { 
-        fetchDoc(); 
+    React.useEffect(() => {
+        fetchDoc();
     }, [docname, apiKey, apiSecret, isAuthenticated, isInitialized]);
 
     // Watch for form changes
@@ -192,7 +192,7 @@ export default function AssetInterchangeDetailPage() {
                 const updatedData = resp.data.data as AssetInterchangeData;
                 setRecord(updatedData);
                 setFormDirty(false);
-                
+
                 // Update button state after save
                 if (updatedData.docstatus === 0) { // Still draft
                     setActiveButton("SUBMIT");
@@ -205,7 +205,7 @@ export default function AssetInterchangeDetailPage() {
         } catch (err: any) {
             console.error("Save error:", err);
             const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
-            toast.error(messages.message, { description: messages.description, duration: Infinity});
+            toast.error(messages.message, { description: messages.description, duration: Infinity });
         } finally {
             setIsSaving(false);
             isProgrammaticUpdate.current = false;
@@ -215,13 +215,13 @@ export default function AssetInterchangeDetailPage() {
     // SUBMIT DOCUMENT
     const handleSubmitDocument = async () => {
         if (!record || !formInstance) return;
-        
+
         setIsSaving(true);
 
         try {
             // Get current form data
             const formData = formInstance.getValues();
-            
+
             // Clean the form data
             const nonDataFields = new Set<string>();
             formTabs.forEach(tab => {
@@ -243,7 +243,7 @@ export default function AssetInterchangeDetailPage() {
                     payload[key] = formData[key];
                 }
             }
-            
+
             // Set docstatus to 1 (submitted)
             payload.docstatus = 1;
             payload.modified = record.modified;
@@ -252,7 +252,7 @@ export default function AssetInterchangeDetailPage() {
                 `${API_BASE_URL}/${encodeURIComponent(DOCTYPE_NAME)}/${encodeURIComponent(docname)}`,
                 payload,
                 {
-                    headers: { 
+                    headers: {
                         Authorization: `token ${apiKey}:${apiSecret}`,
                         "Content-Type": "application/json"
                     }
@@ -260,15 +260,15 @@ export default function AssetInterchangeDetailPage() {
             );
 
             toast.success("Document submitted successfully!");
-            
+
             // Update local state without reload
             const updatedData = response.data.data as AssetInterchangeData;
             setRecord(updatedData);
             setFormDirty(false);
-            
+
             // Update button to CANCEL after submission
             setActiveButton("CANCEL");
-            
+
             // Force form remount with new docstatus
             setFormVersion((v) => v + 1);
         } catch (err: any) {
@@ -283,32 +283,32 @@ export default function AssetInterchangeDetailPage() {
     // CANCEL DOCUMENT
     const handleCancelDocument = async () => {
         if (!record) return;
-        
+
         if (!window.confirm("Are you sure you want to cancel this document? This action cannot be undone.")) {
             return;
         }
-        
+
         setIsSaving(true);
-        
+
         try {
             const payload = {
                 docstatus: 2,
                 modified: record.modified
             };
-            
+
             const resp = await axios.put(
                 `${API_BASE_URL}/${encodeURIComponent(DOCTYPE_NAME)}/${encodeURIComponent(docname)}`,
                 payload,
-                { 
-                    headers: { 
+                {
+                    headers: {
                         Authorization: `token ${apiKey}:${apiSecret}`,
                         "Content-Type": "application/json"
-                    } 
+                    }
                 }
             );
 
             toast.success("Document cancelled successfully!");
-            
+
             // Update local state without reload
             const updatedRecord = resp.data.data as AssetInterchangeData;
             setRecord(updatedRecord);
@@ -353,11 +353,11 @@ export default function AssetInterchangeDetailPage() {
                     defaultValue: getValue("posting_date")
                 },
                 {
-                    name: "which_asset_to_interchange",
+                    name: "select_asset",
                     label: "Which Asset To Interchange?",
                     type: "Select",
                     options: [{ label: "Motor", value: "Motor" }, { label: "Pump", value: "Pump" }],
-                    defaultValue: assetType || getValue("which_asset_to_interchange"),
+                    defaultValue: assetType || getValue("select_asset"),
                     onChange: handleAssetChange,
                 },
 
@@ -366,36 +366,44 @@ export default function AssetInterchangeDetailPage() {
                     name: "motor_section",
                     type: "Section Break",
                     label: "Interchange Motor",
-                    displayDependsOn: { which_asset_to_interchange: "Motor" }
+                    displayDependsOn: { select_asset: "Motor" }
                 },
                 {
                     name: "pump_asset",
                     label: "Pump Asset",
                     type: "Link",
                     linkTarget: "Asset",
-                    displayDependsOn: { which_asset_to_interchange: "Motor" },
-                    defaultValue: getValue("pump_asset")
+                    displayDependsOn: { select_asset: "Motor" },
+                    defaultValue: getValue("pump_asset"),
+                    doctype: "Asset",
+                    filters: (getValue) => ({
+                        custom_lis_name: getValue("lis_name"),
+                        custom_stage_no: getValue("stage"),
+                        asset_category: "Pump"
+                    }),
+
+                    referenceDoctype: "Asset Interchange",
                 },
                 {
                     name: "pump_no",
                     label: "Pump No",
                     type: "Read Only",
                     fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_asset_no" },
-                    displayDependsOn: { which_asset_to_interchange: "Motor" },
+                    displayDependsOn: { select_asset: "Motor" },
                     defaultValue: getValue("pump_no")
                 },
                 {
                     name: "current_motor_asset",
                     label: "Current Motor Asset",
                     type: "Read Only",
-                    displayDependsOn: { which_asset_to_interchange: "Motor", pump_asset: true },
+                    displayDependsOn: { select_asset: "Motor", pump_asset: true },
                     defaultValue: getValue("current_motor_asset")
                 },
                 {
                     name: "current_motor_no",
                     label: "Current Motor No",
-                    type: "Data",
-                    displayDependsOn: { which_asset_to_interchange: "Motor", pump_asset: true },
+                    type: "Read Only",
+                    displayDependsOn: { select_asset: "Motor", pump_asset: true },
                     defaultValue: getValue("current_motor_no")
                 },
                 {
@@ -403,14 +411,19 @@ export default function AssetInterchangeDetailPage() {
                     label: "Interchange Motor",
                     type: "Link",
                     linkTarget: "Asset",
-                    displayDependsOn: { which_asset_to_interchange: "Motor", pump_asset: true },
-                    defaultValue: getValue("interchange_motor")
+                    displayDependsOn: { select_asset: "Motor", pump_asset: true },
+                    defaultValue: getValue("interchange_motor"),
+                    filters: (getValue) => ({
+                        custom_lis_name: getValue("lis_name"),
+                        custom_stage_no: getValue("stage"),
+                        asset_category: "Motor"
+                    }),
                 },
                 {
                     name: "interchange_motor_no",
                     label: "Interchange Motor No",
-                    type: "Data",
-                    displayDependsOn: { which_asset_to_interchange: "Motor", pump_asset: true },
+                    type: "Read Only",
+                    displayDependsOn: { select_asset: "Motor", pump_asset: true },
                     defaultValue: getValue("interchange_motor_no")
                 },
 
@@ -419,7 +432,7 @@ export default function AssetInterchangeDetailPage() {
                     name: "pump_section",
                     type: "Section Break",
                     label: "Interchange Pump",
-                    displayDependsOn: { which_asset_to_interchange: "Pump" }
+                    displayDependsOn: { select_asset: "Pump" }
                 },
                 {
                     name: "motor_asset",
@@ -427,7 +440,15 @@ export default function AssetInterchangeDetailPage() {
                     type: "Link",
                     linkTarget: "Asset",
                     defaultValue: getValue("motor_asset"),
-                    displayDependsOn: { which_asset_to_interchange: "Pump" }
+                    displayDependsOn: { select_asset: "Pump" },
+                    doctype: "Asset",
+                    filters: (getValue) => ({
+                        custom_lis_name: getValue("lis_name"),
+                        custom_stage_no: getValue("stage"),
+                        asset_category: "Motor"
+                    }),
+
+                    referenceDoctype: "Asset Interchange",
                 },
                 {
                     name: "motor_no_for_pump",
@@ -435,7 +456,7 @@ export default function AssetInterchangeDetailPage() {
                     type: "Read Only",
                     fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_asset_no" },
                     defaultValue: getValue("motor_no_for_pump"),
-                    displayDependsOn: { which_asset_to_interchange: "Pump" }
+                    displayDependsOn: { select_asset: "Pump" }
                 },
                 {
                     name: "current_pump_asset",
@@ -443,16 +464,16 @@ export default function AssetInterchangeDetailPage() {
                     type: "Read Only",
                     defaultValue: getValue("current_pump_asset"),
                     displayDependsOn: {
-                        which_asset_to_interchange: "Pump",
+                        select_asset: "Pump",
                         motor_asset: true
                     }
                 },
                 {
                     name: "current_pump_no",
                     label: "Current Pump No",
-                    type: "Data",
+                    type: "Read Only",
                     defaultValue: getValue("current_pump_no"),
-                    displayDependsOn: { which_asset_to_interchange: "Pump", motor_asset: true }
+                    displayDependsOn: { select_asset: "Pump", motor_asset: true }
                 },
                 {
                     name: "interchange_pump",
@@ -460,14 +481,19 @@ export default function AssetInterchangeDetailPage() {
                     type: "Link",
                     linkTarget: "Asset",
                     defaultValue: getValue("interchange_pump"),
-                    displayDependsOn: { which_asset_to_interchange: "Pump", motor_asset: true }
+                    displayDependsOn: { select_asset: "Pump", motor_asset: true },
+                    filters: (getValue) => ({
+                        custom_lis_name: getValue("lis_name"),
+                        custom_stage_no: getValue("stage"),
+                        asset_category: "Pump"
+                    }),
                 },
                 {
                     name: "interchange_pump_no",
                     label: "Interchange Pump No",
-                    type: "Data",
+                    type: "Read Only",
                     defaultValue: getValue("interchange_pump_no"),
-                    displayDependsOn: { which_asset_to_interchange: "Pump", motor_asset: true }
+                    displayDependsOn: { select_asset: "Pump", motor_asset: true }
                 },
             ],
         }];
@@ -489,7 +515,7 @@ export default function AssetInterchangeDetailPage() {
                 default: return "Processing...";
             }
         }
-        
+
         switch (activeButton) {
             case "SAVE": return "Save";
             case "SUBMIT": return "Submit";
@@ -504,7 +530,7 @@ export default function AssetInterchangeDetailPage() {
         <DynamicForm
             key={formKey}
             tabs={formTabs}
-            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => {}}
+            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
             onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
             onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
             onCancel={() => router.back()}

@@ -36,7 +36,7 @@ interface StockEntryItemRow {
     batch_no?: string;              // Data
     expense_account?: string;       // Link -> Account
     cost_center?: string;           // Link -> Cost Center
-    tender?: string;                // Link -> Tender
+    custom_tender?: string;                // Link -> Tender
 }
 
 interface AdditionalCostRow {
@@ -54,7 +54,7 @@ interface StockEntryData {
     stock_entry_type?: string;        // Link -> Stock Entry Type
     apply_putaway_rule?: 0 | 1;       // Check
     add_to_transit?: 0 | 1;           // Check
-    tender?: string;                  // Link -> Tender (Accounting Dimension)
+    custom_tender?: string;                  // Link -> Tender (Accounting Dimension)
     from_warehouse?: string;          // Link -> Warehouse (Default Source)
     to_warehouse?: string;            // Link -> Warehouse (Default Target)
     scan_barcode?: string;            // Data
@@ -200,6 +200,20 @@ export default function StockEntryDetailPage() {
 
     const handleFormInit = React.useCallback((form: any) => {
         setFormInstance(form);
+
+        const fromWarehouse = form.getValues("from_warehouse");
+        const toWarehouse = form.getValues("to_warehouse");
+        const items = form.getValues("items") || [];
+
+        if (!items.length) return;
+
+        const updatedItems = items.map((row: any) => ({
+            ...row,
+            s_warehouse: row.s_warehouse || fromWarehouse || "",
+            t_warehouse: row.t_warehouse || toWarehouse || "",
+        }));
+
+        form.setValue("items", updatedItems);
     }, []);
 
     /* -------------------------------------------------
@@ -282,7 +296,7 @@ export default function StockEntryDetailPage() {
                         type: "Section Break",
                     },
                     {
-                        name: "tender",
+                        name: "custom_tender",
                         label: "Tender",
                         type: "Link",
                         linkTarget: "Project",
@@ -362,6 +376,13 @@ export default function StockEntryDetailPage() {
                                     }
                                     return filters;
                                 },
+                                fetchFrom: {
+                                    sourceField: "parent.from_warehouse",
+                                    targetDoctype: "Warehouse",
+                                    targetField: "name"
+                                },
+                                referenceDoctype: "Stock Entry Detail",
+                                doctype: "Warehouse",
                             },
                             {
                                 name: "t_warehouse",
@@ -378,6 +399,13 @@ export default function StockEntryDetailPage() {
                                     }
                                     return filters;
                                 },
+                                fetchFrom: {
+                                    sourceField: "parent.to_warehouse",
+                                    targetDoctype: "Warehouse",
+                                    targetField: "name"
+                                },
+                                referenceDoctype: "Stock Entry Detail",
+                                doctype: "Warehouse",
                             },
 
                             {
@@ -468,12 +496,12 @@ export default function StockEntryDetailPage() {
                                 defaultValue: ""
                             },
                             {
-                                name: "tender",
+                                name: "custom_tender",
                                 label: "Tender",
                                 type: "Link",
                                 linkTarget: "Project",
                                 fetchFrom: {
-                                    sourceField: "parent.tender",
+                                    sourceField: "parent.custom_tender",
                                     targetDoctype: "Project", // Added targetDoctype
                                     targetField: "name"
                                 },
