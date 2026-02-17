@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json bun.lockb* ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile --production=false
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -18,14 +18,10 @@ RUN bun run build
 FROM oven/bun:1-slim AS runner
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup --system --gid 1001 bun
-RUN adduser --system --uid 1001 bun
-
 # Copy built application
-COPY --from=builder --chown=bun:bun /app/.next/standalone ./
-COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
-COPY --from=builder --chown=bun:bun /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Environment variables
 ENV NODE_ENV production
@@ -33,8 +29,6 @@ ENV PORT 2225
 ENV HOSTNAME 0.0.0.0
 
 EXPOSE 2225
-
-USER bun
 
 # Run the standalone server with Bun
 CMD ["bun", "server.js"]
