@@ -129,12 +129,14 @@ export default function RecordDetailPage() {
   const [isSaving, setIsSaving] = React.useState(false);
 
   const isProgrammaticUpdate = React.useRef(false);
+  const isInitialLoad = React.useRef(true);
   const [formVersion, setFormVersion] = React.useState(0);
 
   // State for work name default value
   const [workName, setWorkName] = React.useState<string>("");
   const [formInstance, setFormInstance] = React.useState<any>(null);
   const [billType, setBillType] = React.useState<string | undefined>("");
+  const [prevCumulativeAmount, setPrevCumulativeAmount] = React.useState(0);
 
   // 🟢 Using formDirty instead of formSaveState
   const [formDirty, setFormDirty] = React.useState(false);
@@ -236,38 +238,39 @@ export default function RecordDetailPage() {
     fetchDoc();
   }, [docname, apiKey, apiSecret, isAuthenticated, isInitialized]);
 
-  // 🟢 OUR FIX: INITIAL FETCH FOR PREVIOUS DETAILS (If missing in current doc)
+  // 🟢 OUR FIX: INITIAL FETCH FOR PREVIOUS DETAILS (Always run to get cumulative amount)
   React.useEffect(() => {
     if (!formInstance || !expenditure?.tender_number) return;
 
-    const currentPrevMB = formInstance.getValues("previous_mb_no");
+    // Remove check for currentPrevMB so we always get the latest cumulative_amount
+    const fetchInitialPrevDetails = async () => {
+      if (!apiKey || !apiSecret) return;
+      try {
+        const prevDetails = await fetchPreviousBillDetails(
+          expenditure.tender_number!,
+          docname,
+          apiKey,
+          apiSecret
+        );
 
-    if (!currentPrevMB) {
-      const fetchInitialPrevDetails = async () => {
-        if (!apiKey || !apiSecret) return;
-        try {
-          const prevDetails = await fetchPreviousBillDetails(
-            expenditure.tender_number!,
-            docname,
-            apiKey,
-            apiSecret
-          );
-          if (prevDetails) {
-            isProgrammaticUpdate.current = true; // Don't mark as dirty for initial load
+        if (prevDetails) {
+          isProgrammaticUpdate.current = true; // Don't mark as dirty for initial load
 
-            formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
-            formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
-            // Map 'mb_no' from old record -> 'previous_mb_no'
-            formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
-            // Map 'page_no' from old record -> 'previous_page_no'
-            formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
+          formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+          formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
+          // Map 'mb_no' from old record -> 'previous_mb_no'
+          formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
+          // Map 'page_no' from old record -> 'previous_page_no'
+          formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
 
-            setTimeout(() => { isProgrammaticUpdate.current = false; }, 100);
-          }
-        } catch (e) { console.error(e); }
-      };
-      fetchInitialPrevDetails();
-    }
+          setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
+
+          setTimeout(() => { isProgrammaticUpdate.current = false; }, 1000); // 🟢 Increased timeout to prevent race condition
+        }
+      } catch (e) { console.error(e); }
+    };
+
+    fetchInitialPrevDetails();
   }, [formInstance, expenditure, docname, apiKey, apiSecret]);
 
   // 🟢 OUR FIX: WATCHER WITH FETCH LOGIC
@@ -308,11 +311,14 @@ export default function RecordDetailPage() {
               // Correct Mapping
               formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
               formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
+
+              setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
             } else {
               formInstance.setValue("prev_bill_no", 0);
               formInstance.setValue("prev_bill_amt", 0);
               formInstance.setValue("previous_mb_no", 0);
               formInstance.setValue("previous_page_no", 0);
+              setPrevCumulativeAmount(0);
             }
           } catch (err) { console.error("Error setting previous bill details", err); }
         };
@@ -339,31 +345,61 @@ export default function RecordDetailPage() {
   React.useEffect(() => {
     if (!formInstance) return;
 
+    const calculateTotals = (values?: any) => {
+      const currentValues = values || formInstance.getValues();
+      const billAmount = Number(currentValues.bill_amount) || 0;
+      const tenderAmount = Number(currentValues.tender_amount) || 0;
+
+      // Calculate bill_upto = bill_amount + prevCumulativeAmount (O(1))
+      const billUpto = billAmount + prevCumulativeAmount;
+      const remainingAmount = tenderAmount - billUpto;
+
+      // Check current values in form
+      const currentBillUpto = Number(formInstance.getValues("bill_upto"));
+      const currentRemaining = Number(formInstance.getValues("remaining_amount"));
+
+      if (currentBillUpto !== billUpto || currentRemaining !== remainingAmount) {
+
+        // 🟢 FIX: If this is the initial machine calculation (on load), 
+        // use RESET to make these values the "default" (Clean State).
+        // Otherwise (user typing), use SETVALUE (Dirty State).
+        if (isInitialLoad.current && prevCumulativeAmount > 0) {
+          console.log("🔄 Initial Calculation - Resetting form defaults with:", { billUpto, remainingAmount });
+
+          // We reset with ALL current values + our updates to establish new baseline
+          formInstance.reset({
+            ...formInstance.getValues(),
+            bill_upto: billUpto,
+            remaining_amount: remainingAmount
+          }, { keepDefaultValues: false, keepDirty: false }); // keepDirty: false ensures it's "Saved"
+
+          isInitialLoad.current = false;
+        } else {
+          // Normal update (User typing or subsequent updates)
+          formInstance.setValue("bill_upto", billUpto, { shouldDirty: !isProgrammaticUpdate.current });
+          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: !isProgrammaticUpdate.current });
+        }
+      }
+    };
+
+    // Run immediately when prevCumulativeAmount changes
+    if (prevCumulativeAmount > 0) {
+      calculateTotals();
+    }
+
     const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
-      // Recalculate when bill_amount or prev_bill_amt changes
-      if (name === "bill_amount" || name === "prev_bill_amt" || name === "tender_amount" || name === undefined) {
-        const billAmount = Number(value.bill_amount) || 0;
-        const prevBillAmt = Number(value.prev_bill_amt) || 0;
-        const tenderAmount = Number(value.tender_amount) || 0;
+      // Once user starts typing, it's no longer initial load
+      if (name) isInitialLoad.current = false;
 
-        // Calculate bill_upto = bill_amount + prev_bill_amt
-        const billUpto = billAmount + prevBillAmt;
-        if (Number(formInstance.getValues("bill_upto")) !== billUpto) {
-          formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
-        }
-
-        // Calculate remaining_amount = tender_amount - bill_upto
-        const remainingAmount = tenderAmount - billUpto;
-        if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
-          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
-        }
+      if (name === "bill_amount" || name === "tender_amount" || name === undefined) {
+        calculateTotals(value);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [formInstance]);
+  }, [formInstance, prevCumulativeAmount]);
 
   const handleFormInit = React.useCallback((form: any) => {
     setFormInstance(form);
@@ -609,12 +645,15 @@ export default function RecordDetailPage() {
                 type: "Link",
                 linkTarget: "Asset",
                 displayDependsOn: "work_type==Repair || work_type==Auxilary || have_asset==1",
-                customSearchParams: {
-                  filters: [
-                    ["Asset", "lift_irrigation_scheme", "=", ""],
-                    ["Asset", "stage_no_sub_scheme", "=", ""],
-                    ["Asset", "obsolete", "=", "No"]
-                  ]
+                filters: (getValues: (name: string) => any) => {
+                  const rowStage = getValues("stage");
+                  const lis = getValues("parent.lift_irrigation_scheme");
+
+                  return {
+                    lift_irrigation_scheme: lis,
+                    stage_no_sub_scheme: rowStage,
+                    obsolete: "No"
+                  };
                 },
               },
               {
@@ -858,6 +897,8 @@ export default function RecordDetailPage() {
 
         // FORCE DynamicForm REMOUNT with updated data
         setFormVersion((v) => v + 1);
+
+        isInitialLoad.current = true; // 🟢 Reset initial load flag so new form instance starts clean
 
         isProgrammaticUpdate.current = false;
       }

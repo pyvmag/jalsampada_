@@ -15,6 +15,7 @@ export interface PreviousBillDetails {
     bill_amount?: number;
     mb_no?: string;
     page_no?: string;
+    cumulative_amount?: number;
 }
 
 /**
@@ -109,13 +110,13 @@ export async function fetchPreviousBillDetails(
         return response.data.message || null;
     } catch (error: any) {
         console.error("Failed to fetch previous bill details:", error);
-        
+
         // Check if method doesn't exist
         if (error.response?.data?.exc?.includes("has no attribute 'get_previous_bill_details'")) {
             console.warn("get_previous_bill_details method not found in API. Backend method may need to be properly exposed.");
             return null;
         }
-        
+
         return null;
     }
 }
