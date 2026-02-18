@@ -15,6 +15,7 @@ export interface PreviousBillDetails {
     bill_amount?: number;
     mb_no?: string;
     page_no?: string;
+    cumulative_amount?: number;
 }
 
 /**
@@ -109,13 +110,13 @@ export async function fetchPreviousBillDetails(
         return response.data.message || null;
     } catch (error: any) {
         console.error("Failed to fetch previous bill details:", error);
-        
+
         // Check if method doesn't exist
         if (error.response?.data?.exc?.includes("has no attribute 'get_previous_bill_details'")) {
             console.warn("get_previous_bill_details method not found in API. Backend method may need to be properly exposed.");
             return null;
         }
-        
+
         return null;
     }
 }
@@ -138,5 +139,60 @@ export function clearWorkNameInTableRows(formInstance: any): void {
     } catch (error) {
         console.error("Failed to clear work name in table rows:", error);
         throw error;
+    }
+}
+/**
+ * Checks if a bill number is unique for a given tender number
+ * @param tenderNumber - The tender/project number
+ * @param billNumber - The bill number to check
+ * @param docName - Optional current document name to exclude (for edit mode)
+ * @param apiKey - Frappe API key
+ * @param apiSecret - Frappe API secret
+ * @returns Promise resolving to boolean (true if unique, false if exists)
+ */
+export async function checkBillNumberUniqueness(
+    tenderNumber: string,
+    billNumber: string,
+    docName: string | null = null,
+    apiKey: string,
+    apiSecret: string
+): Promise<boolean> {
+    if (!tenderNumber || !billNumber) return true;
+
+    try {
+        const filters: any[] = [
+            ["tender_number", "=", tenderNumber],
+            ["bill_number", "=", billNumber],
+            ["docstatus", "!=", 2] // Exclude cancelled documents
+        ];
+
+        if (docName && docName !== "new") {
+            filters.push(["name", "!=", docName]);
+        }
+
+        // Use the constant defined at the top of the file
+        const apiUrl = `${API_BASE_URL}/Expenditure`;
+
+        const response = await axios.get(
+            apiUrl,
+            {
+                params: {
+                    filters: JSON.stringify(filters),
+                    fields: JSON.stringify(["name"]),
+                    limit_page_length: 1
+                },
+                headers: {
+                    Authorization: `token ${apiKey}:${apiSecret}`,
+                    "Content-Type": "application/json",
+                },
+                withCredentials: true,
+            }
+        );
+
+        const data = response.data?.data;
+        return !data || data.length === 0;
+    } catch (error) {
+        console.error("Failed to check bill number uniqueness:", error);
+        return true;
     }
 }

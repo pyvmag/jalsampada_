@@ -47,6 +47,7 @@ interface Expenditure {
   tender_number?: string;
   lift_irrigation_scheme?: string;
   modified?: string;
+  docstatus?: number;
 }
 
 interface LisOption {
@@ -174,6 +175,7 @@ export default function DoctypePage() {
             "tender_number",
             "lift_irrigation_scheme",
             "modified",
+            "docstatus",
           ]),
           limit_start: start,
           limit_page_length: limit,
@@ -208,6 +210,7 @@ export default function DoctypePage() {
           tender_number: r.tender_number ?? "",
           lift_irrigation_scheme: r.lift_irrigation_scheme ?? "",
           modified: r.modified ?? "",
+          docstatus: r.docstatus ?? 0,
         }));
 
         if (isReset) {
@@ -338,6 +341,7 @@ export default function DoctypePage() {
               />
             </th>
             <th>ID</th>
+            <th>Status</th>
             <th>Fiscal Year</th>
             <th>Bill Number</th>
             <th>Bill Amount</th>
@@ -378,6 +382,19 @@ export default function DoctypePage() {
                     />
                   </td>
                   <td>{record.name}</td>
+                  <td>
+                    <span 
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        record.docstatus === 1 
+                          ? "bg-green-100 text-green-800" 
+                          : record.docstatus === 2
+                          ? "bg-red-100 text-red-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {record.docstatus === 1 ? "Submitted" : record.docstatus === 2 ? "Cancelled" : "Draft"}
+                    </span>
+                  </td>
                   <td>{record.fiscal_year}</td>
                   <td>{record.bill_number}</td>
                   <td>{record.bill_amount}</td>

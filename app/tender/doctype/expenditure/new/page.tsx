@@ -14,7 +14,8 @@ import {
   fetchWorkNameByTenderNumber,
   updateWorkNameInTableRows,
   clearWorkNameInTableRows,
-  fetchPreviousBillDetails
+  fetchPreviousBillDetails,
+  checkBillNumberUniqueness
 } from "../services";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
@@ -137,6 +138,7 @@ export default function NewExpenditurePage() {
   }, []);
 
   const [formInstance, setFormInstance] = React.useState<any>(null);
+  const [prevCumulativeAmount, setPrevCumulativeAmount] = React.useState(0);
 
 
   React.useEffect(() => {
@@ -190,16 +192,20 @@ export default function NewExpenditurePage() {
               formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
               formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
 
-              // Map the API's 'mb_no' to our UI's 'prev_mb_no'
-              formInstance.setValue("prev_mb_no", prevDetails.mb_no || 0);
-              // Map the API's 'page_no' to our UI's 'prev_page_no'
-              formInstance.setValue("prev_page_no", prevDetails.page_no || 0);
+              // Map the API's 'mb_no' to our UI's 'previous_mb_no'
+              formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
+              // Map the API's 'page_no' to our UI's 'previous_page_no'
+              formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
+
+              setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
             } else {
+              console.log("⚠️ No Previous Bill Details Found");
               // Reset if no previous record found
               formInstance.setValue("prev_bill_no", 0);
               formInstance.setValue("prev_bill_amt", 0);
-              formInstance.setValue("prev_mb_no", 0);
-              formInstance.setValue("prev_page_no", 0);
+              formInstance.setValue("previous_mb_no", 0);
+              formInstance.setValue("previous_page_no", 0);
+              setPrevCumulativeAmount(0);
             }
           } catch (err) {
             console.error("Error setting previous bill details", err);
@@ -220,31 +226,37 @@ export default function NewExpenditurePage() {
   React.useEffect(() => {
     if (!formInstance) return;
 
+    const calculateTotals = (values?: any) => {
+      const billAmount = values ? (Number(values.bill_amount) || 0) : (Number(formInstance.getValues("bill_amount")) || 0);
+      const tenderAmount = values ? (Number(values.tender_amount) || 0) : (Number(formInstance.getValues("tender_amount")) || 0);
+
+      // Calculate bill_upto = bill_amount + prevCumulativeAmount (O(1))
+      const billUpto = billAmount + prevCumulativeAmount;
+      if (Number(formInstance.getValues("bill_upto")) !== billUpto) {
+        formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
+      }
+
+      // Calculate remaining_amount = tender_amount - bill_upto
+      const remainingAmount = tenderAmount - billUpto;
+      if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
+        formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
+      }
+    };
+
+    // Run immediately when prevCumulativeAmount changes
+    calculateTotals();
+
     const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
-      // Recalculate when bill_amount or prev_bill_amt changes
-      if (name === "bill_amount" || name === "prev_bill_amt" || name === "tender_amount" || name === undefined) {
-        const billAmount = Number(value.bill_amount) || 0;
-        const prevBillAmt = Number(value.prev_bill_amt) || 0;
-        const tenderAmount = Number(value.tender_amount) || 0;
-
-        // Calculate bill_upto = bill_amount + prev_bill_amt
-        const billUpto = billAmount + prevBillAmt;
-        if (Number(formInstance.getValues("bill_upto")) !== billUpto) {
-          formInstance.setValue("bill_upto", billUpto, { shouldDirty: true });
-        }
-
-        // Calculate remaining_amount = tender_amount - bill_upto
-        const remainingAmount = tenderAmount - billUpto;
-        if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
-          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: true });
-        }
+      // Recalculate when bill_amount or tender_amount changes
+      if (name === "bill_amount" || name === "tender_amount" || name === undefined) {
+        calculateTotals(value);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [formInstance]);
+  }, [formInstance, prevCumulativeAmount]);
 
   const handleFormInit = React.useCallback((form: any) => {
     setFormInstance(form);
@@ -395,6 +407,22 @@ export default function NewExpenditurePage() {
             type: "Data",
             defaultValue: "0",
             fieldColumns: 1,
+            asyncValidation: async (value, allValues) => {
+              if (!value || !allValues.tender_number) return { isValid: true };
+
+              const isUnique = await checkBillNumberUniqueness(
+                allValues.tender_number,
+                value,
+                docName || "new",
+                apiKey || "",
+                apiSecret || ""
+              );
+
+              return {
+                isValid: isUnique,
+                message: isUnique ? "Bill Number is available" : "Bill Number already exists for this tender"
+              };
+            }
           },
           {
             name: "bill_amount",
@@ -460,7 +488,8 @@ export default function NewExpenditurePage() {
               sourceField: "tender_number",
               targetDoctype: "Project",
               targetField: "custom_stage"
-            }
+            },
+            readOnlyDependsOn: "tender_number"
           },
 
           {
@@ -499,12 +528,15 @@ export default function NewExpenditurePage() {
                 type: "Link",
                 linkTarget: "Asset",
                 displayDependsOn: "work_type==Repair || work_type==Auxiliary || have_asset==1",
-                customSearchParams: {
-                  filters: [
-                    ["Asset", "lift_irrigation_scheme", "=", ""],
-                    ["Asset", "stage_no_sub_scheme", "=", ""],
-                    ["Asset", "obsolete", "=", "No"]
-                  ]
+                filters: (getValues: (name: string) => any) => {
+                  const rowStage = getValues("stage");
+                  const lis = getValues("parent.lift_irrigation_scheme");
+
+                  return {
+                    custom_lis_name: lis,
+                    custom_stage_no: rowStage,
+                    custom_obsolete: 0
+                  };
                 },
               },
               {

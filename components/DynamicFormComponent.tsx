@@ -11,7 +11,7 @@ import {
   UseFormReturn,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Upload, X, MoreVertical, Copy, Trash2, ChevronLeft, ChevronRight, Printer, Eye } from "lucide-react";
+import { Upload, X, MoreVertical, Copy, Trash2, ChevronLeft, ChevronRight, Printer, Eye, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -142,6 +142,11 @@ export interface FormField {
   disableAutoToday?: boolean;
   onChange?: (value: any, data: any, setFieldValue: any) => void;
   className?: string;
+  readOnly?: boolean;
+  readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
+
+  // Validation
+  asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
 }
 
 export interface TabbedLayout {
@@ -973,15 +978,18 @@ export function DynamicForm({
   };
 
   const renderInput = (field: FormField, type: string = "text") => {
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+    const isDisabled = isReadOnlyMode || isFieldReadOnly;
     const rules = rulesFor(field);
+
     const commonProps: any = {
       id: field.name,
-      className: cn("form-control", getErrorClass(field.name)),
+      className: cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name)),
       placeholder: field.placeholder,
       ...(field.step ? { step: field.step } : {}),
       ...(field.min !== undefined ? { min: field.min } : {}),
       ...(field.max !== undefined ? { max: field.max } : {}),
-      disabled: isReadOnlyMode,
+      disabled: isDisabled,
     };
 
     const valueAsNumber = ["Int", "Float", "Currency", "Percent"].includes(
@@ -1027,20 +1035,84 @@ export function DynamicForm({
       );
     }
 
+    const [validationStatus, setValidationStatus] = React.useState<"idle" | "loading" | "valid" | "invalid">("idle");
+    const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
+
+    // Debounced Validation Effect
+    React.useEffect(() => {
+      if (!field.asyncValidation || !allValues) return;
+
+      const currentValue = allValues[field.name];
+      if (!currentValue) {
+        setValidationStatus("idle");
+        setValidationMessage(null);
+        return;
+      }
+
+      const timeoutId = setTimeout(async () => {
+        setValidationStatus("loading");
+        try {
+          // @ts-ignore
+          const result = await field.asyncValidation(currentValue, allValues);
+          if (result.isValid) {
+            setValidationStatus("valid");
+            setValidationMessage(result.message || null);
+          } else {
+            setValidationStatus("invalid");
+            setValidationMessage(result.message || "Invalid value");
+          }
+        } catch (error) {
+          console.error("Validation error:", error);
+          setValidationStatus("idle");
+        }
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(timeoutId);
+    }, [allValues?.[field.name], field.asyncValidation]); // Only re-run when specific field value changes
+
     return (
-      <div className="form-group">
+      <div className="form-group relative">
         <label htmlFor={field.name} className="form-label">
           {field.label}
           {field.required ? " *" : ""}
         </label>
-        <input
-          type={type}
-          {...reg(field.name, {
-            ...rules,
-            ...(valueAsNumber ? { valueAsNumber: true } : {}),
-          })}
-          {...commonProps}
-        />
+        <div className="relative">
+          <input
+            type={type}
+            {...reg(field.name, {
+              ...rules,
+              ...(valueAsNumber ? { valueAsNumber: true } : {}),
+            })}
+            {...commonProps}
+            className={cn(
+              commonProps.className,
+              validationStatus === "valid" ? "!border-green-500 !focus:ring-green-500" : "",
+              validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : ""
+            )}
+          />
+
+          {/* Validation Icons */}
+          {field.asyncValidation && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              {validationStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+              {validationStatus === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+              {validationStatus === "invalid" && <AlertCircle className="h-4 w-4 text-red-500" />}
+            </div>
+          )}
+        </div>
+
+        {/* Validation Message (Separate from RHF errors) */}
+        {validationStatus === "valid" && validationMessage && (
+          <div className="text-green-600 text-xs mt-1 flex items-center gap-1">
+            <CheckCircle2 size={12} /> {validationMessage}
+          </div>
+        )}
+        {validationStatus === "invalid" && validationMessage && (
+          <div className="text-red-500 text-xs mt-1 flex items-center gap-1">
+            <AlertCircle size={12} /> {validationMessage}
+          </div>
+        )}
+
         <FieldError
           error={(errors as FieldErrors<Record<string, any>>)[field.name]}
         />
@@ -1050,7 +1122,10 @@ export function DynamicForm({
   };
 
   const renderTextarea = (field: FormField, rows = 4) => {
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+    const isDisabled = isReadOnlyMode || isFieldReadOnly;
     const rules = rulesFor(field);
+
     return (
       <div className="form-group">
         <label htmlFor={field.name} className="form-label">
@@ -1060,10 +1135,10 @@ export function DynamicForm({
         <textarea
           id={field.name}
           rows={field.rows ?? rows}
-          className={cn("form-control", getErrorClass(field.name))}
+          className={cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name))}
           placeholder={field.placeholder}
           {...reg(field.name, rules)}
-          disabled={isReadOnlyMode}
+          disabled={isDisabled}
         />
         <FieldError
           error={(errors as FieldErrors<Record<string, any>>)[field.name]}
@@ -1524,13 +1599,9 @@ export function DynamicForm({
         <label className="form-label">{field.label}</label>
         <input
           type="text"
-          className={cn("form-control", getErrorClass(field.name))}
+          className={cn("form-control bg-gray-100 text-gray-500 cursor-not-allowed", getErrorClass(field.name))}
           value={displayValue}
           readOnly
-          style={{
-            background: "var(--color-surface-muted, transparent)",
-            cursor: "default",
-          }}
         />
         <FieldHelp text={field.description} />
       </div>
@@ -1710,6 +1781,8 @@ export function DynamicForm({
     const getValue = (name: string) => watch(name);
     const filtersToPass = buildDynamicFilters(field, getValue);
 
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+
     return (
       <TableMultiSelect
         key={field.name}
@@ -1718,7 +1791,7 @@ export function DynamicForm({
         error={(errors as FieldErrors<Record<string, any>>)[field.name]}
         filters={filtersToPass}
         className={getErrorClass(field.name) ? "!border-red-500 !focus:ring-red-500" : ""}
-        disabled={isReadOnlyMode}
+        disabled={isReadOnlyMode || isFieldReadOnly}
       />
     );
   };
