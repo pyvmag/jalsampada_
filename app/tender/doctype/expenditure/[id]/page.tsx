@@ -606,7 +606,8 @@ export default function RecordDetailPage() {
               sourceField: "tender_number",
               targetDoctype: "Project",
               targetField: "custom_stage"
-            }
+            },
+            readOnlyDependsOn: "tender_number"
           },
 
           {

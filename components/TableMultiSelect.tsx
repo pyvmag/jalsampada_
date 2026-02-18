@@ -258,7 +258,8 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                                     id={field.name}
                                     className={`form-control w-full pr-10 
                     ${error ? "border-red-500" : ""}
-                    ${!isAuthenticated ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                    ${(!isAuthenticated || disabled) ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
+
                                     placeholder={field.placeholder || `Search ${field.label}...`}
                                     value={searchTerm}
                                     onChange={handleInputChangeWrapper}

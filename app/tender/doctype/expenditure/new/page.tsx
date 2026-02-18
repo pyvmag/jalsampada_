@@ -14,7 +14,8 @@ import {
   fetchWorkNameByTenderNumber,
   updateWorkNameInTableRows,
   clearWorkNameInTableRows,
-  fetchPreviousBillDetails
+  fetchPreviousBillDetails,
+  checkBillNumberUniqueness
 } from "../services";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -406,6 +407,22 @@ export default function NewExpenditurePage() {
             type: "Data",
             defaultValue: "0",
             fieldColumns: 1,
+            asyncValidation: async (value, allValues) => {
+              if (!value || !allValues.tender_number) return { isValid: true };
+
+              const isUnique = await checkBillNumberUniqueness(
+                allValues.tender_number,
+                value,
+                docName || "new",
+                apiKey || "",
+                apiSecret || ""
+              );
+
+              return {
+                isValid: isUnique,
+                message: isUnique ? "Bill Number is available" : "Bill Number already exists for this tender"
+              };
+            }
           },
           {
             name: "bill_amount",
@@ -471,7 +488,8 @@ export default function NewExpenditurePage() {
               sourceField: "tender_number",
               targetDoctype: "Project",
               targetField: "custom_stage"
-            }
+            },
+            readOnlyDependsOn: "tender_number"
           },
 
           {
