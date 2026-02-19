@@ -116,6 +116,8 @@ interface TenderProjectData {
 
   custom_contractor_name?: string;
 
+  custom_aadhaar_no?: string;
+
 }
 
 
@@ -790,7 +792,7 @@ export default function RecordDetailPage() {
 
         name: "custom_mobile_no",
 
-        label: "Mobile No",
+        label: "Mobile No.",
 
         type: "Read Only",
 
@@ -830,7 +832,7 @@ export default function RecordDetailPage() {
 
         name: "custom_gst",
 
-        label: "GST",
+        label: "GST No.",
 
         type: "Read Only",
 
@@ -850,7 +852,7 @@ export default function RecordDetailPage() {
 
         name: "custom_pan",
 
-        label: "PAN",
+        label: "PAN No.",
 
         type: "Read Only",
 
@@ -864,6 +866,16 @@ export default function RecordDetailPage() {
 
         },
 
+      },
+      {
+        name: "custom_aadhaar_no",
+        label: "Aadhaar No.",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "custom_aadhaar_no"
+        },
       },
 
     ]);
@@ -1226,7 +1238,9 @@ export default function RecordDetailPage() {
 
             "custom_gst",
 
-            "custom_pan"
+            "custom_pan",
+
+            "custom_aadhaar_no"
 
           ].includes(field.name)) {
 

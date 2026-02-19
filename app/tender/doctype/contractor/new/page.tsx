@@ -32,6 +32,7 @@ interface ContractorData {
   custom_contractor_company?: string;
   custom_gst?: string;
   custom_pan?: string;
+  custom_aadhar_no?: string;
   modified?: string;
   docstatus?: 0 | 1 | 2;
 }
@@ -120,17 +121,22 @@ export default function NewContractorPage() {
           },
           {
             name: "custom_contractor_company",
-            label: "Contractor Company",
+            label: "Firm/Company Name",
             type: "Data",
           },
           {
             name: "custom_gst",
-            label: "GST",
+            label: "GST No.",
             type: "Data",
           },
           {
             name: "custom_pan",
-            label: "PAN",
+            label: "PAN No.",
+            type: "Data",
+          },
+          {
+            name: "custom_aadhaar_no",
+            label: "Aadhaar No.",
             type: "Data",
           },
           {
@@ -218,7 +224,8 @@ export default function NewContractorPage() {
 
       toast.error("Failed to create Contractor", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }
