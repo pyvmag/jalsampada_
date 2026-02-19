@@ -503,7 +503,7 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
 
   const commonProps: any = {
     id: field.name,
-    className: cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name)),
+    className: cn("form-control", getErrorClass(field.name)),
     placeholder: field.placeholder,
     ...(field.step ? { step: field.step } : {}),
     ...(field.min !== undefined ? { min: field.min } : {}),
@@ -608,7 +608,7 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
           {...commonProps}
           className={cn(
             commonProps.className,
-            validationStatus === "valid" ? "!border-green-500 !focus:ring-green-500" : "",
+            validationStatus === "valid" ? "!border-green-600 !border-2 !focus:ring-green-600" : "",
             validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : ""
           )}
         />
@@ -1295,7 +1295,7 @@ export function DynamicForm({
         <textarea
           id={field.name}
           rows={field.rows ?? rows}
-          className={cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name))}
+          className={cn("form-control", getErrorClass(field.name))}
           placeholder={field.placeholder}
           {...reg(field.name, rules)}
           disabled={isDisabled}
@@ -1590,7 +1590,7 @@ export function DynamicForm({
         <label className="form-label">{field.label}</label>
         <input
           type="text"
-          className={cn("form-control bg-gray-100 text-gray-500 cursor-not-allowed", getErrorClass(field.name))}
+          className={cn("form-control", getErrorClass(field.name))}
           value={displayValue}
           readOnly
         />
