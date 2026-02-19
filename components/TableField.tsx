@@ -185,10 +185,6 @@ const renderTableReadOnly = (c: any, idx: number, rows: any[]) => (
     className="form-control-borderless"
     value={(rows[idx] as any)?.[c.name] || ""}
     readOnly
-    style={{
-      background: 'var(--color-surface-muted, #f9fafb)',
-      cursor: 'default'
-    }}
   />
 );
 

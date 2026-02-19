@@ -853,8 +853,8 @@ export default function RecordDetailPage() {
         );
       }
 
-      // Send payload
-      console.log("Sending this PAYLOAD to Frappe:", finalPayload);
+      // // Send payload
+      // console.log("Sending this PAYLOAD to Frappe:", finalPayload);
 
       const resp = await axios.put(
         `${API_BASE_URL}/${doctypeName}/${docname}`,
