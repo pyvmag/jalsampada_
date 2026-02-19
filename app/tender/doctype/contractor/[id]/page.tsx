@@ -32,6 +32,7 @@ interface ContractorData {
   custom_contractor_company?: string;
   custom_gst?: string;
   custom_pan?: string;
+  custom_aadhar_no?: string;
   docstatus: 0 | 1 | 2;
 }
 
@@ -120,7 +121,7 @@ export default function ContractorDetailsPage({
             label: "Contractor Name",
             type: "Data",
             required: true,
-            
+
           },
           {
             name: "supplier_group",
@@ -181,17 +182,22 @@ export default function ContractorDetailsPage({
           },
           {
             name: "custom_contractor_company",
-            label: "Contractor Company",
+            label: "Firm/Company Name",
             type: "Data",
           },
           {
             name: "custom_gst",
-            label: "GST",
+            label: "GST No.",
             type: "Data",
           },
           {
             name: "custom_pan",
-            label: "PAN",
+            label: "PAN No.",
+            type: "Data",
+          },
+          {
+            name: "custom_aadhaar_no",
+            label: "Aadhaar No.",
             type: "Data",
           },
           {
@@ -253,7 +259,7 @@ export default function ContractorDetailsPage({
         // Refresh data to reflect changes
         fetchData();
       } else {
-        toast.error(messages.message, { description: messages.description , duration: Infinity});
+        toast.error(messages.message, { description: messages.description, duration: Infinity });
       }
     } catch (err: any) {
       console.error("Update error:", err);
@@ -263,7 +269,7 @@ export default function ContractorDetailsPage({
         "Contractor updated successfully!",
         "Failed to update Contractor"
       );
-      toast.error(messages.message, { description: messages.description , duration: Infinity});
+      toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsSaving(false);
     }
@@ -309,7 +315,8 @@ export default function ContractorDetailsPage({
       console.error("Delete error:", err);
       toast.error("Failed to delete Contractor", {
         description: err.response?.data?.exception || err.message,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsDeleting(false);
     }

@@ -268,7 +268,7 @@ export default function NewTenderPage() {
       },
       {
         name: "custom_contractor_company",
-        label: "Contractor Company",
+        label: "Firm/Company Name",
         type: "Read Only",
         fetchFrom: {
           sourceField: "custom_contractor_name",
@@ -308,7 +308,7 @@ export default function NewTenderPage() {
       },
       {
         name: "custom_gst",
-        label: "GST",
+        label: "GST No.",
         type: "Read Only",
         fetchFrom: {
           sourceField: "custom_contractor_name",
@@ -318,12 +318,22 @@ export default function NewTenderPage() {
       },
       {
         name: "custom_pan",
-        label: "PAN",
+        label: "PAN No.",
         type: "Read Only",
         fetchFrom: {
           sourceField: "custom_contractor_name",
           targetDoctype: "Contractor",
           targetField: "custom_pan"
+        },
+      },
+      {
+        name: "custom_aadhaar_no",
+        label: "Aadhaar No.",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "custom_aadhaar_no"
         },
       },
     ];
