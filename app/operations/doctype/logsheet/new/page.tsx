@@ -89,13 +89,6 @@ export default function NewLogSheetPage() {
             defaultValue: getValue("lis"),
           },
           {
-            name: "date",
-            label: "Date",
-            type: "Date",
-            required: true,
-            defaultValue: getValue("date"),
-          },
-          {
             name: "stage",
             label: "Stage/ Sub Scheme",
             type: "Link",
@@ -105,6 +98,13 @@ export default function NewLogSheetPage() {
             filterMapping: [
               { sourceField: "lis", targetField: "lis_name" }
             ]
+          },
+          {
+            name: "date",
+            label: "Date",
+            type: "Date",
+            required: true,
+            defaultValue: getValue("date"),
           },
           {
             name: "time",
@@ -160,12 +160,14 @@ export default function NewLogSheetPage() {
             label: "Water Level (In Meters)",
             type: "Float",
             defaultValue: getValue("water_level"),
+            precision: 2,
           },
           {
             name: "pressure_guage",
             label: "Pressure Guage Reading (in Kg/cm2)",
             type: "Float",
             defaultValue: getValue("pressure_guage"),
+            precision: 2,
           },
           { name: "voltage_section", label: "Voltage Reading (In Volt)", type: "Section Break" },
           { name: "br", label: "BR", type: "Float", defaultValue: getValue("br"), precision: 2 },

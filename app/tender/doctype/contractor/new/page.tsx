@@ -57,6 +57,11 @@ export default function NewContractorPage() {
         fields: [
           // --- Main Section ---
           {
+            name: "custom_contractor_company",
+            label: "Firm/Company Name",
+            type: "Data",
+          },
+          {
             name: "contractor_name",
             label: "Contractor Name",
             type: "Data",
@@ -118,11 +123,6 @@ export default function NewContractorPage() {
             label: "Phone",
             type: "Data",
             required: true,
-          },
-          {
-            name: "custom_contractor_company",
-            label: "Firm/Company Name",
-            type: "Data",
           },
           {
             name: "custom_gst",

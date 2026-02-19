@@ -99,18 +99,18 @@ export default function LogSheetDetailPage() {
 
                 const data = resp.data.data as LogSheetData;
                 setRecord(data);
-                
+
                 // Initialize button state based on document status
                 if (data.docstatus === 0) { // Draft
                     setActiveButton("SUBMIT");
                 } else if (data.docstatus === 1) { // Submitted
                     setActiveButton("CANCEL");
                 }
-                
+
                 setFormDirty(false);
             } catch (err: any) {
                 console.error("API Error:", err);
-                
+
                 const messages = getApiMessages(
                     null,
                     err,
@@ -176,7 +176,6 @@ export default function LogSheetDetailPage() {
                 name: "Details",
                 fields: fields([
                     { name: "lis", label: "LIS", type: "Link", linkTarget: "Lift Irrigation Scheme", required: true },
-                    { name: "date", label: "Date", type: "Date", defaultValue: "Today", required: true },
                     {
                         name: "stage",
                         label: "Stage/ Sub Scheme",
@@ -188,6 +187,7 @@ export default function LogSheetDetailPage() {
                             { sourceField: "lis", targetField: "lis_name" }
                         ]
                     },
+                    { name: "date", label: "Date", type: "Date", defaultValue: "Today", required: true },
                     { name: "time", label: "Time", type: "Time", defaultValue: record?.time, required: true },
                     {
                         name: "asset",
@@ -347,7 +347,7 @@ export default function LogSheetDetailPage() {
                 const updatedData = resp.data.data as LogSheetData;
                 setRecord(updatedData);
                 setFormDirty(false);
-                
+
                 // Update button state after save
                 if (updatedData.docstatus === 0) { // Still draft
                     setActiveButton("SUBMIT");
@@ -360,7 +360,7 @@ export default function LogSheetDetailPage() {
         } catch (err: any) {
             console.error("Save error:", err);
             const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
-            toast.error(messages.message, { description: messages.description, duration: Infinity});
+            toast.error(messages.message, { description: messages.description, duration: Infinity });
         } finally {
             setIsSaving(false);
             isProgrammaticUpdate.current = false;
@@ -372,13 +372,13 @@ export default function LogSheetDetailPage() {
        ------------------------------------------------- */
     const handleSubmitDocument = async () => {
         if (!record) return;
-        
+
         setIsSaving(true);
 
         try {
             // Prepare payload similar to handleSubmit
             const payload: Record<string, any> = { ...record };
-            
+
             // Convert numeric fields
             const floatFields = [
                 "water_level", "pressure_guage",
@@ -406,7 +406,7 @@ export default function LogSheetDetailPage() {
                 `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
                 payload,
                 {
-                    headers: { 
+                    headers: {
                         Authorization: `token ${apiKey}:${apiSecret}`,
                         "Content-Type": "application/json"
                     }
@@ -414,15 +414,15 @@ export default function LogSheetDetailPage() {
             );
 
             toast.success("Document submitted successfully!");
-            
+
             // Update local state without reload
             const updatedData = response.data.data as LogSheetData;
             setRecord(updatedData);
             setFormDirty(false);
-            
+
             // Update button to CANCEL after submission
             setActiveButton("CANCEL");
-            
+
             // Force form remount with new docstatus
             setFormVersion((v) => v + 1);
         } catch (err: any) {
@@ -439,32 +439,32 @@ export default function LogSheetDetailPage() {
        ------------------------------------------------- */
     const handleCancelDocument = async () => {
         if (!record) return;
-        
+
         if (!window.confirm("Are you sure you want to cancel this Log Sheet? This action cannot be undone.")) {
             return;
         }
-        
+
         setIsSaving(true);
-        
+
         try {
             const payload = {
                 docstatus: 2,
                 modified: record.modified
             };
-            
+
             const resp = await axios.put(
                 `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
                 payload,
-                { 
-                    headers: { 
+                {
+                    headers: {
                         Authorization: `token ${apiKey}:${apiSecret}`,
                         "Content-Type": "application/json"
-                    } 
+                    }
                 }
             );
 
             toast.success("Document cancelled successfully!");
-            
+
             // Update local state without reload
             const updatedRecord = resp.data.data as LogSheetData;
             setRecord(updatedRecord);
@@ -518,7 +518,7 @@ export default function LogSheetDetailPage() {
                 default: return "Processing...";
             }
         }
-        
+
         switch (activeButton) {
             case "SAVE": return "Save";
             case "SUBMIT": return "Submit";
@@ -539,7 +539,7 @@ export default function LogSheetDetailPage() {
         <DynamicForm
             key={formKey}
             tabs={formTabs}
-            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => {}}
+            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
             onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
             onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
             onCancel={() => router.back()}
