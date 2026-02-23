@@ -54,6 +54,8 @@ interface TenderProjectData {
     name_of_document?: string;
     attachment?: string | File;
   }>;
+  custom_contractor_name?: string;
+  custom_aadhaar_no?: string;
 }
 
 interface FormData {
@@ -396,47 +398,47 @@ export default function NewTenderPage() {
     const tableName = 'custom_tender_extension_history';
 
     const subscription = watch((value: any, { name, type }: any) => {
-      
+
       // 1. Toggle ON -> Add first row (01) if empty
       // We check if value exists because in some cases value might be partial
       if (name === 'custom_is_extension' && (value?.custom_is_extension === 1 || value?.custom_is_extension === true)) {
-          const currentHistory = getValues(tableName) || [];
-          
-          if (currentHistory.length === 0) {
-            setValue(tableName, [
-              {
-                extension_count: "01",
-                extension_upto: "",
-                sanction_letter: "",
-                attach: ""
-              }
-            ], { shouldDirty: true });
-            
-            
-            return; 
-          }
+        const currentHistory = getValues(tableName) || [];
+
+        if (currentHistory.length === 0) {
+          setValue(tableName, [
+            {
+              extension_count: "01",
+              extension_upto: "",
+              sanction_letter: "",
+              attach: ""
+            }
+          ], { shouldDirty: true });
+
+
+          return;
+        }
       }
 
       // 2. Auto-Indexing Strategy (Handles Add/Delete)
       // Checks table changes to enforce sequential indexing (01, 02, 03...)
       if (!name || name === tableName || name.startsWith(tableName)) {
-          // slight delay to ensure getValues gets the *new* row added by the UI
-          setTimeout(() => {
-              const rows = getValues(tableName);
-              
-              if (Array.isArray(rows) && rows.length > 0) {
-                  let hasUpdated = false;
-                  rows.forEach((row: any, index: number) => {
-                      const expected = (index + 1).toString().padStart(2, '0');
-                      
-                      // Only update if strictly different to avoid render loops
-                      if (row.extension_count !== expected) {
-                          setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
-                          hasUpdated = true;
-                      }
-                  });
+        // slight delay to ensure getValues gets the *new* row added by the UI
+        setTimeout(() => {
+          const rows = getValues(tableName);
+
+          if (Array.isArray(rows) && rows.length > 0) {
+            let hasUpdated = false;
+            rows.forEach((row: any, index: number) => {
+              const expected = (index + 1).toString().padStart(2, '0');
+
+              // Only update if strictly different to avoid render loops
+              if (row.extension_count !== expected) {
+                setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
+                hasUpdated = true;
               }
-          }, 50);
+            });
+          }
+        }, 50);
       }
     });
 
@@ -544,11 +546,12 @@ export default function NewTenderPage() {
           // because they need to be saved with the tender record
           if (field.type === "Read Only" && ![
             "custom_contractor_company",
-            "custom_mobile_no", 
+            "custom_mobile_no",
             "custom_supplier_address",
             "custom_email_id",
             "custom_gst",
-            "custom_pan"
+            "custom_pan",
+            "custom_aadhaar_no"
           ].includes(field.name)) {
             nonDataFields.add(field.name);
           }
