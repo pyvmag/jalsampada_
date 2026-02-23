@@ -411,7 +411,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "pump_serial_no",
                         label: "Pump Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Motor" },
                         defaultValue: getValue("pump_serial_no"),
                     },
@@ -437,7 +438,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "current_motor_serial_no",
                         label: "Current Motor Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "current_motor_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Motor", pump_asset: true },
                         defaultValue: getValue("current_motor_serial_no"),
                     },
@@ -468,7 +470,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "interchange_motor_serial_no",
                         label: "Interchange Motor Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "interchange_motor", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Motor", pump_asset: true },
                         defaultValue: getValue("interchange_motor_serial_no"),
                     },
@@ -505,7 +508,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "motor_serial_no",
                         label: "Motor Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Pump" },
                         defaultValue: getValue("motor_serial_no"),
                     },
@@ -531,7 +535,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "current_pump_serial_no",
                         label: "Current Pump Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "current_pump_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Pump", motor_asset: true },
                         defaultValue: getValue("current_pump_serial_no"),
                     },
@@ -562,7 +567,8 @@ export default function AssetInterchangeDetailPage() {
                     {
                         name: "interchange_pump_serial_no",
                         label: "Interchange Pump Serial No.",
-                        type: "Data",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "interchange_pump", targetDoctype: "Asset", targetField: "custom_serial_number" },
                         displayDependsOn: { select_asset: "Pump", motor_asset: true },
                         defaultValue: getValue("interchange_pump_serial_no"),
                     },
