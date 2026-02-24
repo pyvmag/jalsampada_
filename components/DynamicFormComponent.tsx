@@ -146,6 +146,7 @@ export interface FormField {
   className?: string;
   readOnly?: boolean;
   readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
+  toggleVariant?: "default" | "inverted" | "danger";
 
   // Validation
   asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
@@ -1349,6 +1350,9 @@ export function DynamicForm({
   };
 
   const renderCheckbox = (field: FormField) => {
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+    const isDisabled = isReadOnlyMode || isFieldReadOnly;
+
     return (
       <Controller
         name={field.name}
@@ -1359,7 +1363,8 @@ export function DynamicForm({
               checked={!!rhfField.value}
               onChange={(val) => rhfField.onChange(val ? 1 : 0)}
               size="md"
-              disabled={isReadOnlyMode}
+              variant={field.toggleVariant || "default"}
+              disabled={isDisabled}
             />
             <label
               htmlFor={field.name}
