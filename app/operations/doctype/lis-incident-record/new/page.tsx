@@ -17,7 +17,7 @@ const DOCTYPE_NAME = "Issue";
 export default function NewLisIncidentRecordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { apiKey, apiSecret } = useAuth();
+  const { apiKey, apiSecret, currentUser } = useAuth();
   const [isSaving, setIsSaving] = React.useState(false);
 
   // 1. Handle Duplicate Data
@@ -52,10 +52,11 @@ export default function NewLisIncidentRecordPage() {
           /* -----------------------------------------------------------
              Section 1: Incident Details (The Control Center)
              ----------------------------------------------------------- */
+          { name: "custom_incident_datetime", label: "Incident Date & Time", type: "DateTime", defaultValue: getValue("custom_incident_datetime"), required: true },
+
           { name: "custom_incident_details_header", label: "Incident Details", type: "Section Break" },
 
-          // Row 1: Incident Date & Time, Lift Irrigation Scheme, Stage, Asset
-          { name: "custom_incident_datetime", label: "Incident Date & Time", type: "DateTime", defaultValue: getValue("custom_incident_datetime"), required: true },
+          // Row 1: LIS, Stage, Asset and Asset No.
           {
             name: "custom_lis",
             label: "Lift Irrigation Scheme",
@@ -88,15 +89,15 @@ export default function NewLisIncidentRecordPage() {
               custom_obsolete: 0
             })
           },
+          { name: "custom_asset_no", label: "Asset No", type: "Data", fetchFrom: { sourceField: "custom_asset", targetDoctype: "Asset", targetField: "custom_asset_no" }, readOnlyValue: getValue("custom_asset_no") },
 
-          // Row 2: Asset No, Issue Type, Priority, Status
-          { name: "custom_asset_no", label: "Asset No", type: "Data",fetchFrom: { sourceField: "custom_asset", targetDoctype: "Asset", targetField: "custom_asset_no" }, readOnlyValue: getValue("custom_asset_no") }, // Read-only logic usually handled by fetchFrom
+          // Row 2: Issue type, Priority, Status and Reported by
           { name: "issue_type", label: "Issue Type", type: "Link", linkTarget: "Issue Type", defaultValue: getValue("issue_type") },
           { name: "priority", label: "Priority", type: "Link", linkTarget: "Issue Priority", defaultValue: getValue("priority") },
           { name: "status", label: "Status", type: "Select", options: "Open\nReplied\nOn Hold\nResolved\nClosed", defaultValue: getValue("status", "Open") },
-
-          // Row 3: Reported By, Designation
           { name: "custom_reported_by", label: "Reported By", type: "Link", linkTarget: "Employee", searchField: "employee_name", defaultValue: getValue("custom_reported_by") },
+
+          // Row 3: Designation
           {
             name: "custom_designation_",
             label: "Designation",
@@ -109,28 +110,23 @@ export default function NewLisIncidentRecordPage() {
              Section 2: Subject (Hidden standard subject, visible custom subject)
              ----------------------------------------------------------- */
           { name: "custom_subject_section", label: "Subject", type: "Section Break" },
-          { name: "custom_incident_subject", label: "Incident Subject", type: "Small Text", required: true, defaultValue: getValue("custom_incident_subject") },
+          { name: "custom_incident_subject", label: "Incident Subject", type: "Data", fieldColumns: 1, required: true, defaultValue: getValue("custom_incident_subject") },
+          { name: "description", label: "Description", type: "Small Text", fieldColumns: 3, defaultValue: getValue("description") },
           // Hidden field to satisfy backend requirement
           { name: "subject", label: "System Subject", type: "Data", displayDependsOn: "false", defaultValue: getValue("subject") },
-
-          /* -----------------------------------------------------------
-             Section 3: Description
-             ----------------------------------------------------------- */
-          { name: "custom_description_section", label: "Description", type: "Section Break" },
-          { name: "description", label: "Description", type: "Small Text", defaultValue: getValue("description") },
 
           /* -----------------------------------------------------------
              Section 4: Failure Classification
              ----------------------------------------------------------- */
           { name: "custom_failure_classification", label: "Failure Classification", type: "Section Break" },
-          { name: "custom_mechanical_failure", label: "Mechanical Failure", type: "Check", defaultValue: getValue("custom_mechanical_failure") },
-          { name: "custom_electrical_failure", label: "Electrical Failure", type: "Check", defaultValue: getValue("custom_electrical_failure") },
-          { name: "custom_flooding__waterlogging", label: "Flooding / Waterlogging", type: "Check", defaultValue: getValue("custom_flooding__waterlogging") },
-          { name: "custom_control_scada", label: "Control Panel / SCADA", type: "Check", defaultValue: getValue("custom_control_scada") },
-          { name: "custom_structural_damage", label: "Structural Damage", type: "Check", defaultValue: getValue("custom_structural_damage") },
-          { name: "custom_fire__short_circuit", label: "Fire / Short Circuit", type: "Check", defaultValue: getValue("custom_fire__short_circuit") },
-          { name: "custom_personnel_injury", label: "Personnel Injury", type: "Check", defaultValue: getValue("custom_personnel_injury") },
-          { name: "custom_other", label: "Other", type: "Check", defaultValue: getValue("custom_other") },
+          { name: "custom_mechanical_failure", label: "Mechanical Failure", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_mechanical_failure") },
+          { name: "custom_electrical_failure", label: "Electrical Failure", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_electrical_failure") },
+          { name: "custom_flooding__waterlogging", label: "Flooding / Waterlogging", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_flooding__waterlogging") },
+          { name: "custom_control_scada", label: "Control Panel / SCADA", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_control_scada") },
+          { name: "custom_structural_damage", label: "Structural Damage", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_structural_damage") },
+          { name: "custom_fire__short_circuit", label: "Fire / Short Circuit", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_fire__short_circuit") },
+          { name: "custom_personnel_injury", label: "Personnel Injury", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_personnel_injury") },
+          { name: "custom_other", label: "Other", type: "Check", toggleVariant: "danger", defaultValue: getValue("custom_other") },
 
           // Conditional Field: Only show if 'custom_other' is checked
           {
@@ -165,6 +161,7 @@ export default function NewLisIncidentRecordPage() {
             type: "Attach",
             defaultValue: getValue("custom_scada_attach"),
             displayDependsOn: "custom_scada_log_file == 'Yes'",
+            required: true,
             allowPreview: true
           },
 
@@ -184,11 +181,12 @@ export default function NewLisIncidentRecordPage() {
                 label: "Asset",
                 type: "Link",
                 linkTarget: "Asset",
-                // Attempt to filter based on main form + row component
+                // Filter based on main form + row component (Asset Category)
                 filters: (getFormValue) => ({
                   custom_lis_name: getFormValue("custom_lis"),
                   custom_stage_no: getFormValue("custom_stage"),
-                  // Note: Filtering by row's 'component' depends on TableField implementation
+                  asset_category: getFormValue("component"),
+                  custom_obsolete: 0
                 })
               },
               { name: "description_of_damage", label: "Damage Description", type: "Small Text" },
@@ -212,7 +210,7 @@ export default function NewLisIncidentRecordPage() {
             defaultValue: getValue("custom_action_taken", []),
             columns: [
               { name: "action", label: "Action Taken", type: "Small Text" },
-              { name: "taken_by", label: "Taken By", type: "Link", linkTarget: "User" },
+              { name: "taken_by", label: "Taken By", type: "Link", linkTarget: "User", searchField: "full_name" },
               { name: "time", label: "Time", type: "Time" },
               { name: "remarks", label: "Remarks", type: "Small Text" },
             ],
@@ -228,12 +226,42 @@ export default function NewLisIncidentRecordPage() {
              Section 10: Resolution Status
              ----------------------------------------------------------- */
           { name: "custom_status_of_resolution", label: "Resolution Status", type: "Section Break" },
-          { name: "custom_resolved_onsite", label: "Resolved On-site", type: "Check", defaultValue: getValue("custom_resolved_onsite") },
-          { name: "custom_escalated_to_higher_authority", label: "Escalated", type: "Check", defaultValue: getValue("custom_escalated_to_higher_authority") },
-          { name: "custom_intervention_required", label: "Intervention Required", type: "Check", defaultValue: getValue("custom_intervention_required") },
+          {
+            name: "custom_resolved_onsite",
+            label: "Resolved On-site",
+            type: "Check",
+            defaultValue: getValue("custom_resolved_onsite"),
+            readOnlyDependsOn: "custom_escalated_to_higher_authority || custom_intervention_required || custom_equipment_replacement_pending || custom_under_investigation"
+          },
+          {
+            name: "custom_escalated_to_higher_authority",
+            label: "Escalated",
+            type: "Check",
+            defaultValue: getValue("custom_escalated_to_higher_authority"),
+            readOnlyDependsOn: "custom_resolved_onsite || custom_intervention_required || custom_equipment_replacement_pending || custom_under_investigation"
+          },
+          {
+            name: "custom_intervention_required",
+            label: "Intervention Required",
+            type: "Check",
+            defaultValue: getValue("custom_intervention_required"),
+            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_equipment_replacement_pending || custom_under_investigation"
+          },
           { name: "custom_resolution_date", label: "Resolution Date", type: "Date", defaultValue: getValue("custom_resolution_date") },
-          { name: "custom_equipment_replacement_pending", label: "Replacement Pending", type: "Check", defaultValue: getValue("custom_equipment_replacement_pending") },
-          { name: "custom_under_investigation", label: "Under Investigation", type: "Check", defaultValue: getValue("custom_under_investigation") },
+          {
+            name: "custom_equipment_replacement_pending",
+            label: "Replacement Pending",
+            type: "Check",
+            defaultValue: getValue("custom_equipment_replacement_pending"),
+            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_intervention_required || custom_under_investigation"
+          },
+          {
+            name: "custom_under_investigation",
+            label: "Under Investigation",
+            type: "Check",
+            defaultValue: getValue("custom_under_investigation"),
+            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_intervention_required || custom_equipment_replacement_pending"
+          },
 
           /* -----------------------------------------------------------
              Section 11: Recommendations
@@ -264,12 +292,33 @@ export default function NewLisIncidentRecordPage() {
 
   // 3. Form Initialization Hook (The Subject Hack)
   const handleFormInit = (methods: UseFormReturn<any>) => {
-    // Watch 'custom_incident_subject' and copy it to 'subject'
+    // A. Auto-set Reported By if not already set (Hint from Logbook)
+    const setInitialUser = async () => {
+      if (!apiKey || !apiSecret) return;
+      try {
+        // Check if it's empty or the user explicitly asked for auto-fill
+        if (!methods.getValues("custom_reported_by")) {
+          const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+            headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+          });
+          const infoData = await infoResp.json();
+          const empId = infoData.message?.employee || infoData.message?.employee_id;
+          if (empId) {
+            methods.setValue("custom_reported_by", empId, { shouldDirty: true });
+          }
+        }
+      } catch (e) { console.error("Initial user fetch failed:", e); }
+    };
+    setInitialUser();
+
+    // B. Watch 'custom_incident_subject' and copy it to 'subject'
     const subscription = methods.watch((value, { name, type }) => {
       if (name === "custom_incident_subject") {
         methods.setValue("subject", value.custom_incident_subject || "New Incident");
       }
     });
+
+    return () => subscription.unsubscribe();
   };
 
   // 4. Submit Handler
@@ -282,7 +331,95 @@ export default function NewLisIncidentRecordPage() {
 
     setIsSaving(true);
     try {
-      const payload = { ...data };
+      // --- START: AUTOMATIC SIGNATURE LOGIC ---
+      let signatures = [...(data.custom_reporting_and_approval || [])];
+      let activeUser = currentUser;
+
+      // Fallback: If currentUser is null, try to get it from localStorage or API
+      if (!activeUser) {
+        activeUser = localStorage.getItem("currentUser");
+        if (!activeUser) {
+          try {
+            const userResp = await fetch("http://103.219.1.138:4412/api/method/frappe.auth.get_logged_user", {
+              headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+            });
+            const userData = await userResp.json();
+            activeUser = userData.message;
+          } catch (e) { console.error("Manual user fetch failed:", e); }
+        }
+      }
+
+
+
+      if (activeUser && activeUser !== "Guest") {
+        try {
+          let employee = null;
+
+          // Phase 1: Identifying Logged-in User via system API (Highest Priority)
+          try {
+            const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+              headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+            });
+            const infoData = await infoResp.json();
+            const info = infoData.message;
+            const empId = info?.employee || info?.employee_id || info?.custom_employee_id;
+            if (empId) {
+              const empResp = await fetch(`${API_BASE_URL}/Employee/${empId}?fields=${JSON.stringify(["name", "designation"])}`, {
+                headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+              });
+              const empData = await empResp.json();
+              if (empData.data) employee = empData.data;
+            }
+          } catch (e) { console.error("Logged-in user discovery via API failed:", e); }
+
+          // Phase 2: Standard Searches (Email match)
+          if (!employee) {
+            const searchFields = ["user_id", "company_email", "personal_email", "name"];
+            for (const field of searchFields) {
+              const empResp = await fetch(`${API_BASE_URL}/Employee?filters=${JSON.stringify([[field, "=", activeUser]])}&fields=${JSON.stringify(["name", "designation"])}`, {
+                headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+              });
+              const empData = await empResp.json();
+              if (empData.data?.[0]) { employee = empData.data[0]; break; }
+            }
+          }
+
+          // Phase 3: SUPER FUZZY (Contains first part of email/user name)
+          if (!employee) {
+            const prefix = activeUser.split(".")[0];
+            const superFuzzyUrl = `${API_BASE_URL}/Employee?filters=${JSON.stringify([["employee_name", "like", `%${prefix}%`]])}&fields=${JSON.stringify(["name", "designation"])}`;
+            const superFuzzyResp = await fetch(superFuzzyUrl, { headers: { 'Authorization': `token ${apiKey}:${apiSecret}` } });
+            const superFuzzyData = await superFuzzyResp.json();
+            if (superFuzzyData.data?.[0]) employee = superFuzzyData.data[0];
+          }
+
+          // Phase 4: Reported By field (Final Fallback)
+          if (!employee && data.custom_reported_by) {
+            const repResp = await fetch(`${API_BASE_URL}/Employee/${data.custom_reported_by}?fields=${JSON.stringify(["name", "designation"])}`, {
+              headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
+            });
+            const repData = await repResp.json();
+            if (repData.data) employee = repData.data;
+          }
+
+          if (employee) {
+            const alreadySigned = signatures.some(sig => sig.name1 === employee.name);
+            if (!alreadySigned) {
+              signatures.push({
+                name1: employee.name,
+                designation: employee.designation,
+                date: new Date().toISOString().split('T')[0]
+              });
+
+            }
+          } else {
+            console.error("ULTIMATE FAIL: No employee found for signature discovery.");
+          }
+        } catch (e) { console.error("Signature discovery process failed:", e); }
+      }
+      // --- END: AUTOMATIC SIGNATURE LOGIC ---
+
+      const payload: Record<string, any> = { ...data, custom_reporting_and_approval: signatures };
 
       // Ensure hidden subject is populated if missed by watcher
       if (!payload.subject) {
@@ -311,8 +448,7 @@ export default function NewLisIncidentRecordPage() {
           }
           // For other objects, try to stringify or skip
           else {
-            console.warn(`Skipping complex object field ${key}:`, value);
-            continue;
+            continue; // Skip unknown objects
           }
         } else {
           finalPayload[key] = value;
@@ -334,7 +470,7 @@ export default function NewLisIncidentRecordPage() {
         }
       });
 
-      console.log("Submitting Payload:", finalPayload);
+
 
       const resp = await fetch(`${API_BASE_URL}/${DOCTYPE_NAME}`, {
         method: 'POST',
@@ -371,6 +507,7 @@ export default function NewLisIncidentRecordPage() {
       description="Report operational issues and failures"
       submitLabel={isSaving ? "Saving..." : "Create Record"}
       cancelLabel="Cancel"
+      doctype={DOCTYPE_NAME}
     />
   );
 }
