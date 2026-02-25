@@ -188,7 +188,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
             // ADDED: 'capitalize' class to title
             title: "text-xl font-bold mb-1 capitalize",
             // ADDED: 'capitalize' class to description
-            description: "text-base font-medium opacity-90 capitalize",
+            description: "text-base font-medium opacity-90 ",
             actionButton: "text-base font-bold py-2 px-4",
             cancelButton: "text-base font-medium py-2 px-4",
             closeButton: "top-4 right-4",
