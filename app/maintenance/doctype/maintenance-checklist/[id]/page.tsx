@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { MaintenanceChecklistMatrix } from "../components/MaintenanceChecklistMatrix";
+import DocumentActivity from "@/components/DocumentActivity";
 
 // API base URL
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -28,6 +29,7 @@ interface MaintenanceChecklist {
   docstatus: 0 | 1 | 2;
   modified: string;
   owner?: string;
+  modified_by?: string;
 }
 
 // ----------------------
@@ -78,8 +80,8 @@ export default function MaintenanceChecklistDetailPage() {
           err.response?.status === 404
             ? `${doctypeName} not found`
             : err.response?.status === 403
-            ? "Unauthorized"
-            : `Failed to load ${doctypeName}`
+              ? "Unauthorized"
+              : `Failed to load ${doctypeName}`
         );
       } finally {
         setLoading(false);
@@ -107,7 +109,7 @@ export default function MaintenanceChecklistDetailPage() {
       {
         name: "Details",
         fields: fields([
-            { name: "posting_datetime", label: "Posting Datetime", type: "DateTime" },
+          { name: "posting_datetime", label: "Posting Datetime", type: "DateTime" },
           {
             name: "lis_name",
             label: "LIS Name",
@@ -122,8 +124,8 @@ export default function MaintenanceChecklistDetailPage() {
             linkTarget: "Stage No",
             required: true,
             filters: (getValues) => {
-                const lis = getValues("lis_name");
-                return lis ? { "lis_name": lis } : {};
+              const lis = getValues("lis_name");
+              return lis ? { "lis_name": lis } : {};
             }
           },
           {
@@ -147,13 +149,13 @@ export default function MaintenanceChecklistDetailPage() {
             ],
             required: true,
           },
-          
+
           // 🔴 CRITICAL FIX: Add the hidden field so React Hook Form loads the data!
           {
-             name: "checklist_data",
-             label: "Checklist Data",
-             type: "Read Only", // Or "Table" if you want to see the raw table below
-             defaultValue: record.checklist_data || [] 
+            name: "checklist_data",
+            label: "Checklist Data",
+            type: "Read Only", // Or "Table" if you want to see the raw table below
+            defaultValue: record.checklist_data || []
           },
 
           // 🟢 MATRIX UI SECTION
@@ -194,7 +196,7 @@ export default function MaintenanceChecklistDetailPage() {
       // Remove UI-only fields
       delete payload.checklist_ui;
       delete payload.checklist_matrix_section;
-      
+
       delete payload.modified;
       delete payload.creation;
       delete payload.owner;
@@ -240,22 +242,38 @@ export default function MaintenanceChecklistDetailPage() {
   if (!record) return <div className="p-8">Document not found.</div>;
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description="Update checklist details and matrix"
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      initialStatus={record.docstatus === 1 ? "Submitted" : record.docstatus === 2 ? "Cancelled" : "Draft"}
-      docstatus={record.docstatus}
-      isSubmittable={false}
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/maintenance/doctype/maintenance-checklist",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description="Update checklist details and matrix"
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        initialStatus={record.docstatus === 1 ? "Submitted" : record.docstatus === 2 ? "Cancelled" : "Draft"}
+        docstatus={record.docstatus}
+        isSubmittable={false}
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/maintenance/doctype/maintenance-checklist",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }
