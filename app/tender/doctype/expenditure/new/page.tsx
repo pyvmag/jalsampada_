@@ -599,7 +599,6 @@ export default function NewExpenditurePage() {
     const savedAmount = Number(data.saved_amount) || 0;
     const details = data.expenditure_details || [];
     const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
-
     // For Final bills, Saved Amount is the project total (Previous + This Bill).
     // For Running bills, Saved Amount is just the non-table part of THIS bill.
     // 🟢 MENTOR'S LOGIC VALIDATION
