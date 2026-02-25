@@ -48,3 +48,28 @@ export async function checkProjectExtension(
 
   return response.data;
 }
+// Add to api/rpc.ts
+
+export async function fetchDocumentTimeline(
+  doctype: string,
+  docname: string,
+  baseUrl: string,
+  apiKey: string,
+  apiSecret: string
+) {
+  // We use GET here because this specific RPC method accepts URL parameters
+  const url = `${baseUrl}/api/method/frappe.desk.form.load.getdoc`;
+  
+  const response = await axios.get(url, {
+    params: {
+      doctype: doctype,
+      name: docname,
+    },
+    headers: {
+      Authorization: `token ${apiKey}:${apiSecret}`,
+    },
+    withCredentials: true,
+  });
+
+  return response.data;
+}
