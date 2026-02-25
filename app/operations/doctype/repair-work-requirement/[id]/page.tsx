@@ -10,6 +10,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 // Disable Expect header to prevent 417 errors (Global config)
 axios.defaults.transformRequest = [(data, headers) => {
@@ -56,6 +57,8 @@ interface RepairWorkRequirementData {
   verified_by?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -103,8 +106,8 @@ export default function RepairWorkRequirementDetailPage() {
           err.response?.status === 404
             ? "Repair Work Requirement not found"
             : err.response?.status === 403
-            ? "Unauthorized"
-            : "Failed to load record"
+              ? "Unauthorized"
+              : "Failed to load record"
         );
       } finally {
         setLoading(false);
@@ -127,7 +130,7 @@ export default function RepairWorkRequirementDetailPage() {
         defaultValue:
           f.name in record
             ? // @ts-ignore - safe because we match the interface
-              record[f.name as keyof RepairWorkRequirementData]
+            record[f.name as keyof RepairWorkRequirementData]
             : f.defaultValue,
       }));
 
@@ -194,11 +197,12 @@ export default function RepairWorkRequirementDetailPage() {
             type: "Table",
             columns: [
               { name: "sr_no", label: "Sr. No.", type: "Data" },
-              { name: "asset_id", label: "Asset ID", type: "Link", linkTarget: "Asset",
+              {
+                name: "asset_id", label: "Asset ID", type: "Link", linkTarget: "Asset",
                 filters: (getValues: (name: string) => any) => {
                   const parentLisName = getValues("parent.lis_name");
                   const parentStage = getValues("parent.stage");
-                  
+
                   const filters: any = {};
                   if (parentLisName) {
                     filters.custom_lis_name = parentLisName;
@@ -206,7 +210,7 @@ export default function RepairWorkRequirementDetailPage() {
                   if (parentStage) {
                     filters.custom_stage_no = parentStage;
                   }
-                  
+
                   return filters;
                 }
               },
@@ -238,7 +242,7 @@ export default function RepairWorkRequirementDetailPage() {
                 type: "Data",
                 fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "custom_equipement_rating" }
               },
-               { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "available_for_use_date" } },
+              { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "available_for_use_date" } },
               {
                 name: "is_in_warranty_period",
                 label: "Is in Warranty period",
@@ -307,7 +311,7 @@ export default function RepairWorkRequirementDetailPage() {
     // If you always want to allow save on child table changes, 
     // you might need to relax this check or ensure isDirty tracks deep changes.
     // For now, we trust the component's dirty tracking.
-    if (!isDirty && !data.repair_work_details) { 
+    if (!isDirty && !data.repair_work_details) {
       toast.info("No changes to save.");
       return;
     }
@@ -341,7 +345,7 @@ export default function RepairWorkRequirementDetailPage() {
       if (finalPayload.repair_work_details) {
         finalPayload.repair_work_details = finalPayload.repair_work_details.map((row: any) => {
           const cleanRow = { ...row };
-          
+
           // 1. Remove temporary IDs from new rows
           // If 'name' starts with 'new' or is very long (UUID-like) and it's not a standard 10-char hash,
           // assume it's a temp ID and remove it so Frappe inserts a new row.
@@ -355,7 +359,7 @@ export default function RepairWorkRequirementDetailPage() {
           // 3. Ensure Date fields are null if empty string
           if (cleanRow.date_of_commissioning === "") cleanRow.date_of_commissioning = null;
           if (cleanRow.ur_date === "") cleanRow.ur_date = null;
-          
+
           return cleanRow;
         });
       }
@@ -378,13 +382,13 @@ export default function RepairWorkRequirementDetailPage() {
 
       if (resp.data?.data) {
         setRecord(resp.data.data);
-         router.push(`/operations/doctype/repair-work-requirement/${encodeURIComponent(docname)}`);
-                return { statusCode: resp.status, status: resp.data?.data?.status };
+        router.push(`/operations/doctype/repair-work-requirement/${encodeURIComponent(docname)}`);
+        return { statusCode: resp.status, status: resp.data?.data?.status };
       }
-      
+
       // Optional: Redirect or refresh
       // router.push(`/operations/doctype/repair-work-requirement/${encodeURIComponent(docname)}`);
-      
+
     } catch (err: any) {
       console.error("Save error:", err);
 
@@ -392,25 +396,25 @@ export default function RepairWorkRequirementDetailPage() {
       // Check if we have server messages (Validation Errors from Frappe)
       if (err.response && err.response.data) {
         const data = err.response.data;
-        
+
         // 1. Check for _server_messages (JSON string array)
         if (data._server_messages) {
-           try {
-             const messages = JSON.parse(data._server_messages);
-             const messageText = messages
-                .map((m: string) => JSON.parse(m).message)
-                .join(", ");
-             
-             toast.error("Validation Error", {
-               description: messageText,
-               duration: 8000 // Show longer so user can read
-             });
-             return; 
-           } catch (e) {
-             console.error("Failed to parse server messages", e);
-           }
+          try {
+            const messages = JSON.parse(data._server_messages);
+            const messageText = messages
+              .map((m: string) => JSON.parse(m).message)
+              .join(", ");
+
+            toast.error("Validation Error", {
+              description: messageText,
+              duration: 8000 // Show longer so user can read
+            });
+            return;
+          } catch (e) {
+            console.error("Failed to parse server messages", e);
+          }
         }
-        
+
         // 2. Check for exception message
         if (data.exception) {
           toast.error("Server Exception", {
@@ -466,19 +470,35 @@ export default function RepairWorkRequirementDetailPage() {
      7. RENDER
      ------------------------------------------------- */
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Record ID: ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/operations/doctype/repair-work-requirement"
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Record ID: ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/operations/doctype/repair-work-requirement"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }

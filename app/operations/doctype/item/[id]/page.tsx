@@ -11,6 +11,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -27,6 +28,8 @@ interface ItemData {
   // Meta fields (needed for update)
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 export default function ItemDetailPage() {
@@ -89,7 +92,7 @@ export default function ItemDetailPage() {
         defaultValue:
           f.name in item
             ? // @ts-ignore
-              item[f.name as keyof ItemData]
+            item[f.name as keyof ItemData]
             : f.defaultValue,
       }));
 
@@ -231,19 +234,35 @@ export default function ItemDetailPage() {
   }
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${item.item_code || item.name}`}
-      description={`Update basic information for item ${item.item_code || docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/operations/doctype/item"
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${item.item_code || item.name}`}
+        description={`Update basic information for item ${item.item_code || docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/operations/doctype/item"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={item.owner}
+          modifiedStr={item.modified}
+          modifiedBy={item.modified_by}
+        />
+      </div>
+    </div>
   );
 }

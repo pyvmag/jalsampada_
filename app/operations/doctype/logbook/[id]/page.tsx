@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 
 // 🟢 CONFIGURATION
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -48,6 +49,8 @@ interface LogbookData {
   }>;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 export default function RecordDetailPage() {
@@ -686,25 +689,41 @@ export default function RecordDetailPage() {
        9. RENDER FORM (SAME AS LOGSHEET)
        ------------------------------------------------- */
   return (
-    <DynamicForm
-      key={formKey}
-      tabs={formTabs}
-      onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-      onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-      onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
-      onCancel={() => router.push("/operations/doctype/logbook")}
-      title={`${DOCTYPE_NAME}: ${logbook.name}`}
-      description={`Update details for record ID: ${docname}`}
-      isSubmittable={activeButton === "SUBMIT"}
-      docstatus={logbook.docstatus}
-      initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
-      onFormInit={handleFormInit}
-      submitLabel={getSubmitLabel()}
-      deleteConfig={{
-        doctypeName: DOCTYPE_NAME,
-        docName: docname,
-        redirectUrl: "/operations/doctype/logbook",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        key={formKey}
+        tabs={formTabs}
+        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+        onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+        onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
+        onCancel={() => router.push("/operations/doctype/logbook")}
+        title={`${DOCTYPE_NAME}: ${logbook.name}`}
+        description={`Update details for record ID: ${docname}`}
+        isSubmittable={activeButton === "SUBMIT"}
+        docstatus={logbook.docstatus}
+        initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
+        onFormInit={handleFormInit}
+        submitLabel={getSubmitLabel()}
+        deleteConfig={{
+          doctypeName: DOCTYPE_NAME,
+          docName: docname,
+          redirectUrl: "/operations/doctype/logbook",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={DOCTYPE_NAME}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={logbook.owner}
+          modifiedStr={logbook.modified}
+          modifiedBy={logbook.modified_by}
+        />
+      </div>
+    </div>
   );
 }

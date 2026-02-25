@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -45,6 +46,8 @@ interface LogSheetData {
     // System fields
     docstatus: 0 | 1 | 2;
     modified: string;
+    owner?: string;
+    modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -536,25 +539,41 @@ export default function LogSheetDetailPage() {
        9. RENDER FORM
        ------------------------------------------------- */
     return (
-        <DynamicForm
-            key={formKey}
-            tabs={formTabs}
-            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-            onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-            onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
-            onCancel={() => router.back()}
-            title={`${doctypeName}: ${record.name}`}
-            description={`Update details for record ID: ${docname}`}
-            isSubmittable={activeButton === "SUBMIT"}
-            docstatus={record.docstatus}
-            initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
-            onFormInit={handleFormInit}
-            submitLabel={getSubmitLabel()}
-            deleteConfig={{
-                doctypeName: doctypeName,
-                docName: docname,
-                redirectUrl: "/operations/doctype/logsheet",
-            }}
-        />
+        <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+            <DynamicForm
+                key={formKey}
+                tabs={formTabs}
+                onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+                onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+                onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
+                onCancel={() => router.back()}
+                title={`${doctypeName}: ${record.name}`}
+                description={`Update details for record ID: ${docname}`}
+                isSubmittable={activeButton === "SUBMIT"}
+                docstatus={record.docstatus}
+                initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
+                onFormInit={handleFormInit}
+                submitLabel={getSubmitLabel()}
+                deleteConfig={{
+                    doctypeName: doctypeName,
+                    docName: docname,
+                    redirectUrl: "/operations/doctype/logsheet",
+                }}
+            />
+
+            <div className="w-full px-4 md:px-8">
+                <DocumentActivity
+                    doctype={doctypeName}
+                    docname={docname}
+                    baseUrl={API_BASE_URL.replace("/api/resource", "")}
+                    apiKey={apiKey || ""}
+                    apiSecret={apiSecret || ""}
+                    isInitialized={isInitialized}
+                    currentUserEmail={record.owner}
+                    modifiedStr={record.modified}
+                    modifiedBy={record.modified_by}
+                />
+            </div>
+        </div>
     );
 }
