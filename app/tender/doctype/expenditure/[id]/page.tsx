@@ -736,17 +736,36 @@ export default function RecordDetailPage() {
       return sum + (Number(row.bill_amount) || 0);
     }, 0);
 
-    const amtToBeMatched = savedAmount + totalChildBillAmt;
+    // Rule 2: Balance Check
+    // For Final bills, Saved Amount is the project total (Previous + This Bill).
+    // For Running bills, Saved Amount is just the non-table part of THIS bill.
+    const amtToBeMatched = data.bill_type === "Final"
+      ? (savedAmount - prevCumulativeAmount)
+      : (totalChildBillAmt + savedAmount);
 
     // Rule 2: Balance Check
     if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
       const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
 
       toast.error("Amount Mismatch", {
-        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Calculated Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
         duration: Infinity
       });
       return;
+    }
+
+    // Rule 3: Saved Amount check (Only for Final bills)
+    if (data.bill_type === "Final") {
+      const billUpto = billAmount + prevCumulativeAmount;
+      const diff = Math.abs(billUpto - savedAmount);
+
+      if (diff > 0.01) {
+        toast.error("Saved Amount Validation Failed", {
+          description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(data.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+          duration: Infinity,
+        });
+        return;
+      }
     }
 
     // If validation passes, proceed to save
@@ -994,6 +1013,51 @@ export default function RecordDetailPage() {
     setIsSaving(true);
 
     try {
+      // 🟢 VALIDATION LOGIC (Mirroring handleSubmit)
+      const billAmount = Number(formData.bill_amount) || 0;
+      const tenderAmount = Number(formData.tender_amount) || 0;
+      const savedAmount = Number(formData.saved_amount) || 0;
+
+      // Rule 1: Bill Amount cannot be > Tender Amount
+      if (billAmount > tenderAmount) {
+        toast.error("Validation Failed", {
+          description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount.",
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 2: Balance Check
+      const details = formData.expenditure_details || [];
+      const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
+
+      const amtToBeMatched = formData.bill_type === "Final"
+        ? (savedAmount - prevCumulativeAmount)
+        : (totalChildBillAmt + savedAmount);
+
+      if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+        const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 3: Saved Amount check (Only for Final bills)
+      if (formData.bill_type === "Final") {
+        const billUpto = billAmount + prevCumulativeAmount;
+        const diff = Math.abs(billUpto - savedAmount);
+
+        if (diff > 0.01) {
+          toast.error("Saved Amount Validation Failed", {
+            description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(formData.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+            duration: Infinity,
+          });
+          return;
+        }
+      }
+
       // Prepare payload similar to handleSubmit
       const payload: Record<string, any> = JSON.parse(JSON.stringify(formData));
 
