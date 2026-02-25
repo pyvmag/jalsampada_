@@ -9,6 +9,7 @@ import {
   FormField,
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
+import DocumentActivity from "@/components/DocumentActivity";
 import { toast } from "sonner";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -25,6 +26,8 @@ interface WorkSubtypeData {
   // Main fields
   work_type?: string;        // Link to Work Type
   work_subtype?: string;     // Data field
+  owner?: string;
+  modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -76,8 +79,8 @@ export default function WorkSubtypeDetailPage() {
           err.response?.status === 404
             ? `${doctypeName} not found`
             : err.response?.status === 403
-            ? "Unauthorized"
-            : `Failed to load ${doctypeName}`
+              ? "Unauthorized"
+              : `Failed to load ${doctypeName}`
         );
       } finally {
         setLoading(false);
@@ -100,7 +103,7 @@ export default function WorkSubtypeDetailPage() {
         defaultValue:
           f.name in record
             ? // @ts-ignore
-              record[f.name as keyof WorkSubtypeData]
+            record[f.name as keyof WorkSubtypeData]
             : f.defaultValue,
       }));
 
@@ -218,7 +221,8 @@ export default function WorkSubtypeDetailPage() {
 
       toast.error("Failed to save", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }
@@ -262,19 +266,35 @@ export default function WorkSubtypeDetailPage() {
   ------------------------------------------------- */
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Update details for record ID ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/tender/doctype/work-subtype",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Update details for record ID ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/tender/doctype/work-subtype",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }
