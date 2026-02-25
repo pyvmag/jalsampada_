@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 import {
     Loader2,
     FileText,
@@ -70,6 +71,8 @@ interface AssetData {
     custom_current_hours?: number;
     docstatus: 0 | 1 | 2;
     modified: string;
+    owner?: string;
+    modified_by?: string;
     additional_asset_cost?: number;
     total_asset_cost?: number;
 
@@ -1155,26 +1158,42 @@ export default function RecordDetailPage() {
        10. RENDER FORM (SAME AS LOGBOOK)
        ------------------------------------------------- */
     return (
-        <DynamicForm
-            key={formKey}
-            tabs={formTabs}
-            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-            onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-            onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
-            onCancel={handleCancel}
-            title={`${asset.name}`}
-            description={`Status: ${asset?.status || 'Unknown'}`}
-            submitLabel={getSubmitLabel()}
-            cancelLabel="Cancel"
-            initialStatus={getCurrentStatus()}
-            docstatus={asset.docstatus}
-            isSubmittable={activeButton === "SUBMIT" || asset.docstatus === 1}
-            onFormInit={handleFormInit}
-            deleteConfig={{
-                doctypeName: doctypeName,
-                docName: docname,
-                redirectUrl: "/lis-management/doctype/asset"
-            }}
-        />
+        <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+            <DynamicForm
+                key={formKey}
+                tabs={formTabs}
+                onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+                onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+                onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
+                onCancel={handleCancel}
+                title={`${asset.name}`}
+                description={`Status: ${asset?.status || 'Unknown'}`}
+                submitLabel={getSubmitLabel()}
+                cancelLabel="Cancel"
+                initialStatus={getCurrentStatus()}
+                docstatus={asset.docstatus}
+                isSubmittable={activeButton === "SUBMIT" || asset.docstatus === 1}
+                onFormInit={handleFormInit}
+                deleteConfig={{
+                    doctypeName: doctypeName,
+                    docName: docname,
+                    redirectUrl: "/lis-management/doctype/asset"
+                }}
+            />
+
+            <div className="w-full px-4 md:px-8">
+                <DocumentActivity
+                    doctype={doctypeName}
+                    docname={docname}
+                    baseUrl={API_BASE_URL}
+                    apiKey={apiKey || ""}
+                    apiSecret={apiSecret || ""}
+                    isInitialized={isInitialized}
+                    currentUserEmail={asset.owner}
+                    modifiedStr={asset.modified}
+                    modifiedBy={asset.modified_by}
+                />
+            </div>
+        </div>
     );
 }

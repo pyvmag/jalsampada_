@@ -11,8 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
-import { de } from "date-fns/locale";
-import { get } from "http";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -34,6 +33,9 @@ interface ContractorData {
   custom_pan?: string;
   custom_aadhar_no?: string;
   docstatus: 0 | 1 | 2;
+  owner?: string;
+  modified?: string;
+  modified_by?: string;
 }
 
 export default function ContractorDetailsPage({
@@ -42,7 +44,6 @@ export default function ContractorDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
-  // Unwrap params if using Next.js 15+, otherwise access directly
   const resolvedParams = React.use(params);
   const recordId = resolvedParams.id as string;
 
@@ -60,7 +61,7 @@ export default function ContractorDetailsPage({
   const fetchData = React.useCallback(async () => {
     if (!isInitialized) return;
     if (!isAuthenticated || !apiKey || !apiSecret) {
-      toast.error("Authentication required", { duration: Infinity });
+      toast.error("Authentication required");
       router.push("/login");
       return;
     }
@@ -76,7 +77,7 @@ export default function ContractorDetailsPage({
       setData(response.data.data);
     } catch (err: any) {
       console.error("Fetch error:", err);
-      toast.error("Failed to load Contractor details", { duration: Infinity });
+      toast.error("Failed to load Contractor details");
       router.push("/tender/doctype/contractor");
     } finally {
       setLoading(false);
@@ -96,7 +97,7 @@ export default function ContractorDetailsPage({
   }, [fetchData]);
 
   /* -------------------------------------------------
-   2. Form Configuration (Mapped to Fields CSV)
+   2. Form Configuration
   ------------------------------------------------- */
   const formTabs: TabbedLayout[] = React.useMemo(() => {
     if (!data) return [];
@@ -115,7 +116,6 @@ export default function ContractorDetailsPage({
       {
         name: "Details",
         fields: withDefaults([
-          // --- Main Section ---
           {
             name: "custom_contractor_company",
             label: "Firm/Company Name",
@@ -126,7 +126,6 @@ export default function ContractorDetailsPage({
             label: "Contractor Name",
             type: "Data",
             required: true,
-
           },
           {
             name: "supplier_group",
@@ -134,7 +133,6 @@ export default function ContractorDetailsPage({
             type: "Link",
             linkTarget: "Supplier Group",
           },
-
           {
             name: "supplier_type",
             label: "Contractor Type",
@@ -142,14 +140,11 @@ export default function ContractorDetailsPage({
             options: "Company\nIndividual\nPartnership",
             defaultValue: "Company",
           },
-
-          // --- Address and Contact Section ---
           {
             name: "address_and_contact_section",
             label: "Address and Contact",
             type: "Section Break",
           },
-
           {
             name: "address_type",
             label: "Address Type",
@@ -172,7 +167,6 @@ export default function ContractorDetailsPage({
             label: "Postal Code",
             type: "Data",
           },
-
           {
             name: "email_address",
             label: "Email Address",
@@ -212,7 +206,7 @@ export default function ContractorDetailsPage({
   }, [data]);
 
   /* -------------------------------------------------
-   3. Update Handler (PUT)
+   3. Update Handler
   ------------------------------------------------- */
   const handleUpdate = async (formData: Record<string, any>) => {
     if (!apiKey || !apiSecret) return;
@@ -220,11 +214,9 @@ export default function ContractorDetailsPage({
     setIsSaving(true);
     try {
       const payload: Record<string, any> = JSON.parse(JSON.stringify(formData));
-
-      // Remove non-data fields
       const nonDataFields = new Set([
-        "column_break_nkmc",
         "address_and_contact_section",
+        "column_break_nkmc",
         "column_break_jfzy",
         "column_break_ohij",
       ]);
@@ -236,8 +228,6 @@ export default function ContractorDetailsPage({
         }
       }
 
-      console.log("Updating Payload:", finalPayload);
-
       const url = `${API_BASE_URL}/${doctypeName}/${decodeURIComponent(recordId)}`;
       const response = await axios.put(url, finalPayload, {
         headers: {
@@ -247,59 +237,30 @@ export default function ContractorDetailsPage({
         withCredentials: true,
       });
 
-      const messages = getApiMessages(
-        response,
-        null,
-        "Contractor updated successfully!",
-        "Failed to update Contractor"
-      );
-
+      const messages = getApiMessages(response, null, "Contractor updated!", "Failed to update Contractor");
       if (messages.success) {
         toast.success(messages.message);
-        // Refresh data to reflect changes
         fetchData();
       } else {
-        toast.error(messages.message, { description: messages.description, duration: Infinity });
+        toast.error(messages.message);
       }
     } catch (err: any) {
-      console.error("Update error:", err);
-      const messages = getApiMessages(
-        null,
-        err,
-        "Contractor updated successfully!",
-        "Failed to update Contractor"
-      );
-      toast.error(messages.message, { description: messages.description, duration: Infinity });
+      toast.error("Failed to update Contractor");
     } finally {
       setIsSaving(false);
     }
   };
 
-  /* -------------------------------------------------
-   4. Submit Handler (Alias for Update)
-  ------------------------------------------------- */
   const handleSubmit = async (formData: Record<string, any>) => {
     await handleUpdate(formData);
   };
 
-  /* -------------------------------------------------
-   5. Cancel Handler
-  ------------------------------------------------- */
   const handleCancel = () => {
     router.push("/tender/doctype/contractor");
   };
 
-  /* -------------------------------------------------
-   6. Delete Handler (DELETE)
-  ------------------------------------------------- */
   const handleDelete = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete Contractor: ${data?.contractor_name || recordId}?`
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm("Are you sure you want to delete this contractor?")) return;
 
     setIsDeleting(true);
     try {
@@ -309,40 +270,44 @@ export default function ContractorDetailsPage({
         withCredentials: true,
       });
 
-      toast.success("Contractor deleted successfully");
+      toast.success("Contractor deleted");
       router.push("/tender/doctype/contractor");
     } catch (err: any) {
-      console.error("Delete error:", err);
-      toast.error("Failed to delete Contractor", {
-        description: err.response?.data?.exception || err.message,
-        duration: Infinity
-      });
+      toast.error("Failed to delete Contractor");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-8 text-center text-gray-500">
-        Loading Contractor details...
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <div className="p-8 text-center text-red-500">Record not found</div>;
-  }
+  if (loading) return <div className="p-8 text-center text-gray-500">Loading details...</div>;
+  if (!data) return <div className="p-8 text-center text-red-500">Record not found</div>;
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${data.name}`}
-      description={`Update details for record ID ${recordId}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        onDelete={handleDelete}
+        title={`${doctypeName}: ${data.name}`}
+        description={`Update details for record ID ${recordId}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={recordId}
+          baseUrl={API_BASE_URL}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={data.owner}
+          modifiedStr={data.modified}
+          modifiedBy={data.modified_by}
+        />
+      </div>
+    </div>
   );
 }
