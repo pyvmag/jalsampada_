@@ -1185,7 +1185,7 @@ export default function RecordDetailPage() {
                 <DocumentActivity
                     doctype={doctypeName}
                     docname={docname}
-                    baseUrl={API_BASE_URL}
+                    baseUrl={FRAPPE_BASE_URL}
                     apiKey={apiKey || ""}
                     apiSecret={apiSecret || ""}
                     isInitialized={isInitialized}

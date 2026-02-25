@@ -9,6 +9,7 @@ import {
   FormField,
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
+import DocumentActivity from "@/components/DocumentActivity";
 import { toast } from "sonner";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -17,6 +18,9 @@ interface TalukaData {
   name: string;
   taluka: string;
   district: string;
+  modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 export default function TalukaDetailPage() {
@@ -164,19 +168,35 @@ export default function TalukaDetailPage() {
 
   /* ---------------- RENDER ---------------- */
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`Taluka: ${talukaDoc.taluka}`}
-      description={`Update Taluka record (${docname})`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName, // 🔴 Frappe Doctype
-        docName: docname,
-        redirectUrl: "/lis-management/doctype/taluka", // 🔴 URL path
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`Taluka: ${talukaDoc.taluka}`}
+        description={`Update Taluka record (${docname})`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/lis-management/doctype/taluka",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={talukaDoc.owner}
+          modifiedStr={talukaDoc.modified}
+          modifiedBy={talukaDoc.modified_by}
+        />
+      </div>
+    </div>
   );
 }
