@@ -599,40 +599,40 @@ export default function NewExpenditurePage() {
     const savedAmount = Number(data.saved_amount) || 0;
     const details = data.expenditure_details || [];
     const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
-
     // For Final bills, Saved Amount is the project total (Previous + This Bill).
     // For Running bills, Saved Amount is just the non-table part of THIS bill.
-    const calculatedInvoiceAmount = data.bill_type === "Final"
-      ? (savedAmount - prevCumulativeAmount)
-      : (totalChildBillAmt + savedAmount);
+    // 🟢 MENTOR'S LOGIC VALIDATION
+    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
+    // This is mathematically equivalent to: bill_upto = saved_amount
 
-    // Rule 1: Bill Amount cannot be > Tender Amount
+    // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
     if (billAmount > tenderAmount) {
       toast.error("Validation Failed", {
-        description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount.",
+        description: "The Bill Amount cannot be greater than the Tender Amount.",
         duration: Infinity
       });
       return;
     }
 
-    if (Math.abs(billAmount - calculatedInvoiceAmount) > 0.01) {
-      const relation = billAmount > calculatedInvoiceAmount ? "exceeds" : "is less than";
-      toast.error("Amount Mismatch", {
-        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${calculatedInvoiceAmount.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
-        duration: Infinity,
-      });
-      return;
-    }
-
-    // Validation: Saved Amount check (Only for Final bills)
     if (data.bill_type === "Final") {
-      const tenderAmount = Number(data.tender_amount) || 0;
+      // Rule 2: Mentor's Rule for Final Bills
+      // bill_upto = bill_amount + prev_cumulative_amount
       const billUpto = billAmount + prevCumulativeAmount;
       const diff = Math.abs(billUpto - savedAmount);
 
       if (diff > 0.01) {
-        toast.error("Saved Amount Validation Failed", {
-          description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(data.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+        toast.error("Saved Amount Mismatch", {
+          description: `As per rule: Tender Amount (${tenderAmount.toLocaleString()}) - Remaining Amount must equal Saved Amount (${savedAmount.toLocaleString()}). Currently there is a difference of ${diff.toLocaleString()}.`,
+          duration: Infinity,
+        });
+        return;
+      }
+    } else {
+      // Rule 3: For Running Bills, ensure table matches Bill Amount
+      if (Math.abs(billAmount - totalChildBillAmt) > 0.01) {
+        const relation = billAmount > totalChildBillAmt ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${totalChildBillAmt.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
           duration: Infinity,
         });
         return;
