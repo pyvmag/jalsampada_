@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 const DOCTYPE_NAME = "Issue";
@@ -584,21 +585,37 @@ export default function EditLisIncidentRecordPage() {
   if (isLoading) return <div className="p-8">Loading...</div>;
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={() => router.back()}
-      onFormInit={handleFormInit}
-      title={`Edit LIS Incident: ${docname}`}
-      description="Update operational issues and failures"
-      submitLabel={isSaving ? "Saving..." : "Update Record"}
-      cancelLabel="Cancel"
-      doctype={DOCTYPE_NAME}
-      deleteConfig={{
-        doctypeName: DOCTYPE_NAME,
-        docName: docname,
-        redirectUrl: "/operations/doctype/lis-incident-record"
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={() => router.back()}
+        onFormInit={handleFormInit}
+        title={`Edit LIS Incident: ${docname}`}
+        description="Update operational issues and failures"
+        submitLabel={isSaving ? "Saving..." : "Update Record"}
+        cancelLabel="Cancel"
+        doctype={DOCTYPE_NAME}
+        deleteConfig={{
+          doctypeName: DOCTYPE_NAME,
+          docName: docname,
+          redirectUrl: "/operations/doctype/lis-incident-record"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={DOCTYPE_NAME}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={!!(apiKey && apiSecret)}
+          currentUserEmail={record?.owner}
+          modifiedStr={record?.modified}
+          modifiedBy={record?.modified_by}
+        />
+      </div>
+    </div>
   );
 }

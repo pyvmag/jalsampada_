@@ -10,6 +10,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -24,6 +25,8 @@ interface GateData {
     // System fields
     docstatus: 0 | 1 | 2;
     modified: string;
+    owner?: string;
+    modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -214,20 +217,35 @@ export default function GateDetailPage() {
        7. RENDER FORM
        ------------------------------------------------- */
     return (
-        <DynamicForm
-            tabs={formTabs}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            title={`${doctypeName}: ${record.name}`}
-            description={`Record ID: ${docname}`}
-            submitLabel={isSaving ? "Saving..." : "Save"}
-            cancelLabel="Cancel"
-            deleteConfig={{
-                doctypeName: doctypeName,
-                docName: docname,
-                redirectUrl: "/operations/doctype/gate"
-            }}
-            
-        />
+        <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+            <DynamicForm
+                tabs={formTabs}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+                title={`${doctypeName}: ${record.name}`}
+                description={`Record ID: ${docname}`}
+                submitLabel={isSaving ? "Saving..." : "Save"}
+                cancelLabel="Cancel"
+                deleteConfig={{
+                    doctypeName: doctypeName,
+                    docName: docname,
+                    redirectUrl: "/operations/doctype/gate"
+                }}
+            />
+
+            <div className="w-full px-4 md:px-8">
+                <DocumentActivity
+                    doctype={doctypeName}
+                    docname={docname}
+                    baseUrl={API_BASE_URL.replace("/api/resource", "")}
+                    apiKey={apiKey || ""}
+                    apiSecret={apiSecret || ""}
+                    isInitialized={isInitialized}
+                    currentUserEmail={record.owner}
+                    modifiedStr={record.modified}
+                    modifiedBy={record.modified_by}
+                />
+            </div>
+        </div>
     );
 }
