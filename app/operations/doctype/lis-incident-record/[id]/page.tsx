@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
 import {
   DynamicForm,
@@ -12,6 +13,50 @@ import { UseFormReturn } from "react-hook-form";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 const DOCTYPE_NAME = "Issue";
+
+/**
+ * Uploads a single file to Frappe's 'upload_file' method
+ */
+async function uploadFile(
+  file: File,
+  apiKey: string,
+  apiSecret: string,
+  methodBaseUrl: string
+): Promise<string> {
+  console.log(`[Upload] Starting upload for: ${file.name} (${file.size} bytes)`);
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("is_private", "0");
+
+  try {
+    const resp = await axios.post(
+      `${methodBaseUrl}/api/method/upload_file`,
+      formData,
+      {
+        headers: {
+          Authorization: `token ${apiKey}:${apiSecret}`,
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+        timeout: 90000, // 90 second timeout
+      }
+    );
+
+    console.log(`[Upload] Response for ${file.name}:`, resp.data);
+
+    if (resp.data && resp.data.message && resp.data.message.file_url) {
+      return resp.data.message.file_url;
+    }
+  } catch (error: any) {
+    console.error(`[Upload] Failed for ${file.name}:`, error);
+    if (error.code === 'ECONNABORTED') {
+      throw new Error(`Upload timed out. The file "${file.name}" might be too large or the server is slow.`);
+    }
+    const serverMsg = error.response?.data?.message || error.response?.data?.exception || error.message;
+    throw new Error(`Upload failed: ${serverMsg}`);
+  }
+  throw new Error("File upload failed - Server did not return a file URL");
+}
 
 export default function EditLisIncidentRecordPage() {
   const router = useRouter();
@@ -297,7 +342,6 @@ export default function EditLisIncidentRecordPage() {
 
   // 3. Form Initialization Hook (The Subject Hack)
   const handleFormInit = (methods: UseFormReturn<any>) => {
-    // A. Auto-set Reported By if missing (Hint from Logbook)
     const setInitialUser = async () => {
       if (!apiKey || !apiSecret) return;
       try {
@@ -335,7 +379,12 @@ export default function EditLisIncidentRecordPage() {
     }
 
     setIsSaving(true);
+    const methodBaseUrl = "http://103.219.1.138:4412";
+
     try {
+      if (!apiKey || !apiSecret) {
+        throw new Error("Authentication credentials missing. Please log in again.");
+      }
       // --- START: AUTOMATIC SIGNATURE LOGIC ---
       let signatures = [...(data.custom_reporting_and_approval || [])];
       let activeUser = currentUser;
@@ -428,6 +477,34 @@ export default function EditLisIncidentRecordPage() {
 
       // --- END: AUTOMATIC SIGNATURE LOGIC ---
 
+      // 1. Handle main attachment uploads
+      if (data.custom_scada_attach instanceof File) {
+        toast.info("Uploading SCADA attachment...");
+        data.custom_scada_attach = await uploadFile(data.custom_scada_attach, apiKey!, apiSecret!, methodBaseUrl);
+      }
+
+      // 2. Handle child table attachments (Incident Evidence)
+      if (data.custom_attachments && Array.isArray(data.custom_attachments)) {
+        for (let i = 0; i < data.custom_attachments.length; i++) {
+          const row = data.custom_attachments[i];
+          if (row.attach_ayav instanceof File) {
+            toast.info(`Uploading evidence file ${i + 1}...`);
+            row.attach_ayav = await uploadFile(row.attach_ayav, apiKey!, apiSecret!, methodBaseUrl);
+          }
+        }
+      }
+
+      // 3. Handle signatures (Reporting and Approval table)
+      if (signatures && Array.isArray(signatures)) {
+        for (let i = 0; i < signatures.length; i++) {
+          const row = signatures[i];
+          if (row.signature instanceof File) {
+            toast.info(`Uploading signature for row ${i + 1}...`);
+            row.signature = await uploadFile(row.signature, apiKey!, apiSecret!, methodBaseUrl);
+          }
+        }
+      }
+
       const payload: Record<string, any> = { ...data, custom_reporting_and_approval: signatures };
 
       // Ensure hidden subject is populated if missed by watcher
@@ -476,22 +553,20 @@ export default function EditLisIncidentRecordPage() {
 
 
 
-      const resp = await fetch(`${API_BASE_URL}/${DOCTYPE_NAME}/${docname}`, {
-        method: 'PUT',
+      const resp = await axios.put(`${API_BASE_URL}/${DOCTYPE_NAME}/${docname}`, finalPayload, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(finalPayload),
+        withCredentials: true,
       });
 
-      const responseData = await resp.json();
-      if (!resp.ok) {
-        throw new Error(responseData.exception || responseData._server_messages || "Failed to update");
+      if (resp.status !== 200 && resp.status !== 201) {
+        throw new Error(resp.data.exception || resp.data._server_messages || "Failed to update");
       }
 
       toast.success("Incident Updated Successfully");
-      setRecord(responseData.data);
+      setRecord(resp.data.data);
       setIsLoading(true);
       setTimeout(() => setIsLoading(false), 50);
 
