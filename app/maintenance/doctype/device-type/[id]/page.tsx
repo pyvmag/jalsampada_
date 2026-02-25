@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { renameDocument } from "@/lib/services";
+import DocumentActivity from "@/components/DocumentActivity";
 
 // API base URL
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -23,6 +24,8 @@ interface DeviceTypeData {
   device_type?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 // ----------------------
@@ -117,119 +120,119 @@ export default function DeviceTypeDetailPage() {
   // ----------------------
   // Submit handler
   // ----------------------
- const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-  if (!isDirty) {
-    toast.info("No changes to save.");
-    return;
-  }
-
-  if (!record) {
-    toast.error("Record not loaded. Cannot save.", { duration: Infinity });
-    return;
-  }
-
-  if (!apiKey || !apiSecret) {
-    toast.error("Missing API credentials.");
-    return;
-  }
-
-  setIsSaving(true);
-
-  try {
-    let currentDocname = docname;
-
-    /* ---------------- RENAME LOGIC ---------------- */
-    const newDeviceTypeName = data.device_type; // ✅ CORRECT FIELD
-
-    if (
-      newDeviceTypeName &&
-      newDeviceTypeName !== record.device_type &&
-      newDeviceTypeName !== record.name
-    ) {
-      try {
-        await renameDocument(
-          apiKey,
-          apiSecret,
-          doctypeName,
-          record.name,
-          newDeviceTypeName
-        );
-
-        currentDocname = newDeviceTypeName; // ✅ VERY IMPORTANT
-
-        setRecord((prev) =>
-          prev ? { ...prev, name: newDeviceTypeName, device_type: newDeviceTypeName } : null
-        );
-
-        router.replace(`/maintenance/doctype/device-type/${newDeviceTypeName}`);
-      } catch (renameError: any) {
-        console.error("Rename error:", renameError);
-        toast.error("Failed to rename document", {
-          description: renameError.response?.data?.message || renameError.message,
-        });
-        setIsSaving(false);
-        return;
-      }
+  const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
+    if (!isDirty) {
+      toast.info("No changes to save.");
+      return;
     }
 
-    /* ---------------- CLEAN PAYLOAD ---------------- */
-    const payload: Record<string, any> = JSON.parse(JSON.stringify(data));
+    if (!record) {
+      toast.error("Record not loaded. Cannot save.", { duration: Infinity });
+      return;
+    }
 
-    const allFields = formTabs.flatMap((tab) => tab.fields);
-    const nonDataFields = new Set<string>();
+    if (!apiKey || !apiSecret) {
+      toast.error("Missing API credentials.");
+      return;
+    }
 
-    allFields.forEach((field) => {
+    setIsSaving(true);
+
+    try {
+      let currentDocname = docname;
+
+      /* ---------------- RENAME LOGIC ---------------- */
+      const newDeviceTypeName = data.device_type; // ✅ CORRECT FIELD
+
       if (
-        field.type === "Section Break" ||
-        field.type === "Column Break" ||
-        field.type === "Button" ||
-        field.type === "Read Only"
+        newDeviceTypeName &&
+        newDeviceTypeName !== record.device_type &&
+        newDeviceTypeName !== record.name
       ) {
-        nonDataFields.add(field.name);
-      }
-    });
+        try {
+          await renameDocument(
+            apiKey,
+            apiSecret,
+            doctypeName,
+            record.name,
+            newDeviceTypeName
+          );
 
-    const finalPayload: Record<string, any> = {};
-    for (const key in payload) {
-      if (!nonDataFields.has(key)) {
-        finalPayload[key] = payload[key];
+          currentDocname = newDeviceTypeName; // ✅ VERY IMPORTANT
+
+          setRecord((prev) =>
+            prev ? { ...prev, name: newDeviceTypeName, device_type: newDeviceTypeName } : null
+          );
+
+          router.replace(`/maintenance/doctype/device-type/${newDeviceTypeName}`);
+        } catch (renameError: any) {
+          console.error("Rename error:", renameError);
+          toast.error("Failed to rename document", {
+            description: renameError.response?.data?.message || renameError.message,
+          });
+          setIsSaving(false);
+          return;
+        }
       }
+
+      /* ---------------- CLEAN PAYLOAD ---------------- */
+      const payload: Record<string, any> = JSON.parse(JSON.stringify(data));
+
+      const allFields = formTabs.flatMap((tab) => tab.fields);
+      const nonDataFields = new Set<string>();
+
+      allFields.forEach((field) => {
+        if (
+          field.type === "Section Break" ||
+          field.type === "Column Break" ||
+          field.type === "Button" ||
+          field.type === "Read Only"
+        ) {
+          nonDataFields.add(field.name);
+        }
+      });
+
+      const finalPayload: Record<string, any> = {};
+      for (const key in payload) {
+        if (!nonDataFields.has(key)) {
+          finalPayload[key] = payload[key];
+        }
+      }
+
+      finalPayload.modified = record.modified;
+      finalPayload.docstatus = record.docstatus;
+
+      /* ---------------- UPDATE ---------------- */
+      const resp = await axios.put(
+        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(currentDocname)}`, // ✅ FIXED
+        finalPayload,
+        {
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      toast.success("Changes saved!");
+
+      if (resp.data?.data) {
+        setRecord(resp.data.data);
+      }
+
+      router.push(`/maintenance/doctype/device-type/${currentDocname}`); // ✅ FIXED
+    } catch (err: any) {
+      console.error("Save error:", err);
+      console.log("Full server error:", err.response?.data);
+      toast.error("Failed to save", {
+        description: err.response?.data?.message || err.message,
+        duration: Infinity,
+      });
+    } finally {
+      setIsSaving(false);
     }
-
-    finalPayload.modified = record.modified;
-    finalPayload.docstatus = record.docstatus;
-
-    /* ---------------- UPDATE ---------------- */
-    const resp = await axios.put(
-      `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(currentDocname)}`, // ✅ FIXED
-      finalPayload,
-      {
-        headers: {
-          Authorization: `token ${apiKey}:${apiSecret}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      }
-    );
-
-    toast.success("Changes saved!");
-
-    if (resp.data?.data) {
-      setRecord(resp.data.data);
-    }
-
-    router.push(`/maintenance/doctype/device-type/${currentDocname}`); // ✅ FIXED
-  } catch (err: any) {
-    console.error("Save error:", err);
-    console.log("Full server error:", err.response?.data);
-    toast.error("Failed to save", {
-      description: err.response?.data?.message || err.message,
-      duration: Infinity,
-    });
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   const handleCancel = () => router.back();
 
@@ -267,19 +270,35 @@ export default function DeviceTypeDetailPage() {
   // Render form
   // ----------------------
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Update details for record ID: ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/maintenance/doctype/device-type",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Update details for record ID: ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/maintenance/doctype/device-type",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }
