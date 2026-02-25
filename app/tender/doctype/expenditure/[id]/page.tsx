@@ -11,6 +11,7 @@ import {
   FormField,
 } from "@/components/DynamicFormComponent";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import {
@@ -74,6 +75,8 @@ interface ExpenditureData {
 
   docstatus: 0 | 1 | 2 | number;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 /**
@@ -1182,26 +1185,42 @@ export default function RecordDetailPage() {
   ------------------------------------------------- */
 
   return (
-    <DynamicForm
-      key={formKey}
-      title={`Expenditure ${expenditure.name}`}
-      tabs={formTabs}
-      onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-      onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-      onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
-      isSubmittable={activeButton === "SUBMIT"}
-      docstatus={expenditure.docstatus}
-      initialStatus={
-        isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"
-      }
-      onFormInit={handleFormInit}
-      doctype={doctypeName}
-      submitLabel={getSubmitLabel()}
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/tender/doctype/expenditure",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        key={formKey}
+        title={`Expenditure ${expenditure.name}`}
+        tabs={formTabs}
+        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+        onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+        onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
+        isSubmittable={activeButton === "SUBMIT"}
+        docstatus={expenditure.docstatus}
+        initialStatus={
+          isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"
+        }
+        onFormInit={handleFormInit}
+        doctype={doctypeName}
+        submitLabel={getSubmitLabel()}
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/tender/doctype/expenditure",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={expenditure.owner}
+          modifiedStr={expenditure.modified}
+          modifiedBy={expenditure.modified_by}
+        />
+      </div>
+    </div>
   );
 }
