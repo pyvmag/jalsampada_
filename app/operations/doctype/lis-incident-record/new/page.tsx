@@ -279,10 +279,10 @@ export default function NewLisIncidentRecordPage() {
             type: "Table",
             defaultValue: getValue("custom_reporting_and_approval", []),
             columns: [
-              { name: "name1", label: "Employee", type: "Link", searchField: "employee_name", linkTarget: "Employee" },
-              { name: "designation", label: "Designation", type: "Data", fetchFrom: { sourceField: "name1", targetDoctype: "Employee", targetField: "designation" } },
+              { name: "name1", label: "Employee", type: "Link", searchField: "employee_name", linkTarget: "Employee", readOnly: true },
+              { name: "designation", label: "Designation", type: "Data", readOnly: true },
               { name: "signature", label: "Signature", type: "Attach" },
-              { name: "date", label: "Date", type: "Date" },
+              { name: "date", label: "Date", type: "Date", readOnly: true },
             ],
           },
         ],
@@ -403,14 +403,14 @@ export default function NewLisIncidentRecordPage() {
           }
 
           if (employee) {
-            const alreadySigned = signatures.some(sig => sig.name1 === employee.name);
-            if (!alreadySigned) {
+            const today = new Date().toISOString().split('T')[0];
+            const alreadySignedToday = signatures.some(sig => sig.name1 === employee.name && sig.date === today);
+            if (!alreadySignedToday) {
               signatures.push({
                 name1: employee.name,
                 designation: employee.designation,
-                date: new Date().toISOString().split('T')[0]
+                date: today
               });
-
             }
           } else {
             console.error("ULTIMATE FAIL: No employee found for signature discovery.");

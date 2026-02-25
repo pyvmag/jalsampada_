@@ -1618,128 +1618,121 @@ export function DynamicForm({
   );
 
   const renderAttachment = (field: FormField) => {
-    const rules = rulesFor(field);
-    const value = watch(field.name);
-
-    if (!fileInputRefs.current[field.name]) {
-      fileInputRefs.current[field.name] = null;
-    }
-
-    const registration = reg(field.name, rules) as any;
-    const { ref: registerRef, ...registerRest } = registration || {};
-
     return (
-      <div className="form-group flex flex-col gap-2">
-        <label className="form-label font-medium">{field.label}</label>
+      <Controller
+        name={field.name}
+        control={control}
+        rules={rulesFor(field)}
+        render={({ field: { onChange, value }, fieldState: { error } }) => {
+          const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-        {/* Hidden file input */}
-        <input
-          type="file"
-          className="hidden"
-          {...registerRest}
-          ref={(el: HTMLInputElement | null) => {
-            fileInputRefs.current[field.name] = el;
-            if (typeof registerRef === "function") {
-              registerRef(el);
-            } else if (registerRef) {
-              (registerRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-            }
-          }}
-          onChange={(e) => {
-            if (registration?.onChange) registration.onChange(e);
-            const file = e.target.files?.[0];
-            if (file) {
-              setValue(field.name, file, { shouldDirty: true });
-            }
-          }}
-          disabled={isReadOnlyMode}
-        />
+          // Determine display name and preview URL
+          let displayName = "";
+          let previewUrl = "";
 
-        {/* Upload Button */}
-        {!value && (
-          <Button
-            type="button"
-            variant="outline"
-            className={cn("w-fit flex items-center gap-2", getErrorClass(field.name))}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              fileInputRefs.current[field.name]?.click();
-            }}
-            disabled={isReadOnlyMode}
-          >
-            <Upload size={16} />
-            Upload File
-          </Button>
-        )}
+          if (value instanceof File) {
+            displayName = value.name;
+            previewUrl = URL.createObjectURL(value);
+          } else if (typeof value === "string" && value) {
+            displayName = value.split("/").pop() || value;
+            previewUrl = value.startsWith("http") ? value : `http://103.219.1.138:4412${value}`;
+          }
 
-        {/* File Selected View */}
-        {value && (
-          <div
-            className={cn(
-              "flex items-center gap-3 bg-muted/40 p-3 rounded-md border",
-              getErrorClass(field.name)
-            )}
-          >
-            <span className="text-sm flex-1">{value?.name}</span>
+          return (
+            <div className="form-group flex flex-col gap-2">
+              <label className="form-label font-medium">
+                {field.label}
+                {field.required ? " *" : ""}
+              </label>
 
-            {/* Preview */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              {/* Hidden file input */}
+              <input
+                type="file"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onChange(file);
+                  }
+                }}
+                disabled={isReadOnlyMode}
+              />
 
-                if (value?.file_url) {
-                  window.open(value.file_url, "_blank");
-                } else if (value instanceof File) {
-                  const fileUrl = URL.createObjectURL(value);
-                  window.open(fileUrl, "_blank");
-                }
-              }}
-              disabled={isReadOnlyMode}
-            >
-              <Eye size={16} />
-            </Button>
+              {/* Upload Button */}
+              {!value && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("w-fit flex items-center gap-2", error ? "!border-red-500" : "")}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isReadOnlyMode}
+                >
+                  <Upload size={16} />
+                  Upload File
+                </Button>
+              )}
 
-            {/* Replace */}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8 px-2"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                fileInputRefs.current[field.name]?.click();
-              }}
-              disabled={isReadOnlyMode}
-            >
-              Replace
-            </Button>
+              {/* File Selected View */}
+              {value && (
+                <div
+                  className={cn(
+                    "flex items-center gap-3 bg-muted/40 p-3 rounded-md border",
+                    error ? "!border-red-500" : ""
+                  )}
+                >
+                  <span className="text-sm flex-1 truncate" title={displayName}>
+                    {displayName}
+                  </span>
 
-            {/* Remove */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setValue(field.name, null, { shouldDirty: true });
-              }}
-              disabled={isReadOnlyMode}
-            >
-              <X size={16} />
-            </Button>
-          </div>
-        )}
+                  {/* Preview */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(previewUrl, "_blank");
+                    }}
+                    disabled={!previewUrl}
+                  >
+                    <Eye size={16} />
+                  </Button>
 
-        <FieldError error={errors[field.name]} />
-      </div>
+                  {/* Replace */}
+                  {!isReadOnlyMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 px-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Replace
+                    </Button>
+                  )}
+
+                  {/* Remove */}
+                  {!isReadOnlyMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500"
+                      onClick={() => onChange(null)}
+                    >
+                      <X size={16} />
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              <FieldError error={error} />
+              <FieldHelp text={field.description} />
+            </div>
+          );
+        }}
+      />
     );
   };
 

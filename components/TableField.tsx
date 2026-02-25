@@ -540,7 +540,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
               {fields.map((fieldItem, idx) => {
                 const currentRowData = rows[idx] || {};
 
-                const isRowDisabled = disabled || (field.name === 'custom_tender_extension_history' && idx < rows.length - 1);
+                const isRowBaseDisabled = disabled || (field.name === 'custom_tender_extension_history' && idx < rows.length - 1);
 
                 return (
                   <tr
@@ -559,90 +559,93 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                       />
                     </td>
 
-                    {visibleColumns?.map((c) => (
-                      <td key={c.name} className="child-table-input-cell">
-                        {c.type === "Attach" ? (
-                          <AttachmentCell
-                            control={formMethods.control}
-                            fieldName={`${field.name}.${idx}.${c.name}`}
-                            rowIndex={idx}
-                            columnName={c.name}
-                            onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
-                            disabled={isRowDisabled}
-                          />
-                        ) : c.type === "Link" ? (
-                          <TableLinkCell
-                            control={formMethods.control}
-                            fieldName={`${field.name}.${idx}.${c.name}`}
-                            column={c}
-                            onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
-                            disabled={isRowDisabled}
-                          />
-                        ) : c.type === "Date" ? (
-                          <DatePicker
-                            selected={currentRowData[c.name] ? new Date(currentRowData[c.name]) : null}
-                            onChange={(date: Date | null) => {
-                              handleTableInputChange(idx, c.name, date ? date.toISOString().split('T')[0] : '');
-                            }}
-                            dateFormat="dd/MM/yyyy"
-                            className={cn("form-control-borderless w-full")}
-                            placeholderText="DD/MM/YYYY"
-                            showYearDropdown
-                            scrollableYearDropdown
-                            yearDropdownItemNumber={100}
-                            withPortal
-                            portalId="root"
-                            disabled={isRowDisabled}
-                          />
-                        ) : c.type === "Data" || c.type === "Small Text" || c.type === "Text" ? (
-                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Long Text" || c.type === "Markdown Editor" ? (
-                          renderTableTextarea(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Code" ? (
-                          renderTableTextarea(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Password" ? (
-                          <input
-                            className="form-control-borderless"
-                            type="password"
-                            placeholder={c.label}
-                            value={currentRowData[c.name] || ""}
-                            onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
-                            disabled={isRowDisabled}
-                          />
-                        ) : c.type === "Int" ? (
-                          renderTableNumber(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Float" || c.type === "Currency" || c.type === "Percent" ? (
-                          renderTableNumber(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Color" ? (
-                          renderTableColor(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "DateTime" || c.type === "Time" ? (
-                          <input
-                            className="form-control-borderless"
-                            type={c.type === "DateTime" ? "datetime-local" : "time"}
-                            placeholder={c.label}
-                            value={currentRowData[c.name] || ""}
-                            onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
-                            disabled={isRowDisabled}
-                          />
-                        ) : c.type === "Duration" ? (
-                          renderTableDuration(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Check" ? (
-                          renderTableCheckbox(c, idx, rows, handleTableInputChange, formMethods.getValues("pump_operation") === "stop", isRowDisabled)
-                        ) : c.type === "Select" ? (
-                          renderTableSelect(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Barcode" ? (
-                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Read Only" ? (
-                          renderTableReadOnly(c, idx, rows)
-                        ) : c.type === "Rating" ? (
-                          renderTableRating(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        ) : c.type === "Button" ? (
-                          renderTableButton(c, idx, rows)
-                        ) : (
-                          renderTableInput(c, idx, rows, handleTableInputChange, isRowDisabled)
-                        )}
-                      </td>
-                    ))}
+                    {visibleColumns?.map((c) => {
+                      const isDisabled = isRowBaseDisabled || (c as any).readOnly || (c as any).disabled;
+                      return (
+                        <td key={c.name} className="child-table-input-cell">
+                          {c.type === "Attach" ? (
+                            <AttachmentCell
+                              control={formMethods.control}
+                              fieldName={`${field.name}.${idx}.${c.name}`}
+                              rowIndex={idx}
+                              columnName={c.name}
+                              onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
+                              disabled={isDisabled}
+                            />
+                          ) : c.type === "Link" ? (
+                            <TableLinkCell
+                              control={formMethods.control}
+                              fieldName={`${field.name}.${idx}.${c.name}`}
+                              column={c}
+                              onValueChange={(value) => handleTableInputChange(idx, c.name, value)}
+                              disabled={isDisabled}
+                            />
+                          ) : c.type === "Date" ? (
+                            <DatePicker
+                              selected={currentRowData[c.name] ? new Date(currentRowData[c.name]) : null}
+                              onChange={(date: Date | null) => {
+                                handleTableInputChange(idx, c.name, date ? date.toISOString().split('T')[0] : '');
+                              }}
+                              dateFormat="dd/MM/yyyy"
+                              className={cn("form-control-borderless w-full")}
+                              placeholderText="DD/MM/YYYY"
+                              showYearDropdown
+                              scrollableYearDropdown
+                              yearDropdownItemNumber={100}
+                              withPortal
+                              portalId="root"
+                              disabled={isDisabled}
+                            />
+                          ) : c.type === "Data" || c.type === "Small Text" || c.type === "Text" ? (
+                            renderTableInput(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Long Text" || c.type === "Markdown Editor" ? (
+                            renderTableTextarea(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Code" ? (
+                            renderTableTextarea(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Password" ? (
+                            <input
+                              className="form-control-borderless"
+                              type="password"
+                              placeholder={c.label}
+                              value={currentRowData[c.name] || ""}
+                              onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
+                              disabled={isDisabled}
+                            />
+                          ) : c.type === "Int" ? (
+                            renderTableNumber(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Float" || c.type === "Currency" || c.type === "Percent" ? (
+                            renderTableNumber(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Color" ? (
+                            renderTableColor(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "DateTime" || c.type === "Time" ? (
+                            <input
+                              className="form-control-borderless"
+                              type={c.type === "DateTime" ? "datetime-local" : "time"}
+                              placeholder={c.label}
+                              value={currentRowData[c.name] || ""}
+                              onChange={(e) => handleTableInputChange(idx, c.name, e.target.value)}
+                              disabled={isDisabled}
+                            />
+                          ) : c.type === "Duration" ? (
+                            renderTableDuration(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Check" ? (
+                            renderTableCheckbox(c, idx, rows, handleTableInputChange, formMethods.getValues("pump_operation") === "stop", isDisabled)
+                          ) : c.type === "Select" ? (
+                            renderTableSelect(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Barcode" ? (
+                            renderTableInput(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Read Only" ? (
+                            renderTableReadOnly(c, idx, rows)
+                          ) : c.type === "Rating" ? (
+                            renderTableRating(c, idx, rows, handleTableInputChange, isDisabled)
+                          ) : c.type === "Button" ? (
+                            renderTableButton(c, idx, rows)
+                          ) : (
+                            renderTableInput(c, idx, rows, handleTableInputChange, isDisabled)
+                          )}
+                        </td>
+                      );
+                    })}
 
                     <td style={{ position: 'sticky', right: 0, backgroundColor: 'var(--color-surface, #fff)', zIndex: 10 }} className="child-table-edit-cell">
                       <Button
@@ -652,7 +655,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                         className="h-8 w-8"
                         onClick={() => handleEdit(idx)}
                         title="Edit row"
-                        disabled={isRowDisabled}
+                        disabled={isRowBaseDisabled}
                       >
                         <Edit size={16} />
                       </Button>
@@ -721,7 +724,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
             </div>
           )}
         </div>
-      </div>
+      </div >
 
       {isEditModalOpen && editingRowIndex !== null && (
         <Modal
@@ -738,7 +741,8 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
             disabled={disabled}
           />
         </Modal>
-      )}
+      )
+      }
     </>
   );
 }
