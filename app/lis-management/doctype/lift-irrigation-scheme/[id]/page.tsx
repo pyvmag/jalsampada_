@@ -9,6 +9,7 @@ import {
   FormField,
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
+import DocumentActivity from "@/components/DocumentActivity";
 import { toast } from "sonner";
 
 // --- FIX #1: Define the API_BASE_URL ---
@@ -22,6 +23,8 @@ interface LisData {
   lis_name: string;
   modified: string;
   docstatus: 0 | 1 | 2;
+  owner?: string;
+  modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -68,7 +71,7 @@ export default function RecordDetailPage() {
         if (!resp.ok) {
           throw new Error(`Failed to load ${doctypeName}`);
         }
-        
+
         const responseData = await resp.json();
         setScheme(responseData.data);
         // ------------------------------------------
@@ -125,12 +128,12 @@ export default function RecordDetailPage() {
   5. SUBMIT (UPDATE - using fetch)
   ------------------------------------------------- */
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-    
+
     if (!isDirty) {
       toast.info("No changes to save.");
       return;
     }
-    
+
     if (!scheme) {
       toast.error("Cannot save, data not loaded.", { duration: Infinity });
       return;
@@ -149,12 +152,12 @@ export default function RecordDetailPage() {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
-      
+
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
       }
-      
+
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}/${docname}`, {
         method: 'PUT',
         headers: headers,
@@ -171,11 +174,11 @@ export default function RecordDetailPage() {
       // -------------------------------------------------
 
       toast.success("Changes saved!");
-      
+
       if (responseData && responseData.data) {
         setScheme(responseData.data);
       }
-      
+
       router.push(`/lis-management/doctype/lift-irrigation-scheme/${docname}`);
 
     } catch (err: any) {
@@ -203,7 +206,7 @@ export default function RecordDetailPage() {
 
     // Prepare data for duplication - exclude fields that should not be copied
     const duplicateData: Record<string, any> = {};
-    
+
     // Fields to exclude from duplication
     const excludeFields = [
       'name', 'naming_series', 'docstatus', 'modified', 'creation',
@@ -219,10 +222,10 @@ export default function RecordDetailPage() {
 
     // Encode the data for URL transmission
     const encodedData = btoa(JSON.stringify(duplicateData));
-    
+
     // Navigate to new page with duplicate data
     router.push(`/lis-management/doctype/lift-irrigation-scheme/new?duplicate=${encodeURIComponent(encodedData)}`);
-    
+
     toast.success("Lift Irrigation Scheme data copied! Creating duplicate...");
   }, [scheme, router]);
 
@@ -273,19 +276,35 @@ export default function RecordDetailPage() {
   7. RENDER FORM
   ------------------------------------------------- */
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={` ${doctypeName}: ${scheme.lis_name}`}
-      description={`Update details for record ID: ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName, // e.g. "Asset" or "Project"
-        docName: docname,         // usually params.id
-        redirectUrl: "/lis-management/doctype/lift-irrigation-scheme" // The list page to go to
-    }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={` ${doctypeName}: ${scheme.lis_name}`}
+        description={`Update details for record ID: ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/lis-management/doctype/lift-irrigation-scheme"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={scheme.owner}
+          modifiedStr={scheme.modified}
+          modifiedBy={scheme.modified_by}
+        />
+      </div>
+    </div>
   );
 }

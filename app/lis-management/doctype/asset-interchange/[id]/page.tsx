@@ -7,6 +7,7 @@ import { DynamicForm, TabbedLayout } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 const DOCTYPE_NAME = "Asset Interchange";
@@ -42,6 +43,8 @@ interface AssetInterchangeData {
 
     docstatus: 0 | 1 | 2;
     modified: string;
+    owner?: string;
+    modified_by?: string;
 }
 
 export default function AssetInterchangeDetailPage() {
@@ -605,25 +608,41 @@ export default function AssetInterchangeDetailPage() {
     const formKey = `${record.name}-${record.docstatus}-${formVersion}`;
 
     return (
-        <DynamicForm
-            key={formKey}
-            tabs={formTabs}
-            onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-            onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-            onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
-            onCancel={() => router.back()}
-            title={`${DOCTYPE_NAME}: ${record.name}`}
-            description="Update Asset Interchange"
-            submitLabel={getSubmitLabel()}
-            isSubmittable={activeButton === "SUBMIT"}
-            docstatus={record.docstatus}
-            initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
-            deleteConfig={{
-                doctypeName: DOCTYPE_NAME,
-                docName: docname,
-                redirectUrl: "/assets/doctype/asset-interchange"
-            }}
-            onFormInit={handleFormInit}
-        />
+        <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+            <DynamicForm
+                key={formKey}
+                tabs={formTabs}
+                onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+                onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+                onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
+                onCancel={() => router.back()}
+                title={`${DOCTYPE_NAME}: ${record.name}`}
+                description="Update Asset Interchange"
+                submitLabel={getSubmitLabel()}
+                isSubmittable={activeButton === "SUBMIT"}
+                docstatus={record.docstatus}
+                initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
+                deleteConfig={{
+                    doctypeName: DOCTYPE_NAME,
+                    docName: docname,
+                    redirectUrl: "/assets/doctype/asset-interchange"
+                }}
+                onFormInit={handleFormInit}
+            />
+
+            <div className="w-full px-4 md:px-8">
+                <DocumentActivity
+                    doctype={DOCTYPE_NAME}
+                    docname={record.name}
+                    baseUrl={API_BASE_URL.replace("/api/resource", "")}
+                    apiKey={apiKey || ""}
+                    apiSecret={apiSecret || ""}
+                    isInitialized={isInitialized}
+                    currentUserEmail={record.owner}
+                    modifiedStr={record.modified}
+                    modifiedBy={record.modified_by}
+                />
+            </div>
+        </div>
     );
 }
