@@ -15,6 +15,7 @@ export default function NewUserPage() {
     const router = useRouter();
     const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
     const [availableRoles, setAvailableRoles] = React.useState<string[]>([]);
+    const [isSaving, setIsSaving] = React.useState(false);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // FORM CONFIGURATION (User Structure)
@@ -199,49 +200,52 @@ export default function NewUserPage() {
             return;
         }
 
+        setIsSaving(true);
         try {
+            const formData = { ...data };
+
             // Auto-generate full name if missing but first/last are provided
-            if (data.first_name && !data.full_name) {
-                data.full_name = [data.first_name, data.last_name].filter(Boolean).join(" ");
+            if (formData.first_name && !formData.full_name) {
+                formData.full_name = [formData.first_name, formData.last_name].filter(Boolean).join(" ");
             }
 
             // Convert Checkboxes (usually outputting boolean) to 1/0 for Frappe if needed
-            if (typeof data.send_welcome_email === "boolean") data.send_welcome_email = data.send_welcome_email ? 1 : 0;
-            if (typeof data.enabled === "boolean") data.enabled = data.enabled ? 1 : 0;
+            if (typeof formData.send_welcome_email === "boolean") formData.send_welcome_email = formData.send_welcome_email ? 1 : 0;
+            if (typeof formData.enabled === "boolean") formData.enabled = formData.enabled ? 1 : 0;
 
             // Convert checkbox roles to roles child table
             const rolesToSave: { role: string }[] = [];
             availableRoles.forEach(role => {
                 const key = `role_${role.replace(/\s+/g, '_')}`;
-                if (data[key]) {
+                if (formData[key]) {
                     rolesToSave.push({ role });
                 }
-                delete data[key];
+                delete formData[key];
             });
-            data.roles = rolesToSave;
+            formData.roles = rolesToSave;
 
             // 🟢 Handle Image Upload
-            if (data.user_image instanceof File) {
+            if (formData.user_image instanceof File) {
                 toast.loading("Uploading user image...");
                 try {
                     const fileUrl = await uploadFile(
-                        data.user_image,
+                        formData.user_image,
                         apiKey,
                         apiSecret,
                         API_BASE_URL
                     );
-                    data.user_image = fileUrl;
+                    formData.user_image = fileUrl;
                     toast.dismiss();
                 } catch (uploadErr) {
                     toast.dismiss();
                     toast.error("Failed to upload image. Saving without image.");
-                    delete data.user_image;
+                    delete formData.user_image;
                 }
             }
 
             const response = await axios.post(
                 `${API_BASE_URL}/User`,
-                data,
+                formData,
                 {
                     headers: {
                         Authorization: `token ${apiKey}:${apiSecret}`,
@@ -255,6 +259,7 @@ export default function NewUserPage() {
             router.push(`/admin/doctype/user/${encodeURIComponent(newId)}`);
 
         } catch (error: any) {
+            setIsSaving(false);
             console.error("Error creating user:", error);
             toast.error(
                 error.response?.data?.exception || "Failed to create user"
@@ -293,6 +298,7 @@ export default function NewUserPage() {
                     onSubmit={handleSubmit}
                     onCancel={() => router.back()}
                     submitLabel="Save User"
+                    isSaving={isSaving}
                 />
             </div>
         </div>

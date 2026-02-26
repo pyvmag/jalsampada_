@@ -220,8 +220,11 @@ export default function UserEditPage() {
         });
         const roles = res.data.data.map((r: any) => r.name).sort();
         setAvailableRoles(roles);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch roles:", err);
+        if (err.response?.status === 403) {
+          setError("You do not have permission to manage roles. Please log in as an administrator.");
+        }
       }
     };
     fetchRoles();
@@ -247,54 +250,56 @@ export default function UserEditPage() {
     setIsSaving(true);
 
     try {
+      const data = { ...formData };
+
       // Re-generate full name based on changes
-      if (formData.first_name) {
-        formData.full_name = [formData.first_name, formData.last_name].filter(Boolean).join(" ");
+      if (data.first_name) {
+        data.full_name = [data.first_name, data.last_name].filter(Boolean).join(" ");
       }
 
       // Convert boolean checks back to 1/0 integers for Frappe
-      if (typeof formData.enabled === "boolean") {
-        formData.enabled = formData.enabled ? 1 : 0;
+      if (typeof data.enabled === "boolean") {
+        data.enabled = data.enabled ? 1 : 0;
       }
 
       // Convert checkbox roles back to roles child table
       const rolesToSave: { role: string }[] = [];
       availableRoles.forEach(role => {
         const key = `role_${role.replace(/\s+/g, '_')}`;
-        if (formData[key]) {
+        if (data[key]) {
           rolesToSave.push({ role });
         }
-        delete formData[key];
+        delete data[key];
       });
-      formData.roles = rolesToSave;
+      data.roles = rolesToSave;
 
       // Handle Password: If empty, don't send it to avoid overwriting or API errors
-      if (!formData.new_password) {
-        delete formData.new_password;
+      if (!data.new_password) {
+        delete data.new_password;
       }
 
       // 🟢 Handle Image Upload
-      if (formData.user_image instanceof File) {
+      if (data.user_image instanceof File) {
         toast.loading("Uploading user image...");
         try {
           const fileUrl = await uploadFile(
-            formData.user_image,
+            data.user_image,
             apiKey,
             apiSecret,
             API_BASE_URL
           );
-          formData.user_image = fileUrl;
+          data.user_image = fileUrl;
           toast.dismiss();
         } catch (uploadErr) {
           toast.dismiss();
           toast.error("Failed to upload image. Saving without image.");
-          delete formData.user_image;
+          delete data.user_image;
         }
       }
 
       const res = await axios.put(
         `${API_BASE_URL}/${doctypeName}/${encodeURIComponent(docname)}`,
-        formData,
+        data,
         {
           headers: {
             Authorization: `token ${apiKey}:${apiSecret}`,
