@@ -67,7 +67,6 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
   custom_asset: "120px",
   custom_asset_no: "100px",
   status: "60px",
-  workflow_state: "100px",
   issue_type: "120px",
   description: "350px",
   first_responded_on: "180px",

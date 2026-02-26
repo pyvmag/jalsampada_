@@ -14,7 +14,7 @@ import { useSelection } from "@/hooks/useSelection";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { bulkDeleteRPC } from "@/api/rpc";
 import { toast } from "sonner";
-import { getApiMessages} from "@/lib/utils";
+import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 import { TimeAgo } from "@/components/TimeAgo";
 import {
@@ -57,7 +57,7 @@ function useDebounce<T>(value: T, delay: number): T {
 interface LisIncidentRecord {
   name: string;
   subject?: string;
-  workflow_state?: string;
+  status?: string;
   priority?: string;
   raised_by?: string;
   modified?: string;
@@ -75,7 +75,7 @@ const SORT_OPTIONS: { label: string; key: keyof LisIncidentRecord }[] = [
   { label: "Last Updated On", key: "modified" },
   { label: "ID", key: "name" },
   { label: "Subject", key: "subject" },
-  { label: "Status", key: "workflow_state" },
+  { label: "Status", key: "status" },
   { label: "Priority", key: "priority" },
   { label: "Raised By", key: "raised_by" },
   { label: "Lift Irrigation Scheme", key: "custom_lis" },
@@ -177,7 +177,7 @@ export default function LisIncidentRecordPage() {
           fields: JSON.stringify([
             "name",
             "subject",
-            "workflow_state",
+            "status",
             "priority",
             "raised_by",
             "modified",
@@ -193,7 +193,7 @@ export default function LisIncidentRecordPage() {
           params.or_filters = JSON.stringify({
             name: ["like", `%${debouncedSearch}%`],
             subject: ["like", `%${debouncedSearch}%`],
-            workflow_state: ["like", `%${debouncedSearch}%`],
+            status: ["like", `%${debouncedSearch}%`],
             priority: ["like", `%${debouncedSearch}%`],
             raised_by: ["like", `%${debouncedSearch}%`],
           });
@@ -214,14 +214,14 @@ export default function LisIncidentRecordPage() {
           }),
           isReset
             ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-                params: { 
-                    doctype: doctypeName,
-                    // Note: frappe.client.get_count doesn't easily support or_filters in GET params 
-                    // without full filter array. For now, we fetch total unfiltered or simply ignore count filter accuracy for complex OR searches.
-                    // If you need accurate count on search, you might need a custom RPC method.
-                },
-                headers: commonHeaders,
-              })
+              params: {
+                doctype: doctypeName,
+                // Note: frappe.client.get_count doesn't easily support or_filters in GET params 
+                // without full filter array. For now, we fetch total unfiltered or simply ignore count filter accuracy for complex OR searches.
+                // If you need accurate count on search, you might need a custom RPC method.
+              },
+              headers: commonHeaders,
+            })
             : Promise.resolve(null),
         ]);
 
@@ -229,7 +229,7 @@ export default function LisIncidentRecordPage() {
         const mapped: LisIncidentRecord[] = raw.map((r: any) => ({
           name: r.name,
           subject: r.subject,
-          workflow_state: r.workflow_state,
+          status: r.status,
           priority: r.priority,
           raised_by: r.raised_by,
           modified: r.modified,
@@ -300,7 +300,7 @@ export default function LisIncidentRecordPage() {
 
         if (errorMessages.length > 0) {
           // Show error messages from server
-          toast.error("Failed to delete records", { 
+          toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity
           });
@@ -314,14 +314,14 @@ export default function LisIncidentRecordPage() {
       fetchRows(0, true); // Reload from scratch
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
-      
+
       const messages = getApiMessages(
         null,
         err,
         "Records deleted successfully",
         "Failed to delete records"
       );
-      
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -348,7 +348,7 @@ export default function LisIncidentRecordPage() {
   const getFieldsForRow = (row: LisIncidentRecord): RecordCardField[] => {
     const fields: RecordCardField[] = [];
     if (row.subject) fields.push({ label: "Subject", value: row.subject });
-    if (row.workflow_state) fields.push({ label: "Status", value: row.workflow_state });
+    if (row.status) fields.push({ label: "Status", value: row.status });
     if (row.priority) fields.push({ label: "Priority", value: row.priority });
     if (row.raised_by) fields.push({ label: "Raised By", value: row.raised_by });
     if (row.custom_lis) fields.push({ label: "LIS", value: row.custom_lis });
@@ -400,7 +400,7 @@ export default function LisIncidentRecordPage() {
             </th>
             <th
               style={{ cursor: "pointer", minWidth: 120 }}
-              onClick={() => requestSort("workflow_state")}
+              onClick={() => requestSort("status")}
             >
               Status
             </th>
@@ -430,10 +430,10 @@ export default function LisIncidentRecordPage() {
             </th>
             {/* 🟢 Total Count Header */}
             <th className="text-right pr-4" style={{ width: "140px" }}>
-                <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-                 {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-                   <><span>{rows.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
-                 )}
+              <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
+                  <><span>{rows.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
+                )}
 
               </div>
             </th>
@@ -447,14 +447,14 @@ export default function LisIncidentRecordPage() {
                 <tr
                   key={row.name}
                   onClick={() => handleCardClick(row.name)}
-                  style={{ 
+                  style={{
                     cursor: "pointer",
                     backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined
                   }}
                 >
                   {/* 🟢 Row Checkbox */}
-                  <td 
-                    style={{ textAlign: "center" }} 
+                  <td
+                    style={{ textAlign: "center" }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <input
@@ -466,7 +466,7 @@ export default function LisIncidentRecordPage() {
                   </td>
                   <td style={{ minWidth: 140 }}>{row.name}</td>
                   <td style={{ minWidth: 220 }}>{row.subject || "—"}</td>
-                  <td style={{ minWidth: 120 }}>{row.workflow_state || "—"}</td>
+                  <td style={{ minWidth: 120 }}>{row.status || "—"}</td>
                   <td style={{ minWidth: 120 }}>{row.priority || "—"}</td>
                   <td style={{ minWidth: 160 }}>{row.raised_by || "—"}</td>
                   <td style={{ minWidth: 180 }}>{row.custom_lis || "—"}</td>
@@ -496,7 +496,7 @@ export default function LisIncidentRecordPage() {
           <RecordCard
             key={row.name}
             title={row.subject || row.name}
-            subtitle={row.workflow_state || "—"}
+            subtitle={row.status || "—"}
             fields={getFieldsForRow(row)}
             onClick={() => handleCardClick(row.name)}
           />
@@ -526,9 +526,9 @@ export default function LisIncidentRecordPage() {
       <div className="module-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2>{title}</h2>
-          <p>Incident records with workflow_state, priority, and reporter</p>
+          <p>Incident records with status, priority, and reporter</p>
         </div>
-        
+
         {/* Header Action Switch */}
         {selectedIds.size > 0 ? (
           <BulkActionBar
@@ -619,7 +619,7 @@ export default function LisIncidentRecordPage() {
                       control={control}
                       field={{ ...mockField, defaultValue: value }}
                       error={null}
-                      filters = { selectedLis ? {lis_name : selectedLis} : {}}
+                      filters={selectedLis ? { lis_name: selectedLis } : {}}
                       className="[&>label]:hidden vishal"
                     />
                   </div>
@@ -666,11 +666,10 @@ export default function LisIncidentRecordPage() {
                   {SORT_OPTIONS.map((option) => (
                     <button
                       key={option.key}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                        sortConfig.key === option.key
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${sortConfig.key === option.key
                           ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium"
                           : "text-gray-700 dark:text-gray-200"
-                      }`}
+                        }`}
                       onClick={() => {
                         setSortConfig((prev) => ({ ...prev, key: option.key }));
                         setIsSortMenuOpen(false);
