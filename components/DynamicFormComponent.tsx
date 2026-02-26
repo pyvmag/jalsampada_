@@ -1635,7 +1635,7 @@ export function DynamicForm({
             previewUrl = URL.createObjectURL(value);
           } else if (typeof value === "string" && value) {
             displayName = value.split("/").pop() || value;
-            previewUrl = value.startsWith("http") ? value : `http://103.219.1.138:4412${value}`;
+            previewUrl = value.startsWith("http") ? value : `http://103.219.3.169:2223${value}`;
           }
 
           return (

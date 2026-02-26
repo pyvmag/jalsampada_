@@ -348,7 +348,7 @@ export default function EditLisIncidentRecordPage() {
       try {
         if (!methods.getValues("custom_reported_by")) {
 
-          const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+          const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
             headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
           });
           const infoData = await infoResp.json();
@@ -380,7 +380,7 @@ export default function EditLisIncidentRecordPage() {
     }
 
     setIsSaving(true);
-    const methodBaseUrl = "http://103.219.1.138:4412";
+    const methodBaseUrl = "http://103.219.3.169:2223";
 
     try {
       if (!apiKey || !apiSecret) {
@@ -395,7 +395,7 @@ export default function EditLisIncidentRecordPage() {
         activeUser = localStorage.getItem("currentUser");
         if (!activeUser) {
           try {
-            const userResp = await fetch("http://103.219.1.138:4412/api/method/frappe.auth.get_logged_user", {
+            const userResp = await fetch("http://103.219.3.169:2223/api/method/frappe.auth.get_logged_user", {
               headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
             });
             const userData = await userResp.json();
@@ -413,7 +413,7 @@ export default function EditLisIncidentRecordPage() {
           // Phase 1: Identifying Logged-in User via system API (Highest Priority)
           try {
 
-            const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+            const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
               headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
             });
             const infoData = await infoResp.json();
