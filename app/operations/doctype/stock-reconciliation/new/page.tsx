@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
 1. Stock Reconciliation type interfaces
@@ -70,35 +70,35 @@ export default function NewStockReconciliationPage() {
     };
 
     const handleFormInit = React.useCallback((form: any) => {
-    setFormInstance(form);
+        setFormInstance(form);
 
-    form.setValue("posting_date", getCurrentDate());
-    form.setValue("posting_time", getCurrentTime());
+        form.setValue("posting_date", getCurrentDate());
+        form.setValue("posting_time", getCurrentTime());
 
-    const subscription = form.watch((value: any, { name }: { name?: string }) => {
+        const subscription = form.watch((value: any, { name }: { name?: string }) => {
 
-        if (name === "set_posting_time" || name === undefined) {
-            const isEditable = form.getValues("set_posting_time");
-            setEditDateTime(!!isEditable);
-        }
+            if (name === "set_posting_time" || name === undefined) {
+                const isEditable = form.getValues("set_posting_time");
+                setEditDateTime(!!isEditable);
+            }
 
-        // ✅ AUTO FILL CHILD WAREHOUSE
-        if (name === "set_warehouse") {
-            const warehouse = form.getValues("set_warehouse");
-            const items = form.getValues("items") || [];
+            // ✅ AUTO FILL CHILD WAREHOUSE
+            if (name === "set_warehouse") {
+                const warehouse = form.getValues("set_warehouse");
+                const items = form.getValues("items") || [];
 
-            const updatedItems = items.map((row: any) => ({
-                ...row,
-                warehouse: warehouse
-            }));
+                const updatedItems = items.map((row: any) => ({
+                    ...row,
+                    warehouse: warehouse
+                }));
 
-            form.setValue("items", updatedItems);
-        }
+                form.setValue("items", updatedItems);
+            }
 
-    });
+        });
 
-    return () => subscription.unsubscribe();
-}, []);
+        return () => subscription.unsubscribe();
+    }, []);
 
     const formTabs: TabbedLayout[] = React.useMemo(() => {
         return [
@@ -146,7 +146,7 @@ export default function NewStockReconciliationPage() {
                         linkTarget: "Warehouse",
                         required: true,
                         fieldColumns: 1,
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         customSearchParams: {
                             filters: [
                                 ["Warehouse", "company", "=", "quantbit"],
@@ -181,7 +181,7 @@ export default function NewStockReconciliationPage() {
                                 label: "Store Location",
                                 type: "Link",
                                 linkTarget: "Warehouse",
-                                customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                                customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                                 customSearchParams: {
                                     filters: [
                                         ["Warehouse", "company", "in", ["", "quantbit"]],
@@ -190,7 +190,7 @@ export default function NewStockReconciliationPage() {
                                 },
                                 referenceDoctype: "Stock Reconciliation Item",
                                 doctype: "Warehouse",
-                                 fetchFrom: {
+                                fetchFrom: {
                                     sourceField: "parent.set_warehouse",
                                     targetDoctype: "Warehouse",
                                     targetField: "name"

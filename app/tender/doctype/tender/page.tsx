@@ -13,12 +13,12 @@ import { useSelection } from "@/hooks/useSelection";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { bulkDeleteRPC } from "@/api/rpc";
 import { toast } from "sonner";
-import { getApiMessages} from "@/lib/utils";
+import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay"; // Assuming you have sonner installed (or use your preferred toast)
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react"; // Optional: if you want to use Lucide icons for consistency
 import { TimeAgo } from "@/components/TimeAgo";
 
-const API_BASE_URL = "http://103.219.1.138:4412"; // 🟢 Changed: Removed /api/resource so RPC helper can append /api/method
+const API_BASE_URL = "http://103.219.3.169:2223"; // 🟢 Changed: Removed /api/resource so RPC helper can append /api/method
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -82,7 +82,7 @@ export default function DoctypePage() {
   // Filter tenders client-side
   const filteredTenders = React.useMemo(() => {
     let filtered = tenders;
-    
+
     // Apply search filter
     if (debouncedSearch) {
       filtered = filtered.filter(tender =>
@@ -91,22 +91,22 @@ export default function DoctypePage() {
         (tender.status && tender.status.toLowerCase().includes(debouncedSearch.toLowerCase()))
       );
     }
-    
+
     // Apply LIS filter
     if (selectedLis) {
       filtered = filtered.filter(tender => tender.lis_name === selectedLis);
     }
-    
+
     return filtered;
   }, [tenders, debouncedSearch, selectedLis]);
 
   // 🟢 1. Initialize Selection Hook
-  const { 
-    selectedIds, 
-    handleSelectOne, 
-    handleSelectAll, 
-    clearSelection, 
-    isAllSelected 
+  const {
+    selectedIds,
+    handleSelectOne,
+    handleSelectAll,
+    clearSelection,
+    isAllSelected
   } = useSelection(filteredTenders, "name");
 
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -263,7 +263,7 @@ export default function DoctypePage() {
 
         if (errorMessages.length > 0) {
           // Show error messages from server
-          toast.error("Failed to delete records", { 
+          toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity
           });
@@ -273,21 +273,21 @@ export default function DoctypePage() {
 
       // If no error messages, proceed with success
       toast.success(`Successfully deleted ${count} records.`);
-      
+
       // Clear selection and refresh list
       clearSelection();
       fetchTenders(0, true);
 
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
-      
+
       const messages = getApiMessages(
         null,
         err,
         "Records deleted successfully",
         "Failed to delete records"
       );
-      
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -364,14 +364,14 @@ export default function DoctypePage() {
                 <tr
                   key={t.name}
                   onClick={() => handleCardClick(t.name)}
-                  style={{ 
+                  style={{
                     cursor: "pointer",
-                    backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined 
+                    backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined
                   }}
                 >
                   {/* Row Checkbox */}
-                  <td 
-                    style={{ textAlign: "center" }} 
+                  <td
+                    style={{ textAlign: "center" }}
                     onClick={(e) => e.stopPropagation()} // 🔴 Prevent navigation
                   >
                     <input
@@ -426,7 +426,7 @@ export default function DoctypePage() {
           <h2>{title}</h2>
           <p>Manage tender records</p>
         </div>
-        
+
         {/* 🟢 5. Switch between "Add New" and "Bulk Actions" */}
         {selectedIds.size > 0 ? (
           <BulkActionBar
@@ -436,7 +436,7 @@ export default function DoctypePage() {
             isDeleting={isDeleting}
           />
         ) : (
-          <button 
+          <button
             className="btn btn--primary"
             onClick={() => router.push('/tender/doctype/tender/new')}
           >

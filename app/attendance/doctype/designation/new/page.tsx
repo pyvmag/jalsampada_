@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
  1. Designation Type
@@ -133,7 +133,7 @@ export default function DesignationPage() {
             .join("\n");
           toast.error(messages);
           return;
-        } catch {}
+        } catch { }
       }
 
       toast.error(res?.message || "Failed to create Designation.");

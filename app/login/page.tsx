@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
-  
+
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await fetch(
-        "http://103.219.1.138:4412/api/method/quantlis_management.api.login",
+        "http://103.219.3.169:2223/api/method/quantlis_management.api.login",
         {
           method: "POST",
           headers: {
@@ -57,12 +57,12 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background image with overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat object-cover w-full h-full"
         style={{ backgroundImage: "url('/images/sangli_irrigation.jpg')" }}
       />
       <div className="absolute inset-0 bg-black/30 dark:bg-black/60" />
-      
+
       <div className="">
         <Card className="shadow-lg border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 text-center">
@@ -72,12 +72,12 @@ const Login: React.FC = () => {
             <h1 className="text-2xl font-bold text-white">JALSAMPADA</h1>
             <p className="text-blue-100 mt-1">Water Resources Department</p>
           </div>
-          
+
           <CardHeader className="text-center pb-2 pt-6">
             <CardTitle className="text-xl font-bold text-slate-800 dark:text-white">Portal Login</CardTitle>
             <CardDescription className="text-slate-600 dark:text-slate-300">Access your official account</CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -154,7 +154,7 @@ const Login: React.FC = () => {
               </Button>
             </form>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col items-center justify-center pt-4 border-t border-slate-200 dark:border-slate-700">
             {/* <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
               Government of India • Water Resources Department
@@ -165,7 +165,7 @@ const Login: React.FC = () => {
             </div>
           </CardFooter>
         </Card>
-        
+
         {/* <div className="mt-6 text-center text-xs text-white/80 dark:text-slate-300">
           <p> 2025 Water Resources Department, Government of India</p>
           <p className="mt-1"></p>

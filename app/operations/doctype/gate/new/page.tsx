@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewGatePage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function NewGatePage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -81,12 +81,12 @@ export default function NewGatePage() {
             required: true,
             defaultValue: getValue("stage"),
             filterMapping: [
-                            {
-                                sourceField: "lis_name",
-                                
-                                targetField: "lis_name"
-                            }
-                        ],
+              {
+                sourceField: "lis_name",
+
+                targetField: "lis_name"
+              }
+            ],
           },
         ],
       },
@@ -99,14 +99,14 @@ export default function NewGatePage() {
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
     // Check if we have valid data to submit (either dirty changes or duplicate data)
     const hasValidData = isDirty || (duplicateData && data.gate);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       // Build the payload
       const finalPayload = {
@@ -117,7 +117,7 @@ export default function NewGatePage() {
       };
 
       console.log("Sending NEW Gate payload:", finalPayload);
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -132,8 +132,8 @@ export default function NewGatePage() {
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(finalPayload), 
+        credentials: 'include',
+        body: JSON.stringify(finalPayload),
       });
 
       const responseData = await resp.json();
@@ -142,15 +142,15 @@ export default function NewGatePage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Gate created successfully!");
-      
+
       // Go to the main list page for this doctype
       router.push(`/operations/doctype/gate`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      
+
       // Handle duplicate entry error specifically
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {

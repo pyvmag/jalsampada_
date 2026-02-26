@@ -12,9 +12,9 @@ import { UseFormReturn } from "react-hook-form";
 import axios from "axios";
 
 // Base URL for Resources
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 // Base URL for RPC Methods (Custom Python logic)
-const API_METHOD_URL = "http://103.219.1.138:4412/api/method";
+const API_METHOD_URL = "http://103.219.3.169:2223/api/method";
 
 export default function NewLogbookPage() {
   const router = useRouter();
@@ -40,7 +40,7 @@ export default function NewLogbookPage() {
 
       try {
         const response = await fetch(
-          "http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info",
+          "http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info",
           {
             method: "GET",
             headers: {

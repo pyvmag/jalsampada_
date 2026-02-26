@@ -12,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { TimeAgo } from "@/components/TimeAgo";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 /* -------------------------------------------------
    1. Session Default data interface
@@ -216,7 +216,8 @@ export default function SessionDefaultPage() {
             console.error("Save error:", err);
             toast.error("Failed to save session defaults", {
                 description: err.response?.data?.exception || err.message || "Unknown error",
-             duration: Infinity});
+                duration: Infinity
+            });
         } finally {
             setIsSaving(false);
         }

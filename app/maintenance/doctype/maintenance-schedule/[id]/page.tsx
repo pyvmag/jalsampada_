@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import DocumentActivity from "@/components/DocumentActivity";
 
 // API
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* --------------------------------------------------
   TYPES
@@ -134,7 +134,7 @@ export default function MaintenanceScheduleDetailPage() {
             label: "Asset Name",
             type: "Link",
             linkTarget: "Asset",
-            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+            customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
             filters: (getValue) => ({
               custom_stage_no: getValue("custom_stage"),
               custom_lis_name: getValue("custom_lis")

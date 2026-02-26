@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewTemperatureReadingPage() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function NewTemperatureReadingPage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -76,20 +76,20 @@ export default function NewTemperatureReadingPage() {
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
     // Check if we have valid data to submit
     const hasValidData = isDirty || (duplicateData && data.temperature);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const payload: Record<string, any> = { ...data };
       payload.doctype = doctypeName;
 
       console.log("Sending NEW Temperature Readings payload:", payload);
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -103,8 +103,8 @@ export default function NewTemperatureReadingPage() {
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(payload), 
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
 
       const responseData = await resp.json();
@@ -113,14 +113,14 @@ export default function NewTemperatureReadingPage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Temperature Readings created successfully!");
-      
+
       router.push(`/operations/doctype/temperature`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      
+
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {
           description: "This record may already exist.",

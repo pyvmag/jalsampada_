@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* ---------------------- TYPES ---------------------- */
 interface AttendanceSheetData {
@@ -70,8 +70,8 @@ export default function AttendanceSheetDetailPage() {
           err.response?.status === 404
             ? `${doctypeName} not found`
             : err.response?.status === 403
-            ? "Unauthorized"
-            : `Failed to load ${doctypeName}`
+              ? "Unauthorized"
+              : `Failed to load ${doctypeName}`
         );
       } finally {
         setLoading(false);
@@ -121,7 +121,7 @@ export default function AttendanceSheetDetailPage() {
           {
             name: "check_in",
             label: "Check In Date & Time",
-            type: "DateTime", 
+            type: "DateTime",
             required: true,
             disableAutoToday: true,
           },

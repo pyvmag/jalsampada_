@@ -13,8 +13,8 @@ import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
-const API_METHOD_URL = "http://103.219.1.138:4412/api/method";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
+const API_METHOD_URL = "http://103.219.3.169:2223/api/method";
 
 interface PrapanSuchi {
   name?: string;
@@ -109,11 +109,11 @@ export default function ParameterChecklistPage() {
             required: true,
 
           },
-             {
+          {
             name: "monitoring_type",
             label: "Monitoring Type",
             type: "Select",
-            options: [{ label: "Daily", value: "Daily" }, { label: "Weekly", value: "Weekly"},{label: "Monthly", value: "Monthly"}, {label: 'Quarterly', value: "Quarterly"}, {label: 'Half-Yearly', value: 'Half-Yearly'}, {label: "Yearly", value: "Yearly"}],
+            options: [{ label: "Daily", value: "Daily" }, { label: "Weekly", value: "Weekly" }, { label: "Monthly", value: "Monthly" }, { label: 'Quarterly', value: "Quarterly" }, { label: 'Half-Yearly', value: 'Half-Yearly' }, { label: "Yearly", value: "Yearly" }],
 
           },
           {

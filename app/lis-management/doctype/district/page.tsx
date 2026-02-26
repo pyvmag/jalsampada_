@@ -21,7 +21,7 @@ import {
 
 // 🟢 CONFIG
 const DOCTYPE = "WRD District";
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 // ── Types ────────────────────────────────────────────────────────
 interface DistrictRow {
@@ -113,8 +113,8 @@ export default function DistrictListPage() {
         <tbody>
           {rows.length ? (
             rows.map((row) => (
-              <tr 
-                key={row.name} 
+              <tr
+                key={row.name}
                 className="hover:bg-muted/50 cursor-pointer"
                 onClick={() => handleCardClick(row.name)}
               >
@@ -185,7 +185,7 @@ export default function DistrictListPage() {
         </div>
 
         <div className="flex gap-2">
-           <button
+          <button
             className="btn btn--outline btn--sm w-10 h-10 p-0 flex items-center justify-center"
             onClick={() => setView((v) => (v === "grid" ? "list" : "grid"))}
           >

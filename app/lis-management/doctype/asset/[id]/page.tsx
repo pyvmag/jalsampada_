@@ -18,7 +18,7 @@ import { Image as ImageIcon } from "lucide-react";
 // Import Auth Context
 import { useAuth } from "@/context/AuthContext";
 
-const FRAPPE_BASE_URL = "http://103.219.1.138:4412";
+const FRAPPE_BASE_URL = "http://103.219.3.169:2223";
 const API_BASE_URL = `${FRAPPE_BASE_URL}/api/resource`;
 
 interface AssetData {

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────── */
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -75,7 +75,7 @@ export default function ParameterTypeListPage() {
 
   const [records, setRecords] = React.useState<ParameterType[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -164,9 +164,9 @@ export default function ParameterTypeListPage() {
           }),
           // Only fetch count during initial load or filter change
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: DOCTYPE, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+            params: {
+              doctype: DOCTYPE,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -273,12 +273,12 @@ export default function ParameterTypeListPage() {
   const getFieldsForRecord = (
     record: ParameterType
   ): RecordCardField[] => [
-    {
-      label: "Parameter Type",
-      value: record.parameter_type || "-",
-    },
-    { label: "Created", value: formatTimeAgo(record.creation) },
-  ];
+      {
+        label: "Parameter Type",
+        value: record.parameter_type || "-",
+      },
+      { label: "Created", value: formatTimeAgo(record.creation) },
+    ];
 
   const currentSortLabel =
     SORT_OPTIONS.find((o) => o.key === sortConfig.key)?.label ??

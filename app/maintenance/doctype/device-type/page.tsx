@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────── */
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -74,7 +74,7 @@ export default function DeviceTypeListPage() {
 
   const [records, setRecords] = React.useState<DeviceType[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -154,9 +154,9 @@ export default function DeviceTypeListPage() {
           }),
           // Only fetch count during initial load or filter change
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: DOCTYPE, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+            params: {
+              doctype: DOCTYPE,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -436,10 +436,10 @@ export default function DeviceTypeListPage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && records.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

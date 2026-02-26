@@ -18,7 +18,7 @@ import { TimeAgo } from "@/components/TimeAgo";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -67,7 +67,7 @@ export default function StockEntryListPage() {
 
   const [records, setRecords] = React.useState<StockEntry[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -79,7 +79,7 @@ export default function StockEntryListPage() {
   const [idSearch, setIdSearch] = React.useState("");
   const [warehouseOptions, setWarehouseOptions] = React.useState<WarehouseOption[]>([]);
   const [stockEntryTypeOptions, setStockEntryTypeOptions] = React.useState<StockEntryTypeOption[]>([]);
-  
+
   // Debounce the ID search
   const debouncedIdSearch = useDebounce(idSearch, 300);
 
@@ -132,7 +132,7 @@ export default function StockEntryListPage() {
 
         const warehouseData = warehouseResp.data?.data ?? [];
         const stockEntryTypeData = stockEntryTypeResp.data?.data ?? [];
-        
+
         setWarehouseOptions([{ name: "" }, ...warehouseData]);
         setStockEntryTypeOptions([{ name: "" }, ...stockEntryTypeData]);
       } catch (err) {
@@ -207,22 +207,22 @@ export default function StockEntryListPage() {
         }
 
         const limit = isReset ? INITIAL_PAGE_SIZE : LOAD_MORE_SIZE;
-        
+
         // Build filters based on selected filters
         const filters: any[] = [];
-        
+
         if (debouncedIdSearch) {
           filters.push(["Stock Entry", "name", "like", `%${debouncedIdSearch}%`]);
         }
-        
+
         if (selectedStockEntryType) {
           filters.push(["Stock Entry", "stock_entry_type", "=", selectedStockEntryType]);
         }
-        
+
         if (selectedFromWarehouse) {
           filters.push(["Stock Entry", "from_warehouse", "=", selectedFromWarehouse]);
         }
-        
+
         if (selectedToWarehouse) {
           filters.push(["Stock Entry", "to_warehouse", "=", selectedToWarehouse]);
         }
@@ -257,9 +257,9 @@ export default function StockEntryListPage() {
           }),
           // Only fetch count during initial load or filter change
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: doctypeName, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+            params: {
+              doctype: doctypeName,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -368,7 +368,7 @@ export default function StockEntryListPage() {
   };
 
   const getStatusText = (docstatus: number) => {
-    switch(docstatus) {
+    switch (docstatus) {
       case 0: return "Draft";
       case 1: return "Submitted";
       case 2: return "Cancelled";
@@ -377,7 +377,7 @@ export default function StockEntryListPage() {
   };
 
   const getStatusClass = (docstatus: number) => {
-    switch(docstatus) {
+    switch (docstatus) {
       case 0: return "status-draft";
       case 1: return "status-submitted";
       case 2: return "status-cancelled";
@@ -403,10 +403,10 @@ export default function StockEntryListPage() {
         <thead>
           <tr>
             <th style={{ width: 40, textAlign: "center" }}>
-              <input 
-                type="checkbox" 
-                checked={isAllSelected} 
-                onChange={handleSelectAll} 
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={handleSelectAll}
                 style={{ cursor: "pointer", width: "16px", height: "16px" }}
               />
             </th>
@@ -441,10 +441,10 @@ export default function StockEntryListPage() {
                   }}
                 >
                   <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isSelected} 
-                      onChange={() => handleSelectOne(r.name)} 
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleSelectOne(r.name)}
                       style={{ cursor: "pointer", width: "16px", height: "16px" }}
                     />
                   </td>
@@ -545,13 +545,13 @@ export default function StockEntryListPage() {
       </div>
 
       {/* 🟢 FOUR FILTER FIELDS */}
-      <div 
-        className="search-filter-section" 
-        style={{ 
-          display: "flex", 
+      <div
+        className="search-filter-section"
+        style={{
+          display: "flex",
           gap: "8px",
-          alignItems: "center", 
-          marginTop: "1rem" 
+          alignItems: "center",
+          marginTop: "1rem"
         }}
       >
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }}>
@@ -673,10 +673,10 @@ export default function StockEntryListPage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && records.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

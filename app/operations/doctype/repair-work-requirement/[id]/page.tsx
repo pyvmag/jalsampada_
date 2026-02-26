@@ -21,7 +21,7 @@ axios.defaults.transformRequest = [(data, headers) => {
   return data;
 }];
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
    1. Repair Work Requirement interface

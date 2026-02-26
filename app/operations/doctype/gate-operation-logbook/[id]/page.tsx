@@ -14,8 +14,8 @@ import { getApiMessages } from "@/lib/utils";
 import axios from "axios";
 import DocumentActivity from "@/components/DocumentActivity";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
-const API_METHOD_URL = "http://103.219.1.138:4412/api/method";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
+const API_METHOD_URL = "http://103.219.3.169:2223/api/method";
 const DOCTYPE_NAME = "Gate Operation Logbook";
 
 /* -------------------------------------------------
@@ -252,7 +252,7 @@ export default function GateOperationLogbookDetailPage() {
                         type: "Link",
                         linkTarget: "Gate",
                         required: true,
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         filters: (getValue) => {
                             const filters: Record<string, any> = {};
                             const stage = getValue("stage");

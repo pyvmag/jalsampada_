@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 import DocumentActivity from "@/components/DocumentActivity";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
    1. Log Sheet type – mirrors fields from CSV
@@ -198,7 +198,7 @@ export default function LogSheetDetailPage() {
                         type: "Link",
                         linkTarget: "Asset",
                         required: true,
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         customSearchParams: {
                             filters: {
                                 asset_category: "Pump",

@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412"; // 🟢 Base URL (no /api/resource for uploads)
+const API_BASE_URL = "http://103.219.3.169:2223"; // 🟢 Base URL (no /api/resource for uploads)
 
 export default function NewItemPage() {
   const router = useRouter();

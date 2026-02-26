@@ -230,7 +230,7 @@ export default function DoctypePage() {
         
 
         const commonHeaders = { Authorization: `token ${apiKey}:${apiSecret}` };
-        
+
         // Parallel requests for Data and Total Count
         const [dataResp, countResp] = await Promise.all([
           axios.get(`${API_BASE_URL}/api/resource/Asset`, {
@@ -355,9 +355,9 @@ export default function DoctypePage() {
             <th>Location</th>
             <th className="text-right pr-4" style={{ width: "120px" }}>
               <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-                 {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-                   <><span>{assets.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
-                 )}
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
+                  <><span>{assets.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
+                )}
               </div>
             </th>
           </tr>

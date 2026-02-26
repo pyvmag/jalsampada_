@@ -18,7 +18,7 @@ import { TimeAgo } from "@/components/TimeAgo";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;

@@ -11,7 +11,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { LinkInput } from "@/components/LinkInput";
 import { DropdownMultiSelect } from "@/components/DropdownMultiSelect";
 
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.3.169:2223/";
 const REPORT_API_PATH = "api/method/frappe.desk.query_report.run";
 const REPORT_NAME = "Stock Register Report";
 

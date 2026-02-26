@@ -29,7 +29,7 @@ import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 import { TimeAgo } from "@/components/TimeAgo";
 
 // 🟢 Changed: Point to Root URL
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -247,6 +247,7 @@ export default function TemperatureReadingsPage() {
         });
 
         if (errorMessages.length > 0) {
+          // Show error messages from server
           toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity,
@@ -260,12 +261,14 @@ export default function TemperatureReadingsPage() {
       fetchReadings(0, true); // Reload from scratch
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
+
       const messages = getApiMessages(
         null,
         err,
         "Records deleted successfully",
         "Failed to delete records"
       );
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -350,6 +353,7 @@ export default function TemperatureReadingsPage() {
                     backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined
                   }}
                 >
+                  {/* 🟢 Row Checkbox */}
                   <td
                     style={{ textAlign: "center" }}
                     onClick={(e) => e.stopPropagation()}
@@ -420,7 +424,8 @@ export default function TemperatureReadingsPage() {
           <h2>{title}</h2>
           <p>Temperature readings list</p>
         </div>
-        
+
+        {/* 🟢 3. Header Action Switch */}
         {selectedIds.size > 0 ? (
           <BulkActionBar
             selectedCount={selectedIds.size}
@@ -495,11 +500,10 @@ export default function TemperatureReadingsPage() {
                   {SORT_OPTIONS.map((option) => (
                     <button
                       key={option.key}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                        sortConfig.key === option.key
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${sortConfig.key === option.key
                           ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium"
                           : "text-gray-700 dark:text-gray-200"
-                      }`}
+                        }`}
                       onClick={() => {
                         setSortConfig((prev) => ({ ...prev, key: option.key }));
                         setIsSortMenuOpen(false);

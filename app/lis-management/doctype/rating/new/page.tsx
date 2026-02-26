@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223//api/resource";
 
 /* -------------------------------------------------
  1. Rating Data type
@@ -74,13 +74,13 @@ export default function NewRatingPage() {
       });
 
       toast.success("Rating created successfully!");
-      
+
       // Navigate to the newly created record using rating value or name
       const ratingValue = response.data.data.rating;
       const docName = response.data.data.name;
       const navigationId = ratingValue ? String(ratingValue) : docName;
       router.push(`/lis-management/doctype/rating/${navigationId}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to create Rating. Check console for details.";

@@ -12,11 +12,11 @@ import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function ParameterChecklistPage() {
   const router = useRouter();
-      const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
+  const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
   const doctypeName = "Device Type";
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -46,7 +46,7 @@ export default function ParameterChecklistPage() {
   /* -------------------------------------------------
      UI-only submit / cancel handlers
   ------------------------------------------------- */
-     const handleSubmit = async (
+  const handleSubmit = async (
     data: Record<string, any>,
     isDirty: boolean
   ) => {

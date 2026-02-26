@@ -20,7 +20,7 @@ import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 import { TimeAgo } from "@/components/TimeAgo";
 
 // 🟢 Changed: Point to Root URL (Required for RPC calls)
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -217,7 +217,7 @@ export default function DoctypePage() {
 
         if (errorMessages.length > 0) {
           // Show error messages from server
-          toast.error("Failed to delete records", { 
+          toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity
           });
@@ -230,7 +230,7 @@ export default function DoctypePage() {
       fetchSchemes(0, true);
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
-      
+
       // 🟢 Added: Consistent error handling using getApiMessages
       const messages = getApiMessages(
         null,
@@ -238,7 +238,7 @@ export default function DoctypePage() {
         "Records deleted successfully",
         "Failed to delete records"
       );
-      
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -367,7 +367,7 @@ export default function DoctypePage() {
       </div>
     );
   }
-  
+
   if (error && schemes.length === 0) {
     return (
       <div className="module active" style={{ padding: "2rem" }}>
@@ -389,7 +389,7 @@ export default function DoctypePage() {
           <h2>{title}</h2>
           <p>Manage Lift Irrigation Scheme master</p>
         </div>
-        
+
         {/* 🟢 3. Header Action Switch */}
         {selectedIds.size > 0 ? (
           <BulkActionBar

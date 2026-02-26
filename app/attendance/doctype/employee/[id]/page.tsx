@@ -9,7 +9,7 @@ import { ArrowLeft, Edit, User, Mail, Phone, Briefcase, Building } from "lucide-
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function EmployeeDetailPage() {
   const router = useRouter();
@@ -74,16 +74,16 @@ export default function EmployeeDetailPage() {
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Left Column: Profile Card */}
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-lg border shadow-sm text-center">
             <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 overflow-hidden">
-               {data.image ? (
-                 <img src={`http://103.219.1.138:4412${data.image}`} alt="Profile" className="w-full h-full object-cover" />
-               ) : (
-                 <User className="h-10 w-10 text-gray-400" />
-               )}
+              {data.image ? (
+                <img src={`http://103.219.3.169:2223${data.image}`} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="h-10 w-10 text-gray-400" />
+              )}
             </div>
             <h3 className="font-semibold text-lg">{data.employee_name}</h3>
             <p className="text-gray-500 text-sm">{data.designation || "No Designation"}</p>
@@ -92,7 +92,7 @@ export default function EmployeeDetailPage() {
 
           <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
             <h4 className="font-semibold text-sm text-gray-900 border-b pb-2">Contact Info</h4>
-            
+
             <div className="flex items-center gap-3 text-sm">
               <Mail className="h-4 w-4 text-gray-400" />
               <div>
@@ -113,7 +113,7 @@ export default function EmployeeDetailPage() {
 
         {/* Right Column: Details */}
         <div className="md:col-span-2 space-y-6">
-          
+
           {/* Employment Details */}
           <div className="bg-white p-6 rounded-lg border shadow-sm">
             <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">

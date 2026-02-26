@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
    1. Draft Tender Paper data interface
@@ -149,7 +149,7 @@ export default function NewDraftTenderPaperPage() {
       } else {
         router.push(`/tender/doctype/draft-tender-paper`);
       }
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const serverData = err.response?.data;
@@ -161,7 +161,8 @@ export default function NewDraftTenderPaperPage() {
 
       toast.error("Failed to create Draft Tender Paper", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }

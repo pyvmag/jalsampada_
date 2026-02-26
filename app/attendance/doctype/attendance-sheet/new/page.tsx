@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
  1. Attendance Sheet Type
@@ -100,14 +100,14 @@ export default function AttendanceSheetPage() {
             label: "Check In Date and Time",
             type: "DateTime",
             defaultValue: getValue("check_in"),
-            disableAutoToday: true, 
+            disableAutoToday: true,
           },
           {
             name: "check_out_datetime",
             label: "Check Out Date and Time",
             type: "DateTime",
             defaultValue: getValue("check_out"),
-            disableAutoToday: true, 
+            disableAutoToday: true,
           },
           {
             name: "remarks",
@@ -168,7 +168,7 @@ export default function AttendanceSheetPage() {
 
           toast.error(messages);
           return;
-        } catch {}
+        } catch { }
       }
 
       toast.error(res?.message || "Failed to create Attendance Sheet.");

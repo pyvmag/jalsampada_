@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function ParameterCategoryPage() {
   const router = useRouter();

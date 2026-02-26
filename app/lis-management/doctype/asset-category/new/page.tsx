@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223//api/resource";
 
 /* -------------------------------------------------
  1. Asset Category type – mirrors the API
@@ -40,7 +40,7 @@ export default function NewAssetCategoryPage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -80,7 +80,7 @@ export default function NewAssetCategoryPage() {
             label: "Specifications",
             type: "Table",
             columns: [
-               { name: "specification_type", label: "Specification Type", type: "Link", linkTarget: "Specifications" },
+              { name: "specification_type", label: "Specification Type", type: "Link", linkTarget: "Specifications" },
               { name: "details", label: "Details", type: "Text" },
             ],
             defaultValue: getValue("custom_specifications", []),
@@ -101,7 +101,7 @@ export default function NewAssetCategoryPage() {
 
     // Check if we have valid data to submit (either dirty changes or duplicate data)
     const hasValidData = (duplicateData && data.asset_category_name) || !duplicateData;
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
@@ -125,26 +125,26 @@ export default function NewAssetCategoryPage() {
       });
 
       toast.success("Asset Category created successfully!");
-      
+
       // Navigate to the newly created record using asset_category_name
       const newCategoryName = response.data.data.asset_category_name || response.data.data.name;
       router.push(`/lis-management/doctype/asset-category/${newCategoryName}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
-      
+
       // Handle duplicate entry error specifically
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
-        const errorMessage = err.response?.data?._server_messages || 
-                            "An asset category with this name already exists. Please use a different name.";
+        const errorMessage = err.response?.data?._server_messages ||
+          "An asset category with this name already exists. Please use a different name.";
         toast.error("Duplicate Entry Error", {
           description: "Asset Category with this name already exists. Please change the category name and try again.",
           duration: Infinity
         });
       } else {
-        const errorMessage = err.response?.data?.message || 
-                            err.response?.data?.error || 
-                            "Failed to create Asset Category. Check console for details.";
+        const errorMessage = err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to create Asset Category. Check console for details.";
         toast.error(`Error: ${errorMessage}`, { duration: Infinity });
       }
     } finally {

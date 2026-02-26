@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewWarehousePage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function NewWarehousePage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -127,11 +127,11 @@ export default function NewWarehousePage() {
             defaultValue: getValue("account"),
             description: "Financial ledger account (Filtered by current Company)",
             // Advanced dynamic filtering based on selected company
-            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+            customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
             customSearchParams: {
               filters: {
                 is_group: 0,
-                account_type: "Stock"                
+                account_type: "Stock"
               }
             },
             filters: (getValue) => {
@@ -185,14 +185,14 @@ export default function NewWarehousePage() {
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
     // Check if we have valid data to submit
     const hasValidData = isDirty || (duplicateData && data.warehouse_name);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const payload: Record<string, any> = { ...data };
       payload.doctype = doctypeName;
@@ -209,7 +209,7 @@ export default function NewWarehousePage() {
       }
 
       console.log("Sending NEW Warehouse payload:", payload);
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -223,8 +223,8 @@ export default function NewWarehousePage() {
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(payload), 
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
 
       const responseData = await resp.json();
@@ -233,14 +233,14 @@ export default function NewWarehousePage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Warehouse created successfully!");
-      
+
       router.push(`/operations/doctype/warehouse`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      
+
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {
           description: "A Warehouse with this name already exists.",

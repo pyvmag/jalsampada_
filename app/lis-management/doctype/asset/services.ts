@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const FRAPPE_BASE_URL = "http://103.219.1.138:4412";
+const FRAPPE_BASE_URL = "http://103.219.3.169:2223";
 
 export interface LogsheetData {
     name: string;

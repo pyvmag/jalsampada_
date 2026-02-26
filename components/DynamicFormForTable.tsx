@@ -14,7 +14,7 @@ import { Upload, X, Eye } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.3.169:2223/";
 
 // Helper: Build dynamic filters for Link fields
 function buildDynamicFilters(

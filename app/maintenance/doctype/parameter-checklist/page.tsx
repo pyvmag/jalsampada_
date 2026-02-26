@@ -16,7 +16,7 @@ import { TimeAgo } from "@/components/TimeAgo";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -64,7 +64,7 @@ export default function ParameterChecklistListPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-   const title = "Parameter Checklist";
+  const title = "Parameter Checklist";
 
   /* ── Search ─────────────────────────────────── */
   const filteredRecords = React.useMemo(() => {
@@ -380,36 +380,36 @@ export default function ParameterChecklistListPage() {
       </div>
 
       <div
-             className="search-filter-section"
-             style={{
-               display: "flex",
-               justifyContent: "space-between",
-               alignItems: "center",
-               marginTop: "1rem",
-             }}
-           >
-             <div style={{ display: "flex", gap: "8px" }}>
-               <input
-                 type="text"
-                 placeholder={`Search ${title}...`}
-                 className="form-control"
-                 style={{ width: 240 }}
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-               />
-             </div>
-     
-             <div className="view-switcher">
-               <button
-                 className="btn btn--outline btn--sm flex items-center justify-center"
-                 onClick={() => setView((v) => (v === "grid" ? "list" : "grid"))}
-                 aria-label="Toggle view"
-                 title={view === "grid" ? "List view" : "Grid view"}
-               >
-                 {view === "grid" ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-               </button>
-             </div>
-           </div>
+        className="search-filter-section"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "1rem",
+        }}
+      >
+        <div style={{ display: "flex", gap: "8px" }}>
+          <input
+            type="text"
+            placeholder={`Search ${title}...`}
+            className="form-control"
+            style={{ width: 240 }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="view-switcher">
+          <button
+            className="btn btn--outline btn--sm flex items-center justify-center"
+            onClick={() => setView((v) => (v === "grid" ? "list" : "grid"))}
+            aria-label="Toggle view"
+            title={view === "grid" ? "List view" : "Grid view"}
+          >
+            {view === "grid" ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
 
       <div className="view-container" style={{ marginTop: "0.5rem", paddingBottom: "2rem" }}>
         {view === "grid" ? renderGridView() : renderListView()}

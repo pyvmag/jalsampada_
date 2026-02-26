@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
  1. Fund Head data interface
@@ -84,13 +84,13 @@ export default function NewFundHeadPage() {
       });
 
       toast.success("Fund Head created successfully!");
-      
+
       // Navigate to the newly created record using procurement_type or name
       const procurementType = response.data.data.procurement_type;
       const docName = response.data.data.name;
       const navigationId = procurementType || docName;
       router.push(`/tender/doctype/fund-head/${encodeURIComponent(navigationId)}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const serverData = err.response?.data;
@@ -102,7 +102,8 @@ export default function NewFundHeadPage() {
 
       toast.error("Failed to create Fund Head", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }

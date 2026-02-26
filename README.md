@@ -1,4 +1,4 @@
-**Live demo Site**: http://103.219.1.138:4000
+**Live demo Site**: http://103.219.3.169:2225
 **User** : test_user@gmail.com
 **Password** : Test@123
 **For testing purpose only**
@@ -115,7 +115,7 @@ Forms: React Hook Form + Zod Validation
 
 ## 🚀 Production Deployment
 
-The application is currently hosted live at **http://103.219.1.138:4000** using PM2 as the process manager for continuous operation.
+The application is currently hosted live at **http://103.219.3.169:2225** using PM2 as the process manager for continuous operation.
 
 ### PM2 Configuration (ecosystem.config.js)
 The application runs under PM2 with the following configuration:
@@ -155,4 +155,4 @@ sudo systemctl reload nginx
 ```
 
 ### Live URL
-**🌐 http://103.219.1.138:4000**
+**🌐 http://103.219.3.169:2225**

@@ -11,7 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { MaintenanceChecklistMatrix } from "@/app/maintenance/doctype/maintenance-checklist/components/MaintenanceChecklistMatrix"; // Import the new component
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewMaintenanceChecklistPage() {
     const router = useRouter();
@@ -56,10 +56,10 @@ export default function NewMaintenanceChecklistPage() {
                         required: true,
                         defaultValue: getValue("lis_name"),
                     },
-                    { 
-                        name: "stage", 
-                        label: "Stage", 
-                        type: "Link", 
+                    {
+                        name: "stage",
+                        label: "Stage",
+                        type: "Link",
                         linkTarget: "Stage No", // Or handle dynamic filtering via props if needed later
                         defaultValue: getValue("stage"),
                         // Note: You mentioned filtering stage by LIS. 
@@ -124,7 +124,7 @@ export default function NewMaintenanceChecklistPage() {
         try {
             // 1. Prepare Payload
             const payload = { ...data };
-            
+
             // Remove the UI placeholder field
             delete payload.checklist_ui;
             delete payload.checklist_matrix_section;

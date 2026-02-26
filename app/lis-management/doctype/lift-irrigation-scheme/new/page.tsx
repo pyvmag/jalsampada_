@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223//api/resource";
 
 export default function NewRecordPage() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function NewRecordPage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -75,16 +75,16 @@ export default function NewRecordPage() {
      2. SUBMIT (Create) - Using 'fetch' and CSRF Token
      ------------------------------------------------- */
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-    
+
     // Check if we have valid data to submit (either dirty changes or duplicate data)
     const hasValidData = isDirty || (duplicateData && data.lis_name);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
     setIsSaving(true);
-    
+
     try {
       // Build the payload
       const finalPayload = {
@@ -95,7 +95,7 @@ export default function NewRecordPage() {
       };
 
       console.log("Sending this NEW DOC to Frappe:", finalPayload);
-      
+
       // --- This is the working method from your "Healthcare" app ---
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -112,8 +112,8 @@ export default function NewRecordPage() {
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(finalPayload), 
+        credentials: 'include',
+        body: JSON.stringify(finalPayload),
       });
 
       const responseData = await resp.json();
@@ -122,16 +122,16 @@ export default function NewRecordPage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Lift Irrigation Scheme created!");
-      
+
       // Go to the main list page for this doctype
       router.push(`/lis-management/doctype/lift-irrigation-scheme`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      console.log("Full server error message:", err.message); 
-      
+      console.log("Full server error message:", err.message);
+
       // Handle duplicate entry error specifically
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {

@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import DocumentActivity from "@/components/DocumentActivity";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
 1. Stock Reconciliation type interfaces
@@ -401,7 +401,7 @@ export default function StockReconciliationDetailPage() {
             linkTarget: "Warehouse",
             fieldColumns: 1,
             defaultValue: stockReconciliation.set_warehouse || "",
-            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+            customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
             customSearchParams: {
               filters: [
                 ["Warehouse", "company", "=", "quantbit"],
@@ -437,7 +437,7 @@ export default function StockReconciliationDetailPage() {
                 label: "Store Location",
                 type: "Link",
                 linkTarget: "Warehouse",
-                customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                 customSearchParams: {
                   filters: [
                     ["Warehouse", "company", "=", "quantbit"],
@@ -802,7 +802,7 @@ export default function StockReconciliationDetailPage() {
 
     try {
       await axios.post(
-        `http://103.219.1.138:4412/api/method/frappe.client.cancel`,
+        `http://103.219.3.169:2223/api/method/frappe.client.cancel`,
         {
           doctype: "Stock Reconciliation",
           name: docname,

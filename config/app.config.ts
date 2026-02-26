@@ -1,14 +1,14 @@
 // Production-ready configuration
 export const APP_CONFIG = {
   // API URLs
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://103.219.1.138:4412",
-  
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://103.219.3.169:2223",
+
   // App URLs for routing
   BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
-  
+
   // Environment
   NODE_ENV: process.env.NODE_ENV || "development",
-  
+
   // Debug mode
   DEBUG: process.env.NODE_ENV === "development",
 };

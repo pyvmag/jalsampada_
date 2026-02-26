@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
  1. Work Type data
@@ -83,13 +83,13 @@ export default function NewWorkTypePage() {
       });
 
       toast.success("Work Type created successfully!");
-      
+
       // Navigate to the newly created record using work_type_name or name
       const workTypeName = response.data.data.work_type_name;
       const docName = response.data.data.name;
       const navigationId = workTypeName || docName;
       router.push(`/tender/doctype/work-type/${encodeURIComponent(navigationId)}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const serverData = err.response?.data;
@@ -101,7 +101,8 @@ export default function NewWorkTypePage() {
 
       toast.error("Failed to create Work Type", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }

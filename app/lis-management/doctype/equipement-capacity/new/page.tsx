@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223//api/resource";
 
 /* -------------------------------------------------
  1. Equipment Capacity Data type
@@ -74,11 +74,11 @@ export default function NewEquipmentCapacityPage() {
       });
 
       toast.success("Equipment Capacity created successfully!");
-      
+
       // Navigate to the newly created record using equipement_capacity
       const newCapacityName = response.data.data.equipement_capacity || response.data.data.name;
       router.push(`/lis-management/doctype/equipement-capacity/${newCapacityName}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to create Equipment Capacity. Check console for details.";

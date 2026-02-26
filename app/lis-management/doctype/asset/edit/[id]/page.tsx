@@ -28,7 +28,7 @@ import {
 // Use RHF hooks for the custom editor component
 import { useFormContext, useFieldArray } from "react-hook-form";
 
-const FRAPPE_BASE_URL = "http://103.219.1.138:4412";
+const FRAPPE_BASE_URL = "http://103.219.3.169:2223";
 const API_BASE_URL = `${FRAPPE_BASE_URL}/api/resource`;
 const API_METHOD_URL = `${FRAPPE_BASE_URL}/api/method`;
 
@@ -696,7 +696,7 @@ export default function RecordDetailPage() {
                         label: "Current Linked Motor/Pump",
                         type: "Link",
                         linkTarget: "Asset",
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         filters: (getValue) => {
                             const filters: Record<string, any> = {};
                             const stageNo = getValue("custom_stage_no");

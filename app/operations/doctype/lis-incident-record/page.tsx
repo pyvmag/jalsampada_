@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 
 // 🟢 Changed: Point to Root URL
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Pagination
 const INITIAL_PAGE_SIZE = 25;

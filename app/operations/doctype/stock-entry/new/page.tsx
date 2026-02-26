@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { get } from "lodash";
 import { useFormContext } from "react-hook-form";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
 1. Stock Entry type interfaces
@@ -208,7 +208,7 @@ export default function NewStockEntryPage() {
                         linkTarget: "Stock Entry Type",
                         required: true,
                         defaultValue: getValue("stock_entry_type"),
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         customSearchParams: {
                             filters: {
                                 purpose: ["not in", ["Receive from Customer", "Return Raw Material to Customer", "Subcontracting Delivery", "Subcontracting Return"]]
@@ -255,7 +255,7 @@ export default function NewStockEntryPage() {
                         type: "Link",
                         linkTarget: "Warehouse",
                         defaultValue: getValue("from_warehouse"),
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         customSearchParams: {
                             filters: [
                                 ["Warehouse", "company", "in", ["", "quantbit"]],
@@ -272,7 +272,7 @@ export default function NewStockEntryPage() {
                         type: "Link",
                         linkTarget: "Warehouse",
                         defaultValue: getValue("to_warehouse"),
-                        customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                         customSearchParams: {
                             filters: [
                                 ["Warehouse", "company", "in", ["", "quantbit"]],

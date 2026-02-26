@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
  1. Work Subtype data interface
@@ -96,13 +96,13 @@ export default function NewWorkSubtypePage() {
       });
 
       toast.success("Work Subtype created successfully!");
-      
+
       // Navigate to the newly created record using work_subtype or name
       const workSubtypeName = response.data.data.work_subtype;
       const docName = response.data.data.name;
       const navigationId = workSubtypeName || docName;
       router.push(`/tender/doctype/work-subtype/${encodeURIComponent(navigationId)}`);
-      
+
     } catch (err: any) {
       console.error("Create error:", err);
       const serverData = err.response?.data;
@@ -114,7 +114,8 @@ export default function NewWorkSubtypePage() {
 
       toast.error("Failed to create Work Subtype", {
         description: serverMessage,
-       duration: Infinity});
+        duration: Infinity
+      });
     } finally {
       setIsSaving(false);
     }

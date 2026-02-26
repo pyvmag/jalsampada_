@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function EditEmployeePage() {
   const router = useRouter();
@@ -98,7 +98,7 @@ export default function EditEmployeePage() {
           name: "employee_name",
           label: "Employee Name",
           type: "Data",
-          readOnlyValue: "Auto-calculated", 
+          readOnlyValue: "Auto-calculated",
         },
         {
           name: "gender",
@@ -236,7 +236,7 @@ export default function EditEmployeePage() {
   // or via the useForm defaultValues (which we handle below differently).
   // Actually, your DynamicForm takes `defaultValues` from the schema.
   // We need to merge the API data into the schema or pass it to the form.
-  
+
   // OPTIMIZATION: Your DynamicForm component doesn't accept a separate `defaultValues` prop easily.
   // It builds them from the `tabs` prop.
   // So we map the API data into the `tabs` structure.

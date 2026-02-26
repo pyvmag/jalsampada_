@@ -12,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 const DOCTYPE_NAME = "Issue";
 
 /**
@@ -343,7 +343,7 @@ export default function NewLisIncidentRecordPage() {
       try {
         // Check if it's empty or the user explicitly asked for auto-fill
         if (!methods.getValues("custom_reported_by")) {
-          const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+          const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
             headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
           });
           const infoData = await infoResp.json();
@@ -375,7 +375,7 @@ export default function NewLisIncidentRecordPage() {
     }
 
     setIsSaving(true);
-    const methodBaseUrl = "http://103.219.1.138:4412"; // Derived host
+    const methodBaseUrl = "http://103.219.3.169:2223"; // Derived host
 
     try {
       if (!apiKey || !apiSecret) {
@@ -390,7 +390,7 @@ export default function NewLisIncidentRecordPage() {
         activeUser = localStorage.getItem("currentUser");
         if (!activeUser) {
           try {
-            const userResp = await fetch("http://103.219.1.138:4412/api/method/frappe.auth.get_logged_user", {
+            const userResp = await fetch("http://103.219.3.169:2223/api/method/frappe.auth.get_logged_user", {
               headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
             });
             const userData = await userResp.json();
@@ -407,7 +407,7 @@ export default function NewLisIncidentRecordPage() {
 
           // Phase 1: Identifying Logged-in User via system API (Highest Priority)
           try {
-            const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+            const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
               headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
             });
             const infoData = await infoResp.json();

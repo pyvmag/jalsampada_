@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewEmployeePage() {
   const router = useRouter();
@@ -105,7 +105,7 @@ export default function NewEmployeePage() {
           type: "Date",
           required: true,
         },
-        
+
         // ➤ COLUMN BREAK (Right)
         {
           name: "cb_employment_right",
@@ -292,12 +292,12 @@ export default function NewEmployeePage() {
       toast.success("Employee created successfully!");
       const newId = response.data.data.name;
       router.push(`/attendance/doctype/employee/${encodeURIComponent(newId)}`);
-      
+
     } catch (error: any) {
       console.error("Error creating employee:", error);
       toast.error(
         error.response?.data?.exception || "Failed to create employee"
-      , { duration: Infinity });
+        , { duration: Infinity });
     }
   };
 
@@ -309,9 +309,9 @@ export default function NewEmployeePage() {
       {/* Module Header - Matches Asset/Tender Style */}
       <div className="module-header mb-6">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => router.back()}
             className="hover:bg-gray-100 dark:hover:bg-gray-800"
           >

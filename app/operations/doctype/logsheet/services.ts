@@ -1,6 +1,6 @@
 import { UseFormReturn } from "react-hook-form";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 export interface TemperatureRow {
     temperature: string;

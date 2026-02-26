@@ -16,9 +16,9 @@ import { useAuth } from "@/context/AuthContext";
 import "./TableField.css";
 import "react-datepicker/dist/react-datepicker.css";
 
-// 🔴 OLD: const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+// 🔴 OLD: const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 // 🟢 NEW: Split into Server Root and API Path
-const SERVER_URL = "http://103.219.1.138:4412";
+const SERVER_URL = "http://103.219.3.169:2223";
 const API_BASE_URL = `${SERVER_URL}/api/resource`;
 
 interface Option {

@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { RecordCard, RecordCardField } from "@/components/RecordCard";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { 
-  Search, 
-  Plus, 
-  List, 
-  LayoutGrid, 
-  ChevronDown, 
-  ArrowUpNarrowWide, 
+import {
+  Search,
+  Plus,
+  List,
+  LayoutGrid,
+  ChevronDown,
+  ArrowUpNarrowWide,
   ArrowDownWideNarrow,
   Check,
   Loader2
@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource"; // Fixed double slash
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -86,7 +86,7 @@ export default function UserDoctypePage() {
 
   const [users, setUsers] = React.useState<User[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -98,8 +98,8 @@ export default function UserDoctypePage() {
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({
-    key: "modified", 
-    direction: "desc", 
+    key: "modified",
+    direction: "desc",
   });
 
   const [isSortMenuOpen, setIsSortMenuOpen] = React.useState(false);
@@ -142,15 +142,15 @@ export default function UserDoctypePage() {
           ]),
           limit_start: start,
           limit_page_length: limit,
-          order_by: `${sortConfig.key} ${sortConfig.direction}`, 
+          order_by: `${sortConfig.key} ${sortConfig.direction}`,
         };
 
         if (debouncedSearch) {
           params.or_filters = JSON.stringify({
-              email: ["like", `%${debouncedSearch}%`],
-              full_name: ["like", `%${debouncedSearch}%`],
-              first_name: ["like", `%${debouncedSearch}%`],
-              last_name: ["like", `%${debouncedSearch}%`]
+            email: ["like", `%${debouncedSearch}%`],
+            full_name: ["like", `%${debouncedSearch}%`],
+            first_name: ["like", `%${debouncedSearch}%`],
+            last_name: ["like", `%${debouncedSearch}%`]
           });
         }
 
@@ -166,13 +166,13 @@ export default function UserDoctypePage() {
             withCredentials: true,
           }),
           // Only fetch count during initial load - without filters to avoid issues
-          isReset ? axios.get(`http://103.219.1.138:4412/api/method/frappe.client.get_count`, {
-            params: { 
+          isReset ? axios.get(`http://103.219.3.169:2223/api/method/frappe.client.get_count`, {
+            params: {
               doctype: doctypeName
             },
             headers: commonHeaders,
           }).catch(() => ({ data: { message: 0 } })) // Fallback to 0 if count fails
-          : Promise.resolve({ data: { message: 0 } })
+            : Promise.resolve({ data: { message: 0 } })
         ]);
 
         const raw = dataResp.data?.data ?? [];
@@ -265,7 +265,7 @@ export default function UserDoctypePage() {
       const response = await bulkDeleteRPC(
         doctypeName,
         Array.from(selectedIds),
-        "http://103.219.1.138:4412",
+        "http://103.219.3.169:2223",
         apiKey!,
         apiSecret!
       );
@@ -308,8 +308,8 @@ export default function UserDoctypePage() {
     if (user.email) fields.push({ label: "Email", value: user.email });
     if (user.user_type) fields.push({ label: "User Type", value: user.user_type });
     if (user.mobile_no) fields.push({ label: "Mobile", value: user.mobile_no });
-    if (user.enabled !== undefined) fields.push({ 
-      label: "Status", 
+    if (user.enabled !== undefined) fields.push({
+      label: "Status",
       value: user.enabled ? "Active" : "Disabled",
       type: user.enabled ? "success" : "danger"
     });
@@ -354,9 +354,9 @@ export default function UserDoctypePage() {
             sortedUsers.map((user) => {
               const isSelected = selectedIds.has(user.name);
               return (
-                <tr 
-                  key={user.name} 
-                  onClick={() => handleCardClick(user.name)} 
+                <tr
+                  key={user.name}
+                  onClick={() => handleCardClick(user.name)}
                   style={{ cursor: "pointer", backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined }}
                 >
                   <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
@@ -393,18 +393,18 @@ export default function UserDoctypePage() {
     <div className="equipment-grid">
       {users.length ? users.map(user => (
         <RecordCard
-            key={user.name}
-            title={user.full_name || user.name}
-            subtitle={user.email}
-            fields={getFieldsForUser(user)}
-            onClick={() => handleCardClick(user.name)}
-          />
+          key={user.name}
+          title={user.full_name || user.name}
+          subtitle={user.email}
+          fields={getFieldsForUser(user)}
+          onClick={() => handleCardClick(user.name)}
+        />
       )) : <p style={{ color: "var(--color-text-secondary)" }}>No users found.</p>}
     </div>
   );
 
-  if (loading && users.length === 0) return <div className="module active" style={{padding:"2rem", textAlign:"center"}}>Loading users...</div>;
-  if (error && users.length === 0) return <div className="module active" style={{padding:"2rem"}}>{error}</div>;
+  if (loading && users.length === 0) return <div className="module active" style={{ padding: "2rem", textAlign: "center" }}>Loading users...</div>;
+  if (error && users.length === 0) return <div className="module active" style={{ padding: "2rem" }}>{error}</div>;
 
   return (
     <div className="module active">
@@ -431,7 +431,7 @@ export default function UserDoctypePage() {
 
       {/* FILTER BAR */}
       <div className="search-filter-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", gap: "8px" }}>
-        
+
         {/* Left: Single Omni-Search */}
         <div className="relative" style={{ flexGrow: 1, maxWidth: '400px' }}>
           <input
@@ -440,32 +440,32 @@ export default function UserDoctypePage() {
             className="form-control w-full pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            aria-label="Search Users" 
+            aria-label="Search Users"
           />
         </div>
 
         {/* Right: Sort Pill + View Switcher */}
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          
+
           {/* Sort Pill */}
           <div className="relative" ref={sortMenuRef}>
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
-              
-              <button 
+
+              <button
                 className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors"
                 onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
                 title={`Sort ${sortConfig.direction === 'asc' ? 'Descending' : 'Ascending'}`}
                 aria-label={sortConfig.direction === 'asc' ? "Sort Descending" : "Sort Ascending"}
               >
-                {sortConfig.direction === 'asc' ? 
-                    <ArrowDownWideNarrow className="w-4 h-4 text-gray-600 dark:text-gray-300" /> : 
-                    <ArrowUpNarrowWide className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                {sortConfig.direction === 'asc' ?
+                  <ArrowDownWideNarrow className="w-4 h-4 text-gray-600 dark:text-gray-300" /> :
+                  <ArrowUpNarrowWide className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 }
               </button>
-              
+
               <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
-              
-              <button 
+
+              <button
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors"
                 onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
                 aria-label="Open Sort Options"
@@ -513,10 +513,10 @@ export default function UserDoctypePage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && users.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

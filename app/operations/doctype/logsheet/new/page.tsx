@@ -16,7 +16,7 @@ import {
   populateTemperatureReadings,
 } from "../services";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewLogSheetPage() {
   const router = useRouter();
@@ -119,7 +119,7 @@ export default function NewLogSheetPage() {
             type: "Link",
             required: true,
             linkTarget: "Asset",
-            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+            customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
             customSearchParams: {
               filters: {
                 asset_category: "Pump",

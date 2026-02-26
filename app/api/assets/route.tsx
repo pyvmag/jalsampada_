@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     // This fetch runs on YOUR server, so there is no CORS error
-    const response = await fetch("http://103.219.1.138:4412//api/resource/Asset", {
+    const response = await fetch("http://103.219.3.169:2223//api/resource/Asset", {
       cache: 'no-store', // Ensures you always get fresh data
     });
 
@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     const data = await response.json();
-    
+
     // Send the data back to your page
     return NextResponse.json(data);
 

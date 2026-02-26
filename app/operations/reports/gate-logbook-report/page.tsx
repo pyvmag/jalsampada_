@@ -8,9 +8,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 // --- API Configuration ---
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.3.169:2223/";
 const REPORT_API_PATH = "api/method/frappe.desk.query_report.run";
-const REPORT_NAME = "Gate LogBook Report"; 
+const REPORT_NAME = "Gate LogBook Report";
 
 // --- Type Definitions ---
 type ReportField = {
@@ -82,7 +82,7 @@ export default function GateLogBookSheetReportPage() {
     stage: "",
     gate_no: "",
     from_date: "",
-  to_date: "",
+    to_date: "",
   });
 
   // --- Fetch Report ---
@@ -236,29 +236,29 @@ export default function GateLogBookSheetReportPage() {
       <div className="filters-grid grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
 
         <div className="form-group z-[110]">
-                    <label className="text-sm font-medium mb-1 block">From Date</label>
-                    <DatePicker
-                      selected={filters.from_date ? new Date(filters.from_date) : null}
-                      onChange={(date: Date | null) =>
-                        handleFilterChange("from_date", date ? date.toISOString() : "")
-                      }
-                      placeholderText="DD/MM/YYYY"
-                      dateFormat="dd/MM/yyyy"
-                      className="form-control w-full placeholder:uppercase"
-                    />
-                  </div>
-                  <div className="form-group z-[110]">
-                    <label className="text-sm font-medium mb-1 block">To Date</label>
-                    <DatePicker
-                      selected={filters.to_date ? new Date(filters.to_date) : null}
-                      onChange={(date: Date | null) =>
-                        handleFilterChange("to_date", date ? date.toISOString() : "")
-                      }
-                      placeholderText="DD/MM/YYYY"
-                      dateFormat="dd/MM/yyyy"
-                      className="form-control w-full placeholder:uppercase"
-                    />
-                  </div>
+          <label className="text-sm font-medium mb-1 block">From Date</label>
+          <DatePicker
+            selected={filters.from_date ? new Date(filters.from_date) : null}
+            onChange={(date: Date | null) =>
+              handleFilterChange("from_date", date ? date.toISOString() : "")
+            }
+            placeholderText="DD/MM/YYYY"
+            dateFormat="dd/MM/yyyy"
+            className="form-control w-full placeholder:uppercase"
+          />
+        </div>
+        <div className="form-group z-[110]">
+          <label className="text-sm font-medium mb-1 block">To Date</label>
+          <DatePicker
+            selected={filters.to_date ? new Date(filters.to_date) : null}
+            onChange={(date: Date | null) =>
+              handleFilterChange("to_date", date ? date.toISOString() : "")
+            }
+            placeholderText="DD/MM/YYYY"
+            dateFormat="dd/MM/yyyy"
+            className="form-control w-full placeholder:uppercase"
+          />
+        </div>
 
         <div className="form-group z-[50]">
           <label className="text-sm font-medium mb-1 block">LIS</label>

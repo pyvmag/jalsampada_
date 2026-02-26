@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 // 🟢 Changed: Point to Root URL
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -296,7 +296,7 @@ export default function WarehousePage() {
 
         if (errorMessages.length > 0) {
           // Show error messages from server
-          toast.error("Failed to delete records", { 
+          toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity
           });
@@ -310,14 +310,14 @@ export default function WarehousePage() {
       fetchWarehouses(0, true); // Reload from scratch
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
-      
+
       const messages = getApiMessages(
         null,
         err,
         "Records deleted successfully",
         "Failed to delete records"
       );
-      
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -410,14 +410,14 @@ export default function WarehousePage() {
                 <tr
                   key={w.name}
                   onClick={() => handleCardClick(w.name)}
-                  style={{ 
+                  style={{
                     cursor: "pointer",
                     backgroundColor: isSelected ? "var(--color-surface-selected, #f0f9ff)" : undefined
                   }}
                 >
                   {/* 🟢 Row Checkbox */}
-                  <td 
-                    style={{ textAlign: "center" }} 
+                  <td
+                    style={{ textAlign: "center" }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <input
@@ -490,7 +490,7 @@ export default function WarehousePage() {
           <h2>Store Locations</h2>
           <p>List of store locations with company, parent, type and account</p>
         </div>
-        
+
         {/* 🟢 3. Header Action Switch */}
         {selectedIds.size > 0 ? (
           <BulkActionBar

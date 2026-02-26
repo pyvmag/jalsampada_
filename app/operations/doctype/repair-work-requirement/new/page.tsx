@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function NewRepairWorkRequirementPage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function NewRepairWorkRequirementPage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -105,7 +105,7 @@ export default function NewRepairWorkRequirementPage() {
             name: "designation",
             label: "Designation",
             type: "Data",
-            fetchFrom:{
+            fetchFrom: {
               sourceField: "prepared_by",
               targetDoctype: "Employee",
               targetField: "designation"
@@ -122,11 +122,12 @@ export default function NewRepairWorkRequirementPage() {
             defaultValue: getValue("repair_work_details", []),
             columns: [
               { name: "sr_no", label: "Sr. No.", type: "Data" },
-              { name: "asset_id", label: "Asset ID", type: "Link", linkTarget: "Asset",
+              {
+                name: "asset_id", label: "Asset ID", type: "Link", linkTarget: "Asset",
                 filters: (getValues: (name: string) => any) => {
                   const parentLisName = getValues("parent.lis_name");
                   const parentStage = getValues("parent.stage");
-                  
+
                   const filters: any = {};
                   if (parentLisName) {
                     filters.custom_lis_name = parentLisName;
@@ -134,13 +135,14 @@ export default function NewRepairWorkRequirementPage() {
                   if (parentStage) {
                     filters.custom_stage_no = parentStage;
                   }
-                  
+
                   return filters;
                 }
               },
-              { name: "asset_name", label: "Asset Name", type: "Data", 
-                 fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "asset_name" }
-               },
+              {
+                name: "asset_name", label: "Asset Name", type: "Data",
+                fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "asset_name" }
+              },
               {
                 name: "equipement_model",
                 label: "Equipement Model",
@@ -238,17 +240,17 @@ export default function NewRepairWorkRequirementPage() {
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
     // Check if we have valid data to submit
     const hasValidData = isDirty || (duplicateData && data.lis_name);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const payload: Record<string, any> = { ...data };
-      
+
       // Remove layout/break fields
       const nonDataFields = new Set([
         "section_break_tfui",
@@ -275,7 +277,7 @@ export default function NewRepairWorkRequirementPage() {
       }
 
       console.log("Sending NEW Repair Work Requirement payload:", finalPayload);
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -289,8 +291,8 @@ export default function NewRepairWorkRequirementPage() {
       const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(finalPayload), 
+        credentials: 'include',
+        body: JSON.stringify(finalPayload),
       });
 
       const responseData = await resp.json();
@@ -299,14 +301,14 @@ export default function NewRepairWorkRequirementPage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Repair Work Requirement created successfully!");
-      
+
       router.push(`/operations/doctype/repair-work-requirement`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      
+
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {
           description: "This record may already exist.",

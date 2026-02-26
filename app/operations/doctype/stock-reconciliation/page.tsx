@@ -18,7 +18,7 @@ import { TimeAgo } from "@/components/TimeAgo";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -66,7 +66,7 @@ export default function StockReconciliationListPage() {
 
   const [records, setRecords] = React.useState<StockReconciliation[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -78,7 +78,7 @@ export default function StockReconciliationListPage() {
   const [idSearch, setIdSearch] = React.useState("");
   const [accountOptions, setAccountOptions] = React.useState<AccountOption[]>([]);
   const [costCenterOptions, setCostCenterOptions] = React.useState<CostCenterOption[]>([]);
-  
+
   // Debounce the ID search
   const debouncedIdSearch = useDebounce(idSearch, 300);
 
@@ -129,7 +129,7 @@ export default function StockReconciliationListPage() {
 
         const accountData = accountResp.data?.data ?? [];
         const costCenterData = costCenterResp.data?.data ?? [];
-        
+
         setAccountOptions([{ name: "" }, ...accountData]);
         setCostCenterOptions([{ name: "" }, ...costCenterData]);
       } catch (err) {
@@ -197,18 +197,18 @@ export default function StockReconciliationListPage() {
         }
 
         const limit = isReset ? INITIAL_PAGE_SIZE : LOAD_MORE_SIZE;
-        
+
         // Build filters based on selected filters
         const filters: any[] = [];
-        
+
         if (debouncedIdSearch) {
           filters.push(["Stock Reconciliation", "name", "like", `%${debouncedIdSearch}%`]);
         }
-        
+
         if (selectedAccount) {
           filters.push(["Stock Reconciliation", "expense_account", "=", selectedAccount]);
         }
-        
+
         if (selectedCostCenter) {
           filters.push(["Stock Reconciliation", "cost_center", "=", selectedCostCenter]);
         }
@@ -241,9 +241,9 @@ export default function StockReconciliationListPage() {
           }),
           // Only fetch count during initial load or filter change
           isReset ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: doctypeName, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+            params: {
+              doctype: doctypeName,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -366,10 +366,10 @@ export default function StockReconciliationListPage() {
         <thead>
           <tr>
             <th style={{ width: 40, textAlign: "center" }}>
-              <input 
-                type="checkbox" 
-                checked={isAllSelected} 
-                onChange={handleSelectAll} 
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={handleSelectAll}
                 style={{ cursor: "pointer", width: "16px", height: "16px" }}
               />
             </th>
@@ -402,10 +402,10 @@ export default function StockReconciliationListPage() {
                   }}
                 >
                   <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isSelected} 
-                      onChange={() => handleSelectOne(r.name)} 
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleSelectOne(r.name)}
                       style={{ cursor: "pointer", width: "16px", height: "16px" }}
                     />
                   </td>
@@ -498,13 +498,13 @@ export default function StockReconciliationListPage() {
       </div>
 
       {/* 🟢 THREE FILTER FIELDS */}
-      <div 
-        className="search-filter-section" 
-        style={{ 
-          display: "flex", 
+      <div
+        className="search-filter-section"
+        style={{
+          display: "flex",
           gap: "8px",
-          alignItems: "center", 
-          marginTop: "1rem" 
+          alignItems: "center",
+          marginTop: "1rem"
         }}
       >
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }}>
@@ -596,10 +596,10 @@ export default function StockReconciliationListPage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && records.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

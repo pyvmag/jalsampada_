@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 // 🟢 CONFIG: Settings for Frappe-like pagination
 const INITIAL_PAGE_SIZE = 25;
@@ -87,7 +87,7 @@ export default function EmployeeListPage() {
 
   const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [view, setView] = React.useState<ViewMode>("list");
-  
+
   // 🟢 Loading & Pagination States
   const [loading, setLoading] = React.useState(true);       // Full page load
   const [isLoadingMore, setIsLoadingMore] = React.useState(false); // Button load
@@ -191,10 +191,10 @@ export default function EmployeeListPage() {
             withCredentials: true,
           }),
           // Only fetch count during initial load or filter change
-          isReset ? axios.get(`http://103.219.1.138:4412/api/method/frappe.client.get_count`, {
-            params: { 
-              doctype: doctypeName, 
-              filters: filters.length > 0 ? JSON.stringify(filters) : undefined 
+          isReset ? axios.get(`http://103.219.3.169:2223/api/method/frappe.client.get_count`, {
+            params: {
+              doctype: doctypeName,
+              filters: filters.length > 0 ? JSON.stringify(filters) : undefined
             },
             headers: commonHeaders,
           }) : Promise.resolve(null)
@@ -292,7 +292,7 @@ export default function EmployeeListPage() {
       const response = await bulkDeleteRPC(
         doctypeName,
         Array.from(selectedIds),
-        "http://103.219.1.138:4412",
+        "http://103.219.3.169:2223",
         apiKey!,
         apiSecret!
       );
@@ -406,7 +406,7 @@ export default function EmployeeListPage() {
                     <div className="flex items-center gap-2">
                       {e.image ? (
                         <img
-                          src={`${API_BASE_URL}${e.image}`} 
+                          src={`${API_BASE_URL}${e.image}`}
                           // Note: You might need to adjust image URL depending on if it's full path or relative
                           alt="avatar"
                           className="h-6 w-6 rounded-full object-cover"
@@ -424,13 +424,12 @@ export default function EmployeeListPage() {
                   <td>{e.department || "—"}</td>
                   <td>
                     <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        e.status === "Active"
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${e.status === "Active"
                           ? "bg-green-100 text-green-700"
                           : e.status === "Left"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
                     >
                       {e.status || "—"}
                     </span>
@@ -583,9 +582,8 @@ export default function EmployeeListPage() {
                     direction: prev.direction === "asc" ? "desc" : "asc",
                   }))
                 }
-                title={`Sort ${
-                  sortConfig.direction === "asc" ? "Descending" : "Ascending"
-                }`}
+                title={`Sort ${sortConfig.direction === "asc" ? "Descending" : "Ascending"
+                  }`}
               >
                 {sortConfig.direction === "asc" ? (
                   <ArrowDownWideNarrow className="w-4 h-4 text-gray-600 dark:text-gray-300" />
@@ -614,11 +612,10 @@ export default function EmployeeListPage() {
                   {SORT_OPTIONS.map((option) => (
                     <button
                       key={option.key}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                        sortConfig.key === option.key
-                          ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium"
-                          : "text-gray-700 dark:text-gray-200"
-                      }`}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${sortConfig.key === option.key
+                        ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium"
+                        : "text-gray-700 dark:text-gray-200"
+                        }`}
                       onClick={() => {
                         setSortConfig((prev) => ({ ...prev, key: option.key }));
                         setIsSortMenuOpen(false);
@@ -663,10 +660,10 @@ export default function EmployeeListPage() {
         {view === "grid" ? renderGridView() : renderListView()}
         {hasMore && employees.length > 0 && (
           <div className="mt-6 flex justify-end">
-            <button 
-              onClick={handleLoadMore} 
-              disabled={isLoadingMore} 
-              className="btn btn--secondary flex items-center gap-2 px-6 py-2" 
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="btn btn--secondary flex items-center gap-2 px-6 py-2"
               style={{ minWidth: "140px" }}
             >
               {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}

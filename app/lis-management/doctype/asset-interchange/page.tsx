@@ -16,7 +16,7 @@ import { TimeAgo } from "@/components/TimeAgo";
 import { useForm, Controller } from "react-hook-form";
 import { LinkField } from "@/components/LinkField";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 
 /* ── Debounce Hook ─────────────────────────────── */
 function useDebounce<T>(value: T, delay: number): T {

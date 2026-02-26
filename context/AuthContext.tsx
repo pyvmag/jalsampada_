@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const response = await fetch(
-        "http://103.219.1.138:4412//api/method/frappe.auth.get_logged_user",
+        "http://103.219.3.169:2223//api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers: {
