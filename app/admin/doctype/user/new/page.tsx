@@ -13,7 +13,8 @@ const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
 export default function NewUserPage() {
     const router = useRouter();
-    const { apiKey, apiSecret } = useAuth();
+    const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
+    const [availableRoles, setAvailableRoles] = React.useState<string[]>([]);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // FORM CONFIGURATION (User Structure)
@@ -151,7 +152,43 @@ export default function NewUserPage() {
                 },
             ],
         },
+        {
+            name: "Roles",
+            fields: [
+                {
+                    name: "sb_roles",
+                    label: "Assign Roles",
+                    type: "Section Break",
+                },
+                ...availableRoles.map(role => ({
+                    name: `role_${role.replace(/\s+/g, '_')}`,
+                    label: role,
+                    type: "Check" as const,
+                })),
+            ],
+        },
     ];
+
+    // Fetch Available Roles
+    React.useEffect(() => {
+        const fetchRoles = async () => {
+            if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) return;
+            try {
+                const res = await axios.get(`${API_BASE_URL}/Role`, {
+                    params: {
+                        limit_page_length: 1000,
+                        fields: JSON.stringify(["name"]),
+                    },
+                    headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+                });
+                const roles = res.data.data.map((r: any) => r.name).sort();
+                setAvailableRoles(roles);
+            } catch (err) {
+                console.error("Failed to fetch roles:", err);
+            }
+        };
+        fetchRoles();
+    }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // SUBMIT HANDLER
@@ -171,6 +208,17 @@ export default function NewUserPage() {
             // Convert Checkboxes (usually outputting boolean) to 1/0 for Frappe if needed
             if (typeof data.send_welcome_email === "boolean") data.send_welcome_email = data.send_welcome_email ? 1 : 0;
             if (typeof data.enabled === "boolean") data.enabled = data.enabled ? 1 : 0;
+
+            // Convert checkbox roles to roles child table
+            const rolesToSave: { role: string }[] = [];
+            availableRoles.forEach(role => {
+                const key = `role_${role.replace(/\s+/g, '_')}`;
+                if (data[key]) {
+                    rolesToSave.push({ role });
+                }
+                delete data[key];
+            });
+            data.roles = rolesToSave;
 
             // 🟢 Handle Image Upload
             if (data.user_image instanceof File) {
