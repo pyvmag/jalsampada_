@@ -10,6 +10,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 // Disable Expect header to prevent 417 errors (Global config)
 axios.defaults.transformRequest = [(data, headers) => {
@@ -56,6 +57,8 @@ interface RepairWorkRequirementData {
   verified_by?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -239,7 +242,7 @@ export default function RepairWorkRequirementDetailPage() {
                 type: "Data",
                 fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "custom_equipement_rating" }
               },
-               { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "available_for_use_date" } },
+              { name: "date_of_commissioning", label: "Date of Commissioning", type: "Date", fetchFrom: { sourceField: "asset_id", targetDoctype: "Asset", targetField: "available_for_use_date" } },
               {
                 name: "is_in_warranty_period",
                 label: "Is in Warranty period",
@@ -467,19 +470,35 @@ export default function RepairWorkRequirementDetailPage() {
      7. RENDER
      ------------------------------------------------- */
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Record ID: ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/operations/doctype/repair-work-requirement"
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Record ID: ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/operations/doctype/repair-work-requirement"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }

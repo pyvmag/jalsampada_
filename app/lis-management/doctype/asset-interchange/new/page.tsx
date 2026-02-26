@@ -19,18 +19,24 @@ interface AssetInterchangeData {
     // Motor fields
     pump_asset?: string;
     pump_no?: string;
+    pump_serial_no?: string;
     current_motor_asset?: string;
     current_motor_no?: string;
+    current_motor_serial_no?: string;
     interchange_motor?: string;
     interchange_motor_no?: string;
+    interchange_motor_serial_no?: string;
 
     // Pump fields
     motor_asset?: string;
     motor_no?: string;
+    motor_serial_no?: string;
     current_pump_asset?: string;
     current_pump_no?: string;
+    current_pump_serial_no?: string;
     interchange_pump?: string;
     interchange_pump_no?: string;
+    interchange_pump_serial_no?: string;
 }
 
 export default function NewAssetInterchangePage() {
@@ -72,7 +78,6 @@ export default function NewAssetInterchangePage() {
     };
 
 
-    // Inside formTabs definition
     const formTabs: TabbedLayout[] = React.useMemo(() => {
         const getValue = (fieldName: keyof AssetInterchangeData, defaultValue: any = undefined) =>
             duplicateData?.[fieldName] ?? defaultValue;
@@ -81,7 +86,19 @@ export default function NewAssetInterchangePage() {
             {
                 name: "Details",
                 fields: [
-                    // Always visible fields
+                    // ROW 1: Only Posting Date (1/3rd width, followed by two empty columns)
+                    { type: "Section Break", layoutCols: 3, name: "layout_section", label: "" },
+                    {
+                        name: "posting_date",
+                        label: "Posting Date",
+                        type: "Date",
+                        defaultValue: getValue("posting_date"),
+                    },
+                    { type: "Column Break", name: "cb_1", label: "" },
+                    { type: "Column Break", name: "cb_2", label: "" },
+
+                    // ROW 2: LIS Name, Stage, and Which Asset To Interchange
+                    { type: "Section Break", name: "sb_details", label: "Details" },
                     {
                         name: "lis_name",
                         label: "LIS Name",
@@ -98,12 +115,6 @@ export default function NewAssetInterchangePage() {
                         filterMapping: [{ sourceField: "lis_name", targetField: "lis_name" }],
                     },
                     {
-                        name: "posting_date",
-                        label: "Posting Date",
-                        type: "Date",
-                        defaultValue: getValue("posting_date"),
-                    },
-                    {
                         name: "select_asset",
                         label: "Which Asset To Interchange?",
                         type: "Select",
@@ -115,50 +126,67 @@ export default function NewAssetInterchangePage() {
                         onChange: handleAssetChange,
                     },
 
-                    // Motor Section (always present but hidden if Pump selected)
+                    // INTERCHANGE MOTOR SECTION
                     {
                         name: "motor_section",
                         type: "Section Break",
                         label: "Interchange Motor",
                         displayDependsOn: { select_asset: "Motor" },
                     },
+                    // Motor Row 1: Pump Asset, Pump No, Pump Serial No.
                     {
                         name: "pump_asset",
                         label: "Pump Asset",
                         type: "Link",
                         linkTarget: "Asset",
                         displayDependsOn: { select_asset: "Motor" },
-
-                        doctype: "Asset",
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
                             asset_category: "Pump"
                         }),
-
-                        referenceDoctype: "Asset Interchange",
                     },
                     {
-                        name: "pump_no", label: "Pump No", type: "Read Only",
-                        fetchFrom: {
-                            sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_asset_no",
-                        },
+                        name: "pump_no",
+                        label: "Pump No",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_asset_no" },
                         displayDependsOn: { select_asset: "Motor" },
                     },
                     {
-                        name: "current_motor_asset", label: "Current Motor Asset", type: "Read Only", displayDependsOn: { select_asset: "Motor", pump_asset: true },
-                        fetchFrom: {
-                            sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_current_linked_asset",
-                        },
+                        name: "pump_serial_no",
+                        label: "Pump Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Motor" },
                     },
 
+                    // Motor Row 2: Current Motor Asset, Current Motor No, Current Motor Serial No.
+                    { type: "Section Break", name: "sb_motor_row_2", label: "", displayDependsOn: { select_asset: "Motor", pump_asset: true } },
                     {
-                        name: "current_motor_no", label: "Current Motor No", type: "Read Only", displayDependsOn: { select_asset: "Motor", pump_asset: true },
-                        fetchFrom: {
-                            sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_linked_asset_no",
-                        },
+                        name: "current_motor_asset",
+                        label: "Current Motor Asset",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Motor", pump_asset: true },
+                        fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_current_linked_asset" },
+                    },
+                    {
+                        name: "current_motor_no",
+                        label: "Current Motor No",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Motor", pump_asset: true },
+                        fetchFrom: { sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_linked_asset_no" },
+                    },
+                    {
+                        name: "current_motor_serial_no",
+                        label: "Current Motor Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "current_motor_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Motor", pump_asset: true },
                     },
 
+                    // Motor Row 3: Interchange Motor, Interchange Motor No, Interchange Motor Serial No.
+                    { type: "Section Break", name: "sb_motor_row_3", label: "", displayDependsOn: { select_asset: "Motor", pump_asset: true } },
                     {
                         name: "interchange_motor",
                         label: "Interchange Motor",
@@ -171,50 +199,82 @@ export default function NewAssetInterchangePage() {
                             asset_category: "Motor"
                         }),
                     },
-
                     {
-                        name: "interchange_motor_no", label: "Interchange Motor No", type: "Read Only", displayDependsOn: { select_asset: "Motor", pump_asset: true },
-                        fetchFrom: {
-                            sourceField: "interchange_motor", targetDoctype: "Asset", targetField: "custom_asset_no",
-                        },
+                        name: "interchange_motor_no",
+                        label: "Interchange Motor No",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Motor", pump_asset: true },
+                        fetchFrom: { sourceField: "interchange_motor", targetDoctype: "Asset", targetField: "custom_asset_no" },
+                    },
+                    {
+                        name: "interchange_motor_serial_no",
+                        label: "Interchange Motor Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "interchange_motor", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Motor", pump_asset: true },
                     },
 
-                    // Pump Section (always present but hidden if Motor selected)
+                    // INTERCHANGE PUMP SECTION (Mirrored Layout)
                     {
                         name: "pump_section",
                         type: "Section Break",
                         label: "Interchange Pump",
                         displayDependsOn: { select_asset: "Pump" },
                     },
+                    // Pump Row 1: Motor Asset, Motor No, Motor Serial No.
                     {
-                        name: "motor_asset", label: "Motor Asset", type: "Link", linkTarget: "Asset", displayDependsOn: { select_asset: "Pump" },
-                        doctype: "Asset",
+                        name: "motor_asset",
+                        label: "Motor Asset",
+                        type: "Link",
+                        linkTarget: "Asset",
+                        displayDependsOn: { select_asset: "Pump" },
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
                             asset_category: "Motor"
                         }),
-
-                        referenceDoctype: "Asset Interchange",
                     },
                     {
-                        name: "motor_no", label: "Motor No", type: "Read Only",
+                        name: "motor_no",
+                        label: "Motor No",
+                        type: "Read Only",
                         fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_asset_no" },
-                        displayDependsOn: { select_asset: "Pump", },
+                        displayDependsOn: { select_asset: "Pump" },
+                    },
+                    {
+                        name: "motor_serial_no",
+                        label: "Motor Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Pump" },
+                    },
 
+                    // Pump Row 2: Current Pump Asset, Current Pump No, Current Pump Serial No.
+                    { type: "Section Break", name: "sb_pump_row_2", label: "", displayDependsOn: { select_asset: "Pump", motor_asset: true } },
+                    {
+                        name: "current_pump_asset",
+                        label: "Current Pump Asset",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Pump", motor_asset: true },
+                        fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_current_linked_asset" },
                     },
                     {
-                        name: "current_pump_asset", label: "Current Pump Asset", type: "Read Only", displayDependsOn: { select_asset: "Pump", motor_asset: true },
-                        fetchFrom: {
-                            sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_current_linked_asset",
-                        },
+                        name: "current_pump_no",
+                        label: "Current Pump No",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Pump", motor_asset: true },
+                        fetchFrom: { sourceField: "motor_asset", targetDoctype: "Asset", targetField: "custom_linked_asset_no" },
                     },
                     {
-                        name: "current_pump_no", label: "Current Pump No", type: "Read Only", displayDependsOn: { select_asset: "Pump", motor_asset: true },
-                        fetchFrom: {
-                            sourceField: "pump_asset", targetDoctype: "Asset", targetField: "custom_linked_asset_no",
-                        },
+                        name: "current_pump_serial_no",
+                        label: "Current Pump Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "current_pump_asset", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Pump", motor_asset: true },
                     },
+
+                    // Pump Row 3: Interchange Pump, Interchange Pump No, Interchange Pump Serial No.
+                    { type: "Section Break", name: "sb_pump_row_3", label: "", displayDependsOn: { select_asset: "Pump", motor_asset: true } },
                     {
                         name: "interchange_pump",
                         label: "Interchange Pump",
@@ -228,10 +288,18 @@ export default function NewAssetInterchangePage() {
                         }),
                     },
                     {
-                        name: "interchange_pump_no", label: "Interchange Pump No", type: "Read Only", displayDependsOn: { select_asset: "Pump", motor_asset: true },
-                        fetchFrom: {
-                            sourceField: "interchange_pump", targetDoctype: "Asset", targetField: "custom_asset_no",
-                        },
+                        name: "interchange_pump_no",
+                        label: "Interchange Pump No",
+                        type: "Read Only",
+                        displayDependsOn: { select_asset: "Pump", motor_asset: true },
+                        fetchFrom: { sourceField: "interchange_pump", targetDoctype: "Asset", targetField: "custom_asset_no" },
+                    },
+                    {
+                        name: "interchange_pump_serial_no",
+                        label: "Interchange Pump Serial No.",
+                        type: "Read Only",
+                        fetchFrom: { sourceField: "interchange_pump", targetDoctype: "Asset", targetField: "custom_serial_number" },
+                        displayDependsOn: { select_asset: "Pump", motor_asset: true },
                     },
                 ],
             },

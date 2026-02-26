@@ -11,6 +11,7 @@ import {
 import { getApiMessages } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -1043,26 +1044,42 @@ export default function StockReconciliationDetailPage() {
   ------------------------------------------------- */
 
   return (
-    <DynamicForm
-      key={formKey}
-      title={`Stock Reconciliation ${stockReconciliation.name}`}
-      tabs={formTabs}
-      onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-      onSubmitDocument={
-        activeButton === "SUBMIT" ? handleSubmitDocument : undefined
-      }
-      onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
-      isSubmittable={activeButton === "SUBMIT"}
-      docstatus={stockReconciliation.docstatus}
-      initialStatus={isDraft ? "Draft" : "Submitted"}
-      onFormInit={handleFormInit}
-      doctype={doctypeName}
-      submitLabel={getSubmitLabel()}
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/operations/doctype/stock-reconciliation",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        key={formKey}
+        title={`Stock Reconciliation ${stockReconciliation.name}`}
+        tabs={formTabs}
+        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+        onSubmitDocument={
+          activeButton === "SUBMIT" ? handleSubmitDocument : undefined
+        }
+        onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
+        isSubmittable={activeButton === "SUBMIT"}
+        docstatus={stockReconciliation.docstatus}
+        initialStatus={isDraft ? "Draft" : "Submitted"}
+        onFormInit={handleFormInit}
+        doctype={doctypeName}
+        submitLabel={getSubmitLabel()}
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/operations/doctype/stock-reconciliation",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={stockReconciliation.owner}
+          modifiedStr={stockReconciliation.modified}
+          modifiedBy={undefined}
+        />
+      </div>
+    </div>
   );
 }

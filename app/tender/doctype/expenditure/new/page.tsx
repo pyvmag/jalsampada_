@@ -1,5 +1,6 @@
 "use client";
 
+
 import * as React from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -371,7 +372,6 @@ export default function NewExpenditurePage() {
             name: "prev_bill_no",
             label: "Previous Bill Number",
             type: "Read Only",
-            defaultValue: 0,
             fieldColumns: 1,
           },
 
@@ -405,7 +405,6 @@ export default function NewExpenditurePage() {
             name: "bill_number",
             label: "Bill Number",
             type: "Data",
-            defaultValue: "0",
             fieldColumns: 1,
             asyncValidation: async (value, allValues) => {
               if (!value || !allValues.tender_number) return { isValid: true };
@@ -571,6 +570,7 @@ export default function NewExpenditurePage() {
             label: "Saved Amount",
             type: "Currency",
             precision: 2,
+            required: true,
             displayDependsOn: { "bill_type": "Final" }
           },
           {
@@ -595,18 +595,48 @@ export default function NewExpenditurePage() {
 
     // Validation: Bill Amount Mismatch
     const billAmount = Number(data.bill_amount) || 0;
+    const tenderAmount = Number(data.tender_amount) || 0;
     const savedAmount = Number(data.saved_amount) || 0;
     const details = data.expenditure_details || [];
     const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
-    const calculatedInvoiceAmount = totalChildBillAmt + savedAmount;
+    // For Final bills, Saved Amount is the project total (Previous + This Bill).
+    // For Running bills, Saved Amount is just the non-table part of THIS bill.
+    // 🟢 MENTOR'S LOGIC VALIDATION
+    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
+    // This is mathematically equivalent to: bill_upto = saved_amount
 
-    if (Math.abs(billAmount - calculatedInvoiceAmount) > 0.01) {
-      const relation = billAmount > calculatedInvoiceAmount ? "exceeds" : "is less than";
-      toast.error("Amount Mismatch", {
-        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Calculated Invoice Amount (${calculatedInvoiceAmount.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
-        duration: Infinity,
+    // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
+    if (billAmount > tenderAmount) {
+      toast.error("Validation Failed", {
+        description: "The Bill Amount cannot be greater than the Tender Amount.",
+        duration: Infinity
       });
       return;
+    }
+
+    if (data.bill_type === "Final") {
+      // Rule 2: Mentor's Rule for Final Bills
+      // bill_upto = bill_amount + prev_cumulative_amount
+      const billUpto = billAmount + prevCumulativeAmount;
+      const diff = Math.abs(billUpto - savedAmount);
+
+      if (diff > 0.01) {
+        toast.error("Saved Amount Mismatch", {
+          description: `As per rule: Tender Amount (${tenderAmount.toLocaleString()}) - Remaining Amount must equal Saved Amount (${savedAmount.toLocaleString()}). Currently there is a difference of ${diff.toLocaleString()}.`,
+          duration: Infinity,
+        });
+        return;
+      }
+    } else {
+      // Rule 3: For Running Bills, ensure table matches Bill Amount
+      if (Math.abs(billAmount - totalChildBillAmt) > 0.01) {
+        const relation = billAmount > totalChildBillAmt ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${totalChildBillAmt.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+          duration: Infinity,
+        });
+        return;
+      }
     }
 
     if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) {
@@ -782,6 +812,50 @@ export default function NewExpenditurePage() {
     setIsSaving(true);
 
     try {
+      // 🟢 VALIDATION LOGIC (Mirroring handleSubmit)
+      const billAmount = Number(formData.bill_amount) || 0;
+      const tenderAmount = Number(formData.tender_amount) || 0;
+      const savedAmount = Number(formData.saved_amount) || 0;
+
+      // Rule 1: Bill Amount cannot be > Tender Amount
+      if (billAmount > tenderAmount) {
+        toast.error("Validation Failed", {
+          description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount.",
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 2: Balance Check
+      const details = formData.expenditure_details || [];
+      const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
+      const amtToBeMatched = formData.bill_type === "Final"
+        ? (savedAmount - prevCumulativeAmount)
+        : (totalChildBillAmt + savedAmount);
+
+      if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+        const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 3: Saved Amount check (Only for Final bills)
+      if (formData.bill_type === "Final") {
+        const billUpto = billAmount + prevCumulativeAmount;
+        const diff = Math.abs(billUpto - savedAmount);
+
+        if (diff > 0.01) {
+          toast.error("Saved Amount Validation Failed", {
+            description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(formData.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+            duration: Infinity,
+          });
+          return;
+        }
+      }
+
       const payload: Record<string, any> = JSON.parse(JSON.stringify(formData));
 
       // Numeric conversions

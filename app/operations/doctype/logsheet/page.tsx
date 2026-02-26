@@ -60,14 +60,14 @@ interface LogSheet {
   stage?: string;
   date?: string;
   time?: string;
-  br?: string;
-  ry?: string;
-  water_level?: string;
-  pressure_guage?: string;
-  yb?: string;
-  r?: string;
-  y?: string;
-  b?: string;
+  br?: number;
+  ry?: number;
+  water_level?: number;
+  pressure_guage?: number;
+  yb?: number;
+  r?: number;
+  y?: number;
+  b?: number;
   modified?: string;
 }
 
@@ -222,14 +222,14 @@ export default function LogSheetPage() {
           }),
           isReset
             ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-                params: { 
-                    doctype: doctypeName,
-                    // Note: frappe.client.get_count doesn't easily support or_filters in GET params 
-                    // without full filter array. For now, we fetch total unfiltered or simply ignore count filter accuracy for complex OR searches.
-                    // If you need accurate count on search, you might need a custom RPC method.
-                },
-                headers: commonHeaders,
-              })
+              params: {
+                doctype: doctypeName,
+                // Note: frappe.client.get_count doesn't easily support or_filters in GET params 
+                // without full filter array. For now, we fetch total unfiltered or simply ignore count filter accuracy for complex OR searches.
+                // If you need accurate count on search, you might need a custom RPC method.
+              },
+              headers: commonHeaders,
+            })
             : Promise.resolve(null),
         ]);
 
@@ -439,10 +439,10 @@ export default function LogSheetPage() {
             <th style={{ minWidth: 110 }}>B</th>
             {/* 🟢 Total Count Header */}
             <th className="text-right pr-4" style={{ width: "140px" }}>
-                <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-                 {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-                   <><span>{rows.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
-                 )}
+              <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
+                  <><span>{rows.length}</span><span className="opacity-50"> /</span><span className="text-gray-900 dark:text-gray-200 font-bold">{totalCount}</span></>
+                )}
 
               </div>
             </th>
@@ -634,7 +634,7 @@ export default function LogSheetPage() {
                       control={control}
                       field={{ ...mockField, defaultValue: value }}
                       error={null}
-                      filters={selectedLis ? {lis_name : selectedLis} : {}}
+                      filters={selectedLis ? { lis_name: selectedLis } : {}}
                       className="[&>label]:hidden vishal"
                     />
                   </div>

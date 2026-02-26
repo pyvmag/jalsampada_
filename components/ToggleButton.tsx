@@ -8,6 +8,7 @@ interface ToggleButtonProps {
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
+  variant?: "default" | "inverted" | "danger";
   invertColors?: boolean;
 }
 
@@ -18,6 +19,7 @@ export const ToggleButton: React.FC<ToggleButtonProps> = ({
   size = "md",
   className = "",
   invertColors = false,
+  variant = "default",
 }) => {
   const [isChecked, setIsChecked] = React.useState(checked);
 
@@ -51,6 +53,17 @@ export const ToggleButton: React.FC<ToggleButtonProps> = ({
     lg: isChecked ? "translate-x-8" : "translate-x-0.5"
   };
 
+  // Determine colors based on variant/invertColors
+  let bgColorClass = "";
+  if (variant === "danger") {
+    bgColorClass = isChecked ? "bg-red-600 hover:bg-red-700" : "bg-gray-300 hover:bg-gray-400";
+  } else if (invertColors || variant === "inverted") {
+    bgColorClass = isChecked ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600";
+  } else {
+    // Default
+    bgColorClass = isChecked ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600";
+  }
+
   return (
     <button
       type="button"
@@ -61,14 +74,7 @@ export const ToggleButton: React.FC<ToggleButtonProps> = ({
         border-2 border-transparent transition-colors duration-200 ease-in-out
         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
         ${sizeClasses[size]}
-        ${invertColors
-          ? isChecked
-            ? "bg-red-500 hover:bg-red-600"
-            : "bg-green-500 hover:bg-green-600"
-          : isChecked
-            ? "bg-green-500 hover:bg-green-600"
-            : "bg-red-500 hover:bg-red-600"
-        }
+        ${bgColorClass}
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
         ${className}
       `}

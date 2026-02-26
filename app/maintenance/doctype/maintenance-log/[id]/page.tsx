@@ -10,6 +10,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -38,6 +39,8 @@ interface MaintenanceLogData {
   stage?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 /* --------------------------------------------------
@@ -130,11 +133,11 @@ export default function MaintenanceLogDetailPage() {
               const lisName = getValue("lis");
               const lisPhase = getValue("lis_phase");
               const stageNo = getValue("stage");
-              
+
               if (lisName) filters["lis"] = lisName;
               if (lisPhase) filters["lis_phase"] = lisPhase;
               if (stageNo) filters["stage"] = stageNo;
-              
+
               return filters;
             },
             defaultValue: getValue("asset_name"),
@@ -154,14 +157,14 @@ export default function MaintenanceLogDetailPage() {
             type: "Read Only",
             // linkTarget: "Item",
             defaultValue: getValue("item_code"),
-            displayDependsOn: "maintenance_schedule", fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
+            displayDependsOn: { "asset_maintenance": true }, fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
           },
           {
             name: "asset_maintenance",
             label: "Asset Name",
             type: "Read Only",
             linkTarget: "Asset",
-            displayDependsOn: {"asset_maintenance": true},
+            displayDependsOn: { "asset_maintenance": true },
             fetchFrom: { sourceField: "maintenance_schedule", targetDoctype: "Asset", targetField: "asset_name" }
           },
 
@@ -175,7 +178,7 @@ export default function MaintenanceLogDetailPage() {
             required: true,
             defaultValue: getValue("lis"),
           },
-         
+
           {
             name: "stage",
             label: "Stage",
@@ -203,7 +206,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Task Name",
             type: "Read Only",
             defaultValue: getValue("task_name"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "maintenance_task" }
           },
@@ -212,7 +215,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Assign To",
             type: "Read Only",
             defaultValue: getValue("assign_to_name"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "assign_to_name" }
           },
@@ -221,7 +224,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Maintenance Type",
             type: "Read Only",
             defaultValue: getValue("maintenance_type"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "maintenance_type" }
           },
@@ -230,7 +233,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Due Date",
             type: "Read Only",
             defaultValue: getValue("due_date"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "next_due_date" }
           },
@@ -239,7 +242,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Periodicity",
             type: "Read Only",
             defaultValue: getValue("periodicity"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "periodicity" }
           },
@@ -248,7 +251,7 @@ export default function MaintenanceLogDetailPage() {
             label: "Description",
             type: "Small Text",
             defaultValue: getValue("description"),
-            displayDependsOn: {"task": true},
+            displayDependsOn: { "task": true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "description" }
 
@@ -287,7 +290,7 @@ export default function MaintenanceLogDetailPage() {
             name: "resume",
             label: "Upload Certificate",
             type: "Attach",
-            displayDependsOn: {"has_certificate": true},
+            displayDependsOn: { "has_certificate": true },
             requiredDependsOn: "has_certificate",
           },
 
@@ -377,19 +380,35 @@ export default function MaintenanceLogDetailPage() {
     RENDER
   -------------------------------------------------- */
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description="Update Maintenance Log"
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/maintenance/doctype/maintenance-log",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description="Update Maintenance Log"
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/maintenance/doctype/maintenance-log",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }

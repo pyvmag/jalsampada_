@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 import { getApiMessages } from "@/lib/utils";
 import axios from "axios";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 const API_METHOD_URL = "http://103.219.3.169:2223/api/method";
@@ -36,6 +37,8 @@ interface GateOperationLogbookData {
     // System fields
     docstatus: 0 | 1 | 2;
     modified: string;
+    owner?: string;
+    modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -226,7 +229,7 @@ export default function GateOperationLogbookDetailPage() {
                         linkTarget: "Lift Irrigation Scheme",
                         required: true,
                     },
-                   
+
                     {
                         name: "stage",
                         label: "Stage/ Sub Scheme",
@@ -396,24 +399,40 @@ export default function GateOperationLogbookDetailPage() {
        7. RENDER
        ------------------------------------------------- */
     return (
-        <DynamicForm
-            tabs={formTabs}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            onSubmitDocument={handleSubmitDocument}
-            onCancelDocument={handleCancelDocument}
-            onFormInit={handleFormInit}
-            title={`${DOCTYPE_NAME}: ${record.name}`}
-            description={`Record ID: ${docname}`}
-            initialStatus={getCurrentStatus()}
-            docstatus={record.docstatus}
-            submitLabel={isSaving ? "Saving..." : "Save Changes"}
-            isSubmittable={true}
-            deleteConfig={{
-                doctypeName: DOCTYPE_NAME,
-                docName: docname,
-                redirectUrl: "/operations/doctype/gate-operation-logbook"
-            }}
-        />
+        <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+            <DynamicForm
+                tabs={formTabs}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+                onSubmitDocument={handleSubmitDocument}
+                onCancelDocument={handleCancelDocument}
+                onFormInit={handleFormInit}
+                title={`${DOCTYPE_NAME}: ${record.name}`}
+                description={`Record ID: ${docname}`}
+                initialStatus={getCurrentStatus()}
+                docstatus={record.docstatus}
+                submitLabel={isSaving ? "Saving..." : "Save Changes"}
+                isSubmittable={true}
+                deleteConfig={{
+                    doctypeName: DOCTYPE_NAME,
+                    docName: docname,
+                    redirectUrl: "/operations/doctype/gate-operation-logbook"
+                }}
+            />
+
+            <div className="w-full px-4 md:px-8">
+                <DocumentActivity
+                    doctype={DOCTYPE_NAME}
+                    docname={docname}
+                    baseUrl={API_BASE_URL.replace("/api/resource", "")}
+                    apiKey={apiKey || ""}
+                    apiSecret={apiSecret || ""}
+                    isInitialized={isInitialized}
+                    currentUserEmail={record.owner}
+                    modifiedStr={record.modified}
+                    modifiedBy={record.modified_by}
+                />
+            </div>
+        </div>
     );
 }

@@ -53,7 +53,7 @@ const formatCurrency = (amount: number | string | null) => {
 const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
     custom_lis_name: "150px",
     custom_stage_no: "200px",
-    custom_doctype_name: "300px",
+    custom_doctype_name: "180px",
     custom_asset_no: "150px",
     asset_category: "200px",
     make_model: "200px",
@@ -67,9 +67,9 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
 };
 
 const COLUMN_ORDER = [
+    "custom_doctype_name",
     "custom_lis_name",
     "custom_stage_no",
-    "custom_doctype_name",
     "custom_asset_no",
     "asset_category",
     "make_model",
@@ -83,10 +83,7 @@ const COLUMN_ORDER = [
 ];
 
 const STICKY_COLUMNS = [
-    "custom_lis_name",
-    "custom_stage_no",
-    "custom_doctype_name",
-    "custom_asset_no"
+    "custom_doctype_name"
 ];
 
 export default function AssetRegisterReport() {

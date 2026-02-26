@@ -11,6 +11,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -25,6 +26,8 @@ interface WarehouseData {
   // Meta fields (needed for update)
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 export default function WarehouseDetailPage() {
@@ -302,19 +305,35 @@ export default function WarehouseDetailPage() {
   }
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${warehouse.name}`}
-      description={`Update basic warehouse information`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/operations/doctype/warehouse"
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${warehouse.name}`}
+        description={`Update basic warehouse information`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/operations/doctype/warehouse"
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={warehouse.owner}
+          modifiedStr={warehouse.modified}
+          modifiedBy={warehouse.modified_by}
+        />
+      </div>
+    </div>
   );
 }

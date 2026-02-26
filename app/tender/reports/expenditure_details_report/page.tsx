@@ -171,9 +171,15 @@ export default function ExpenditureDetailsReport() {
     apiFields.forEach(field => {
       if (apiFieldMap.has(field.fieldname)) {
         const width = DEFAULT_COLUMN_WIDTHS[field.fieldname] || field.width || 150;
+
+        let label = field.label;
+        if (field.fieldname === "asset_no") {
+          label = "Asset No";
+        }
+
         scrollableCols.push({
           fieldname: field.fieldname,
-          label: field.label,
+          label: label,
           width: `${width}px`,
           widthInt: width,
           formatter: getFieldFormatter(field.fieldtype, field.fieldname),

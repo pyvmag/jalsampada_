@@ -8,6 +8,7 @@ import {
   TabbedLayout,
   FormField,
 } from "@/components/DynamicFormComponent";
+import DocumentActivity from "@/components/DocumentActivity";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
@@ -29,6 +30,8 @@ interface DraftTenderPaperData {
   lis_name?: string;        // Link
   stage?: string;           // Link
   description?: string;     // Text (long text)
+  owner?: string;
+  modified_by?: string;
 }
 
 /* -------------------------------------------------
@@ -276,19 +279,35 @@ export default function DraftTenderPaperDetailPage() {
   ------------------------------------------------- */
 
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Update details for record ID ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      cancelLabel="Cancel"
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/tender/doctype/draft-tender-paper",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Update details for record ID ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        cancelLabel="Cancel"
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/tender/doctype/draft-tender-paper",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }

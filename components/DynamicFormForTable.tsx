@@ -339,7 +339,7 @@ export function DynamicFormForTable({
         onSubmit(formData);
     };
 
-    const renderLink = (field: FormField) => {
+    const renderLink = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? "";
 
         // Build dynamic filters for Link fields with parent context support
@@ -368,7 +368,7 @@ export function DynamicFormForTable({
                     linkTarget={field.linkTarget}
                     className="w-full"
                     filters={filtersToPass}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                     customSearchUrl={field.customSearchUrl}
                     customSearchParams={field.customSearchParams}
                     referenceDoctype={field.referenceDoctype}
@@ -382,7 +382,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderInput = (field: FormField, type: string = "text") => {
+    const renderInput = (field: FormField, type: string = "text", isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? "";
 
         const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -411,7 +411,7 @@ export function DynamicFormForTable({
                     {...(field.step ? { step: field.step } : {})}
                     {...(field.min !== undefined ? { min: field.min } : {})}
                     {...(field.max !== undefined ? { max: field.max } : {})}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 />
 
                 <FieldError error={null} />
@@ -420,7 +420,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderTextarea = (field: FormField, rows = 4) => {
+    const renderTextarea = (field: FormField, rows = 4, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? "";
 
         return (
@@ -436,7 +436,7 @@ export function DynamicFormForTable({
                     placeholder={field.placeholder}
                     value={value}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 />
 
                 <FieldError error={null} />
@@ -445,7 +445,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderSelect = (field: FormField) => {
+    const renderSelect = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? "";
         const options =
             typeof field.options === "string"
@@ -467,7 +467,7 @@ export function DynamicFormForTable({
                     className="form-control"
                     value={value}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 >
                     <option value="">Select...</option>
                     {options?.map((opt) => (
@@ -483,7 +483,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderCheckbox = (field: FormField) => {
+    const renderCheckbox = (field: FormField, isFieldDisabled: boolean) => {
         const checked = !!formData[field.name];
 
         return (
@@ -493,7 +493,7 @@ export function DynamicFormForTable({
                     checked={checked}
                     onCheckedChange={(val) => handleInputChange(field.name, val)}
                     className="rounded border border-gray-300 data-[state=checked]:bg-primary"
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 />
 
                 <label
@@ -513,7 +513,8 @@ export function DynamicFormForTable({
 
     const renderDateLike = (
         field: FormField,
-        type: "date" | "datetime-local" | "time"
+        type: "date" | "datetime-local" | "time",
+        isFieldDisabled: boolean
     ) => {
         const value = formData[field.name] ?? "";
 
@@ -535,7 +536,7 @@ export function DynamicFormForTable({
                         showYearDropdown
                         scrollableYearDropdown
                         yearDropdownItemNumber={100}
-                        disabled={disabled}
+                        disabled={isFieldDisabled}
                     />
 
                     <FieldError error={null} />
@@ -556,7 +557,7 @@ export function DynamicFormForTable({
                     className="form-control"
                     value={value}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 />
 
                 <FieldError error={null} />
@@ -565,7 +566,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderColor = (field: FormField) => {
+    const renderColor = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? "#000000";
 
         return (
@@ -580,7 +581,7 @@ export function DynamicFormForTable({
                     className={cn("form-control h-10 p-1")}
                     value={value}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    disabled={disabled}
+                    disabled={isFieldDisabled}
                 />
 
                 <FieldError error={null} />
@@ -589,7 +590,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderDuration = (field: FormField) => {
+    const renderDuration = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? {};
 
         return (
@@ -612,7 +613,7 @@ export function DynamicFormForTable({
                         placeholder="Hours"
                         value={value.hours || ""}
                         onChange={(e) => handleInputChange(field.name, { ...value, hours: e.target.value })}
-                        disabled={disabled}
+                        disabled={isFieldDisabled}
                     />
                     <input
                         type="number"
@@ -621,7 +622,7 @@ export function DynamicFormForTable({
                         placeholder="Minutes"
                         value={value.minutes || ""}
                         onChange={(e) => handleInputChange(field.name, { ...value, minutes: e.target.value })}
-                        disabled={disabled}
+                        disabled={isFieldDisabled}
                     />
                     <input
                         type="number"
@@ -630,7 +631,7 @@ export function DynamicFormForTable({
                         placeholder="Seconds"
                         value={value.seconds || ""}
                         onChange={(e) => handleInputChange(field.name, { ...value, seconds: e.target.value })}
-                        disabled={disabled}
+                        disabled={isFieldDisabled}
                     />
 
                 </div>
@@ -639,7 +640,7 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderRating = (field: FormField) => {
+    const renderRating = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name] ?? 0;
 
         return (
@@ -655,7 +656,7 @@ export function DynamicFormForTable({
                             type="button"
                             className="btn btn--ghost btn--sm"
                             onClick={() => handleInputChange(field.name, star)}
-                            disabled={disabled}
+                            disabled={isFieldDisabled}
                             style={{
                                 color: star <= value ? '#fbbf24' : '#d1d5db',
                                 padding: '4px 8px',
@@ -691,13 +692,13 @@ export function DynamicFormForTable({
         );
     };
 
-    const renderButton = (field: FormField) => (
+    const renderButton = (field: FormField, isFieldDisabled: boolean) => (
         <div className="form-group">
             <button
                 type="button"
                 className="btn btn--outline btn--full-width"
                 onClick={() => field.action?.()}
-                disabled={disabled}
+                disabled={isFieldDisabled}
             >
                 {field.buttonLabel || field.label}
             </button>
@@ -705,7 +706,7 @@ export function DynamicFormForTable({
         </div>
     );
 
-    const renderAttachment = (field: FormField) => {
+    const renderAttachment = (field: FormField, isFieldDisabled: boolean) => {
         const value = formData[field.name];
         const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -797,7 +798,7 @@ export function DynamicFormForTable({
                                 className="h-8 w-8 text-red-500"
                                 onClick={handleClear}
                                 title="Clear"
-                                disabled={disabled}
+                                disabled={isFieldDisabled}
                             >
                                 <X size={16} />
                             </Button>
@@ -811,6 +812,8 @@ export function DynamicFormForTable({
     };
 
     const renderField = (field: FormField) => {
+        const isFieldDisabled = disabled || (field as any).readOnly || (field as any).disabled;
+
         // ── Layout fields ───────────────────────────────────────
         if (field.type === "Section Break") {
             return (
@@ -839,71 +842,73 @@ export function DynamicFormForTable({
             case "Data":
             case "Small Text":
             case "Text":
-                return renderInput(field, "text");
+                return renderInput(field, "text", isFieldDisabled);
 
             case "Long Text":
             case "Markdown Editor":
-                return renderTextarea(field, field.rows ?? 4);
+                return renderTextarea(field, field.rows ?? 4, isFieldDisabled);
 
             case "Code":
-                return renderTextarea(field, field.rows ?? 6);
+                return renderTextarea(field, field.rows ?? 6, isFieldDisabled);
 
             case "Password":
-                return renderInput(field, "password");
+                return renderInput(field, "password", isFieldDisabled);
 
             case "Int":
-                return renderInput(field, "number");
+                return renderInput(field, "number", isFieldDisabled);
 
             case "Float":
             case "Currency":
             case "Percent":
-                return renderInput(field, "number");
+                return renderInput(field, "number", isFieldDisabled);
 
             case "Color":
-                return renderColor(field);
+                return renderColor(field, isFieldDisabled);
 
             case "Date":
-                return renderDateLike(field, "date");
+                return renderDateLike(field, "date", isFieldDisabled);
 
             case "DateTime":
-                return renderDateLike(field, "datetime-local");
+                return renderDateLike(field, "datetime-local", isFieldDisabled);
 
             case "Time":
-                return renderDateLike(field, "time");
+                return renderDateLike(field, "time", isFieldDisabled);
 
             case "Duration":
-                return renderDuration(field);
+                return renderDuration(field, isFieldDisabled);
 
             case "Check":
-                return renderCheckbox(field);
+                return renderCheckbox(field, isFieldDisabled);
 
             case "Select":
-                return renderSelect(field);
+                return renderSelect(field, isFieldDisabled);
 
             case "Link":
-                return renderLink(field);
+                return renderLink(field, isFieldDisabled);
 
             case "Barcode":
-                return renderInput(field, "text");
+                return renderInput(field, "text", isFieldDisabled);
 
             case "Read Only":
                 return renderReadOnly(field);
 
             case "Rating":
-                return renderRating(field);
+                return renderRating(field, isFieldDisabled);
 
             case "Button":
-                return renderButton(field);
+                return renderButton(field, isFieldDisabled);
 
             case "Attach":
-                return renderAttachment(field);
+                return renderAttachment(field, isFieldDisabled);
 
             // You can also support Custom type if you plan to use it
             case "Custom":
                 return (
                     <div className="form-group">
                         {field.label && <label className="form-label">{field.label}</label>}
-                        {field.customElement}
+                        <div className={isFieldDisabled ? "opacity-60 pointer-events-none" : ""}>
+                            {field.customElement}
+                        </div>
                     </div>
                 );
 

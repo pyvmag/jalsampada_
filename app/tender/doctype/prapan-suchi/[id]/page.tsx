@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { UseFormReturn } from "react-hook-form";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 const API_METHOD_URL = "http://103.219.3.169:2223/api/method";
@@ -29,6 +30,8 @@ interface PrapanSuchi {
   description?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 export default function PrapanSuchiDetailPage() {
@@ -57,34 +60,34 @@ export default function PrapanSuchiDetailPage() {
   const handleSubmitDocument = async () => {
     if (!record) return;
     setIsSaving(true);
-    
+
     try {
       // First, get the current form data if we have form methods
       let formData = record;
       if (formMethods) {
         formData = { ...formMethods.getValues(), modified: record.modified };
       }
-      
+
       // Set docstatus to 1 (Submitted)
       const payload = {
         ...formData,
         docstatus: 1,
         modified: record.modified
       };
-      
+
       const resp = await axios.put(
         `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
         payload,
-        { 
-          headers: { 
+        {
+          headers: {
             Authorization: `token ${apiKey}:${apiSecret}`,
             "Content-Type": "application/json"
-          } 
+          }
         }
       );
 
       const messages = getApiMessages(resp, null, "Document submitted successfully!", "Submit failed");
-      
+
       if (messages.success) {
         toast.success(messages.message);
         setRecord(resp.data.data);
@@ -103,32 +106,32 @@ export default function PrapanSuchiDetailPage() {
   // 🟢 CANCEL DOCUMENT
   const handleCancelDocument = async () => {
     if (!record) return;
-    
+
     if (!window.confirm("Are you sure you want to cancel this document? This action cannot be undone.")) {
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const payload = {
         docstatus: 2,
         modified: record.modified
       };
-      
+
       const resp = await axios.put(
         `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
         payload,
-        { 
-          headers: { 
+        {
+          headers: {
             Authorization: `token ${apiKey}:${apiSecret}`,
             "Content-Type": "application/json"
-          } 
+          }
         }
       );
 
       const messages = getApiMessages(resp, null, "Document cancelled successfully!", "Cancel failed");
-      
+
       if (messages.success) {
         toast.success(messages.message);
         setRecord(resp.data.data);
@@ -406,7 +409,7 @@ export default function PrapanSuchiDetailPage() {
     } catch (err: any) {
       console.error("Save error:", err);
       const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
-      toast.error(messages.message, { description: messages.description, duration: Infinity});
+      toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsSaving(false);
     }
@@ -442,24 +445,40 @@ export default function PrapanSuchiDetailPage() {
 
   // RENDER FORM
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onSubmitDocument={record.docstatus === 0 ? handleSubmitDocument : undefined}
-      onCancelDocument={record.docstatus === 1 ? handleCancelDocument : undefined}
-      onCancel={() => router.back()}
-      title={`${doctypeName}: ${record.name}`}
-      description={`Update details for record ID: ${docname}`}
-      submitLabel={isSaving ? "Saving..." : "Save"}
-      isSubmittable={true}
-      docstatus={record.docstatus}
-      initialStatus={getCurrentStatus()}
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/tender/doctype/prapan-suchi",
-      }}
-      onFormInit={(methods) => setFormMethods(methods)}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        tabs={formTabs}
+        onSubmit={handleSubmit}
+        onSubmitDocument={record.docstatus === 0 ? handleSubmitDocument : undefined}
+        onCancelDocument={record.docstatus === 1 ? handleCancelDocument : undefined}
+        onCancel={() => router.back()}
+        title={`${doctypeName}: ${record.name}`}
+        description={`Update details for record ID: ${docname}`}
+        submitLabel={isSaving ? "Saving..." : "Save"}
+        isSubmittable={true}
+        docstatus={record.docstatus}
+        initialStatus={getCurrentStatus()}
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/tender/doctype/prapan-suchi",
+        }}
+        onFormInit={(methods) => setFormMethods(methods)}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
+    </div>
   );
 }

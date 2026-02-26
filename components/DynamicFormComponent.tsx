@@ -6,6 +6,8 @@ import {
   useForm,
   FormProvider,
   useFieldArray,
+  useFormContext,
+  useController,
   FieldErrors,
   RegisterOptions,
   UseFormReturn,
@@ -144,6 +146,7 @@ export interface FormField {
   className?: string;
   readOnly?: boolean;
   readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
+  toggleVariant?: "default" | "inverted" | "danger";
 
   // Validation
   asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
@@ -483,6 +486,306 @@ const formatSlug = (slug: string) => {
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+};
+
+const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField, type?: string, isReadOnlyMode: boolean }) => {
+  const { register, control, formState: { errors }, watch } = useFormContext();
+  const allValues = watch();
+
+  const getErrorClass = (fieldName: string) => {
+    return errors[fieldName]
+      ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500 !ring-1 !ring-red-500"
+      : "";
+  };
+
+  const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+  const isDisabled = isReadOnlyMode || isFieldReadOnly;
+  const rules = rulesFor(field);
+
+  const commonProps: any = {
+    id: field.name,
+    className: cn("form-control", getErrorClass(field.name)),
+    placeholder: field.placeholder,
+    ...(field.step ? { step: field.step } : {}),
+    ...(field.min !== undefined ? { min: field.min } : {}),
+    ...(field.max !== undefined ? { max: field.max } : {}),
+    disabled: isDisabled,
+  };
+
+  const valueAsNumber = ["Int", "Float", "Currency", "Percent"].includes(field.type);
+
+  // Currency/Float with precision
+  if ((field.type === "Currency" || field.type === "Float") && field.precision) {
+    // commonProps.step = field.precision > 0 ? (0).toFixed(field.precision).substring(1) : "1";
+    // Fix: Ensure step handles precision correctly but doesn't break input
+    const stepVal = field.precision > 0 ? Math.pow(10, -field.precision).toFixed(field.precision) : "1";
+    commonProps.step = stepVal;
+
+    return (
+      <Controller
+        name={field.name}
+        control={control}
+        rules={rules}
+        render={({ field: controllerField }) => (
+          <div className="form-group">
+            <label htmlFor={field.name} className="form-label">
+              {field.label}{field.required ? " *" : ""}
+            </label>
+
+            <input
+              type={type}
+              value={controllerField.value ?? ""}
+              onChange={(e) => {
+                controllerField.onChange(e.target.value);
+              }}
+              onBlur={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                  controllerField.onChange(val.toFixed(field.precision));
+                }
+              }}
+              {...commonProps}
+            />
+
+            <FieldError
+              error={(errors as FieldErrors<Record<string, any>>)[field.name]}
+            />
+            <FieldHelp text={field.description} />
+          </div>
+        )}
+      />
+    );
+  }
+
+  // Async Validation logic
+  const [validationStatus, setValidationStatus] = React.useState<"idle" | "loading" | "valid" | "invalid">("idle");
+  const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!field.asyncValidation || !allValues) return;
+
+    const currentValue = allValues[field.name];
+    if (!currentValue) {
+      setValidationStatus("idle");
+      setValidationMessage(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setValidationStatus("loading");
+      try {
+        // @ts-ignore
+        const result = await field.asyncValidation(currentValue, allValues);
+        if (result.isValid) {
+          setValidationStatus("valid");
+          setValidationMessage(result.message || null);
+        } else {
+          setValidationStatus("invalid");
+          setValidationMessage(result.message || "Invalid value");
+        }
+      } catch (error) {
+        console.error("Validation error:", error);
+        setValidationStatus("idle");
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [allValues?.[field.name], field.asyncValidation]);
+
+  return (
+    <div className="form-group relative">
+      <label htmlFor={field.name} className="form-label">
+        {field.label}
+        {field.required ? " *" : ""}
+      </label>
+      <div className="relative">
+        <input
+          type={type}
+          {...register(field.name, {
+            ...rules,
+            valueAsNumber: valueAsNumber ? true : undefined,
+            pattern: valueAsNumber ? undefined : (rules.pattern as any),
+          } as RegisterOptions<Record<string, any>, string>)}
+          {...commonProps}
+          className={cn(
+            commonProps.className,
+            validationStatus === "valid" ? "!border-green-600 !border-2 !focus:ring-green-600" : "",
+            validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : ""
+          )}
+        />
+
+        {field.asyncValidation && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            {validationStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+            {validationStatus === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+            {validationStatus === "invalid" && <AlertCircle className="h-4 w-4 text-red-500" />}
+          </div>
+        )}
+      </div>
+
+      {validationStatus === "valid" && validationMessage && (
+        <div className="text-green-600 text-xs mt-1 flex items-center gap-1">
+          <CheckCircle2 size={12} /> {validationMessage}
+        </div>
+      )}
+      {validationStatus === "invalid" && validationMessage && (
+        <div className="text-red-500 text-xs mt-1 flex items-center gap-1">
+          <AlertCircle size={12} /> {validationMessage}
+        </div>
+      )}
+
+      <FieldError
+        error={(errors as FieldErrors<Record<string, any>>)[field.name]}
+      />
+      <FieldHelp text={field.description} />
+    </div>
+  );
+};
+
+const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type: "date" | "datetime-local" | "time", isReadOnlyMode: boolean }) => {
+  const { control, formState: { errors }, register } = useFormContext();
+
+  const getErrorClass = (fieldName: string) => {
+    return errors[fieldName]
+      ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500 !ring-1 !ring-red-500"
+      : "";
+  };
+
+  if (type === "time") {
+    const { field: controllerField } = useController({
+      name: field.name,
+      control,
+      rules: rulesFor(field),
+    });
+
+    React.useEffect(() => {
+      if (!controllerField.value) {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        controllerField.onChange(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
+      }
+    }, []);
+
+    return (
+      <div className="form-group">
+        <label htmlFor={field.name} className="form-label">
+          {field.label}
+          {field.required ? " *" : ""}
+        </label>
+        <input
+          id={field.name}
+          type={type}
+          step="1"
+          className={cn("form-control", getErrorClass(field.name))}
+          {...register(field.name, rulesFor(field))}
+          disabled={isReadOnlyMode}
+        />
+        <FieldError error={(errors as FieldErrors<Record<string, any>>)[field.name]} />
+        <FieldHelp text={field.description} />
+      </div>
+    );
+  }
+
+  const rules = field.type === "DateTime" ? rulesFor(field) : rulesFor(field);
+  const { field: controllerField, fieldState: { error } } = useController({
+    name: field.name,
+    control,
+    rules,
+  });
+
+  // Auto-set current date ONLY if allowed
+  // Note: moved inside render but useEffect dependency array ensures it runs only once/when prop changes
+  React.useEffect(() => {
+    if (!controllerField.value && !field.disableAutoToday) {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+
+      const yyyy = now.getFullYear();
+      const MM = pad(now.getMonth() + 1);
+      const dd = pad(now.getDate());
+      const hh = pad(now.getHours());
+      const mm = pad(now.getMinutes());
+      const ss = pad(now.getSeconds());
+
+      controllerField.onChange(
+        type === "datetime-local"
+          ? `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`
+          : `${yyyy}-${MM}-${dd}`
+      );
+    }
+  }, [field.disableAutoToday]);
+
+  let selectedDate: Date | null = null;
+  if (controllerField.value) {
+    const parsedDate = new Date(controllerField.value);
+    if (!isNaN(parsedDate.getTime())) {
+      selectedDate = parsedDate;
+    }
+  } else if (field.defaultValue) {
+    const defaultDate = new Date(field.defaultValue);
+    if (!isNaN(defaultDate.getTime())) {
+      selectedDate = defaultDate;
+    }
+  }
+
+  if (!selectedDate && !field.disableAutoToday) {
+    selectedDate = new Date();
+  }
+
+  return (
+    <div className="form-group">
+      <label htmlFor={field.name} className="form-label">
+        {field.label}
+        {field.required ? " *" : ""}
+      </label>
+
+      <div className={error ? "input-error-wrapper" : ""}>
+        <DatePicker
+          selected={selectedDate ?? null}
+          onChange={(date: Date | null) => {
+            if (!date) {
+              controllerField.onChange("");
+              return;
+            }
+
+            const pad = (n: number) => (n < 10 ? "0" + n : n);
+            const yyyy = date.getFullYear();
+            const MM = pad(date.getMonth() + 1);
+            const dd = pad(date.getDate());
+
+            if (type === "datetime-local") {
+              const hh = pad(date.getHours());
+              const mm = pad(date.getMinutes());
+              const ss = pad(date.getSeconds());
+              controllerField.onChange(`${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`);
+            } else {
+              controllerField.onChange(`${yyyy}-${MM}-${dd}`);
+            }
+          }}
+          dateFormat={type === "datetime-local" ? "dd/MM/yyyy h:mm aa" : "dd/MM/yyyy"}
+          showTimeSelect={type === "datetime-local"}
+          timeIntervals={15}
+          timeCaption="Time"
+          placeholderText={type === "datetime-local" ? "DD/MM/YYYY HH:MM AM/PM" : "DD/MM/YYYY"}
+          className={cn("form-control w-full", getErrorClass(field.name))}
+          showYearDropdown
+          scrollableYearDropdown
+          yearDropdownItemNumber={100}
+          autoComplete="off"
+          withPortal
+          portalId="root-portal"
+          disabled={isReadOnlyMode}
+        />
+      </div>
+
+      {error && (
+        <span className="text-red-500 font-medium text-sm mt-1">
+          {error.message}
+        </span>
+      )}
+      <FieldHelp text={field.description} />
+    </div>
+  );
 };
 
 export function DynamicForm({
@@ -977,149 +1280,7 @@ export function DynamicForm({
     );
   };
 
-  const renderInput = (field: FormField, type: string = "text") => {
-    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
-    const isDisabled = isReadOnlyMode || isFieldReadOnly;
-    const rules = rulesFor(field);
 
-    const commonProps: any = {
-      id: field.name,
-      className: cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name)),
-      placeholder: field.placeholder,
-      ...(field.step ? { step: field.step } : {}),
-      ...(field.min !== undefined ? { min: field.min } : {}),
-      ...(field.max !== undefined ? { max: field.max } : {}),
-      disabled: isDisabled,
-    };
-
-    const valueAsNumber = ["Int", "Float", "Currency", "Percent"].includes(
-      field.type
-    );
-
-    if ((field.type === "Currency" || field.type === "Float") && field.precision) {
-      commonProps.step = field.precision > 0 ? (0).toFixed(field.precision).substring(1) : "1";
-
-      return (
-        <Controller
-          name={field.name}
-          control={control}
-          rules={rules}
-          render={({ field: controllerField }) => (
-            <div className="form-group">
-              <label htmlFor={field.name} className="form-label">
-                {field.label}{field.required ? " *" : ""}
-              </label>
-
-              <input
-                type={type}
-                value={controllerField.value ?? ""}
-                onChange={(e) => {
-                  controllerField.onChange(e.target.value);
-                }}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    controllerField.onChange(val.toFixed(field.precision));
-                  }
-                }}
-                {...commonProps}
-              />
-
-              <FieldError
-                error={(errors as FieldErrors<Record<string, any>>)[field.name]}
-              />
-              <FieldHelp text={field.description} />
-            </div>
-          )}
-        />
-      );
-    }
-
-    const [validationStatus, setValidationStatus] = React.useState<"idle" | "loading" | "valid" | "invalid">("idle");
-    const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
-
-    // Debounced Validation Effect
-    React.useEffect(() => {
-      if (!field.asyncValidation || !allValues) return;
-
-      const currentValue = allValues[field.name];
-      if (!currentValue) {
-        setValidationStatus("idle");
-        setValidationMessage(null);
-        return;
-      }
-
-      const timeoutId = setTimeout(async () => {
-        setValidationStatus("loading");
-        try {
-          // @ts-ignore
-          const result = await field.asyncValidation(currentValue, allValues);
-          if (result.isValid) {
-            setValidationStatus("valid");
-            setValidationMessage(result.message || null);
-          } else {
-            setValidationStatus("invalid");
-            setValidationMessage(result.message || "Invalid value");
-          }
-        } catch (error) {
-          console.error("Validation error:", error);
-          setValidationStatus("idle");
-        }
-      }, 500); // 500ms debounce
-
-      return () => clearTimeout(timeoutId);
-    }, [allValues?.[field.name], field.asyncValidation]); // Only re-run when specific field value changes
-
-    return (
-      <div className="form-group relative">
-        <label htmlFor={field.name} className="form-label">
-          {field.label}
-          {field.required ? " *" : ""}
-        </label>
-        <div className="relative">
-          <input
-            type={type}
-            {...reg(field.name, {
-              ...rules,
-              ...(valueAsNumber ? { valueAsNumber: true } : {}),
-            })}
-            {...commonProps}
-            className={cn(
-              commonProps.className,
-              validationStatus === "valid" ? "!border-green-500 !focus:ring-green-500" : "",
-              validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : ""
-            )}
-          />
-
-          {/* Validation Icons */}
-          {field.asyncValidation && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              {validationStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
-              {validationStatus === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-              {validationStatus === "invalid" && <AlertCircle className="h-4 w-4 text-red-500" />}
-            </div>
-          )}
-        </div>
-
-        {/* Validation Message (Separate from RHF errors) */}
-        {validationStatus === "valid" && validationMessage && (
-          <div className="text-green-600 text-xs mt-1 flex items-center gap-1">
-            <CheckCircle2 size={12} /> {validationMessage}
-          </div>
-        )}
-        {validationStatus === "invalid" && validationMessage && (
-          <div className="text-red-500 text-xs mt-1 flex items-center gap-1">
-            <AlertCircle size={12} /> {validationMessage}
-          </div>
-        )}
-
-        <FieldError
-          error={(errors as FieldErrors<Record<string, any>>)[field.name]}
-        />
-        <FieldHelp text={field.description} />
-      </div>
-    );
-  };
 
   const renderTextarea = (field: FormField, rows = 4) => {
     const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
@@ -1135,7 +1296,7 @@ export function DynamicForm({
         <textarea
           id={field.name}
           rows={field.rows ?? rows}
-          className={cn("form-control disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed", getErrorClass(field.name))}
+          className={cn("form-control", getErrorClass(field.name))}
           placeholder={field.placeholder}
           {...reg(field.name, rules)}
           disabled={isDisabled}
@@ -1189,6 +1350,9 @@ export function DynamicForm({
   };
 
   const renderCheckbox = (field: FormField) => {
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+    const isDisabled = isReadOnlyMode || isFieldReadOnly;
+
     return (
       <Controller
         name={field.name}
@@ -1199,7 +1363,8 @@ export function DynamicForm({
               checked={!!rhfField.value}
               onChange={(val) => rhfField.onChange(val ? 1 : 0)}
               size="md"
-              disabled={isReadOnlyMode}
+              variant={field.toggleVariant || "default"}
+              disabled={isDisabled}
             />
             <label
               htmlFor={field.name}
@@ -1314,176 +1479,7 @@ export function DynamicForm({
     );
   };
 
-  const renderDateLike = (
-    field: FormField,
-    type: "date" | "datetime-local" | "time"
-  ) => {
-    if (type === "date" || type === "datetime-local") {
-      const rules = field.type === "DateTime" ? rulesFor(field) : rulesFor(field);
 
-      return (
-        <Controller
-          name={field.name}
-          control={control}
-          rules={rules}
-          render={({ field: controllerField, fieldState: { error } }) => {
-            // Auto-set current date ONLY if allowed
-            React.useEffect(() => {
-              if (!controllerField.value && !field.disableAutoToday) {
-                const now = new Date();
-                const pad = (n: number) => String(n).padStart(2, "0");
-
-                const yyyy = now.getFullYear();
-                const MM = pad(now.getMonth() + 1);
-                const dd = pad(now.getDate());
-                const hh = pad(now.getHours());
-                const mm = pad(now.getMinutes());
-                const ss = pad(now.getSeconds());
-
-                controllerField.onChange(
-                  type === "datetime-local"
-                    ? `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`
-                    : `${yyyy}-${MM}-${dd}`
-                );
-              }
-            }, [field.disableAutoToday]);
-
-            // Decide what date picker should show
-            let selectedDate: Date | null = null;
-
-            if (controllerField.value) {
-              const parsedDate = new Date(controllerField.value);
-              if (!isNaN(parsedDate.getTime())) {
-                selectedDate = parsedDate;
-              }
-            } else if (field.defaultValue) {
-              const defaultDate = new Date(field.defaultValue);
-              if (!isNaN(defaultDate.getTime())) {
-                selectedDate = defaultDate;
-              }
-            }
-
-            // Only show today if auto-today is enabled
-            if (!selectedDate && !field.disableAutoToday) {
-              selectedDate = new Date();
-            }
-
-            return (
-              <div className="form-group">
-                <label htmlFor={field.name} className="form-label">
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </label>
-
-                <div className={error ? "input-error-wrapper" : ""}>
-                  <DatePicker
-                    selected={selectedDate ?? null}
-                    onChange={(date: Date | null) => {
-                      if (!date) {
-                        controllerField.onChange("");
-                        return;
-                      }
-
-                      const pad = (n: number) => (n < 10 ? "0" + n : n);
-                      const yyyy = date.getFullYear();
-                      const MM = pad(date.getMonth() + 1);
-                      const dd = pad(date.getDate());
-
-                      if (type === "datetime-local") {
-                        const hh = pad(date.getHours());
-                        const mm = pad(date.getMinutes());
-                        const ss = pad(date.getSeconds());
-                        controllerField.onChange(`${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`);
-                      } else {
-                        controllerField.onChange(`${yyyy}-${MM}-${dd}`);
-                      }
-                    }}
-                    dateFormat={type === "datetime-local" ? "dd/MM/yyyy h:mm aa" : "dd/MM/yyyy"}
-                    showTimeSelect={type === "datetime-local"}
-                    timeIntervals={15}
-                    timeCaption="Time"
-                    placeholderText={type === "datetime-local" ? "DD/MM/YYYY HH:MM AM/PM" : "DD/MM/YYYY"}
-                    className={cn("form-control w-full", getErrorClass(field.name))}
-                    showYearDropdown
-                    scrollableYearDropdown
-                    yearDropdownItemNumber={100}
-                    autoComplete="off"
-                    withPortal
-                    portalId="root-portal"
-                    disabled={isReadOnlyMode}
-                  />
-                </div>
-
-                {error && (
-                  <span className="text-red-500 font-medium text-sm mt-1">
-                    {error.message}
-                  </span>
-                )}
-                <FieldHelp text={field.description} />
-              </div>
-            );
-          }}
-        />
-      );
-    }
-
-    if (type === "time") {
-      return (
-        <Controller
-          name={field.name}
-          control={control}
-          rules={rulesFor(field)}
-          render={({ field: controllerField }) => {
-            React.useEffect(() => {
-              if (!controllerField.value) {
-                const now = new Date();
-                const pad = (n: number) => String(n).padStart(2, '0');
-                controllerField.onChange(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
-              }
-            }, []);
-
-            return (
-              <div className="form-group">
-                <label htmlFor={field.name} className="form-label">
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </label>
-                <input
-                  id={field.name}
-                  type={type}
-                  step="1"
-                  className={cn("form-control", getErrorClass(field.name))}
-                  {...reg(field.name, rulesFor(field))}
-                  disabled={isReadOnlyMode}
-                />
-                <FieldError error={(errors as FieldErrors<Record<string, any>>)[field.name]} />
-                <FieldHelp text={field.description} />
-              </div>
-            );
-          }}
-        />
-      );
-    }
-
-    return (
-      <div className="form-group">
-        <label htmlFor={field.name} className="form-label">
-          {field.label}
-          {field.required ? " *" : ""}
-        </label>
-        <input
-          id={field.name}
-          type={type}
-          step="1"
-          className={cn("form-control", getErrorClass(field.name))}
-          {...reg(field.name, rulesFor(field))}
-          disabled={isReadOnlyMode}
-        />
-        <FieldError error={(errors as FieldErrors<Record<string, any>>)[field.name]} />
-        <FieldHelp text={field.description} />
-      </div>
-    );
-  };
 
   const renderDuration = (field: FormField) => {
     const base = field.name;
@@ -1599,7 +1595,7 @@ export function DynamicForm({
         <label className="form-label">{field.label}</label>
         <input
           type="text"
-          className={cn("form-control bg-gray-100 text-gray-500 cursor-not-allowed", getErrorClass(field.name))}
+          className={cn("form-control", getErrorClass(field.name))}
           value={displayValue}
           readOnly
         />
@@ -1622,128 +1618,121 @@ export function DynamicForm({
   );
 
   const renderAttachment = (field: FormField) => {
-    const rules = rulesFor(field);
-    const value = watch(field.name);
-
-    if (!fileInputRefs.current[field.name]) {
-      fileInputRefs.current[field.name] = null;
-    }
-
-    const registration = reg(field.name, rules) as any;
-    const { ref: registerRef, ...registerRest } = registration || {};
-
     return (
-      <div className="form-group flex flex-col gap-2">
-        <label className="form-label font-medium">{field.label}</label>
+      <Controller
+        name={field.name}
+        control={control}
+        rules={rulesFor(field)}
+        render={({ field: { onChange, value }, fieldState: { error } }) => {
+          const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-        {/* Hidden file input */}
-        <input
-          type="file"
-          className="hidden"
-          {...registerRest}
-          ref={(el: HTMLInputElement | null) => {
-            fileInputRefs.current[field.name] = el;
-            if (typeof registerRef === "function") {
-              registerRef(el);
-            } else if (registerRef) {
-              (registerRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-            }
-          }}
-          onChange={(e) => {
-            if (registration?.onChange) registration.onChange(e);
-            const file = e.target.files?.[0];
-            if (file) {
-              setValue(field.name, file, { shouldDirty: true });
-            }
-          }}
-          disabled={isReadOnlyMode}
-        />
+          // Determine display name and preview URL
+          let displayName = "";
+          let previewUrl = "";
 
-        {/* Upload Button */}
-        {!value && (
-          <Button
-            type="button"
-            variant="outline"
-            className={cn("w-fit flex items-center gap-2", getErrorClass(field.name))}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              fileInputRefs.current[field.name]?.click();
-            }}
-            disabled={isReadOnlyMode}
-          >
-            <Upload size={16} />
-            Upload File
-          </Button>
-        )}
+          if (value instanceof File) {
+            displayName = value.name;
+            previewUrl = URL.createObjectURL(value);
+          } else if (typeof value === "string" && value) {
+            displayName = value.split("/").pop() || value;
+            previewUrl = value.startsWith("http") ? value : `http://103.219.1.138:4412${value}`;
+          }
 
-        {/* File Selected View */}
-        {value && (
-          <div
-            className={cn(
-              "flex items-center gap-3 bg-muted/40 p-3 rounded-md border",
-              getErrorClass(field.name)
-            )}
-          >
-            <span className="text-sm flex-1">{value?.name}</span>
+          return (
+            <div className="form-group flex flex-col gap-2">
+              <label className="form-label font-medium">
+                {field.label}
+                {field.required ? " *" : ""}
+              </label>
 
-            {/* Preview */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              {/* Hidden file input */}
+              <input
+                type="file"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onChange(file);
+                  }
+                }}
+                disabled={isReadOnlyMode}
+              />
 
-                if (value?.file_url) {
-                  window.open(value.file_url, "_blank");
-                } else if (value instanceof File) {
-                  const fileUrl = URL.createObjectURL(value);
-                  window.open(fileUrl, "_blank");
-                }
-              }}
-              disabled={isReadOnlyMode}
-            >
-              <Eye size={16} />
-            </Button>
+              {/* Upload Button */}
+              {!value && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("w-fit flex items-center gap-2", error ? "!border-red-500" : "")}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isReadOnlyMode}
+                >
+                  <Upload size={16} />
+                  Upload File
+                </Button>
+              )}
 
-            {/* Replace */}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8 px-2"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                fileInputRefs.current[field.name]?.click();
-              }}
-              disabled={isReadOnlyMode}
-            >
-              Replace
-            </Button>
+              {/* File Selected View */}
+              {value && (
+                <div
+                  className={cn(
+                    "flex items-center gap-3 bg-muted/40 p-3 rounded-md border",
+                    error ? "!border-red-500" : ""
+                  )}
+                >
+                  <span className="text-sm flex-1 truncate" title={displayName}>
+                    {displayName}
+                  </span>
 
-            {/* Remove */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setValue(field.name, null, { shouldDirty: true });
-              }}
-              disabled={isReadOnlyMode}
-            >
-              <X size={16} />
-            </Button>
-          </div>
-        )}
+                  {/* Preview */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(previewUrl, "_blank");
+                    }}
+                    disabled={!previewUrl}
+                  >
+                    <Eye size={16} />
+                  </Button>
 
-        <FieldError error={errors[field.name]} />
-      </div>
+                  {/* Replace */}
+                  {!isReadOnlyMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 px-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Replace
+                    </Button>
+                  )}
+
+                  {/* Remove */}
+                  {!isReadOnlyMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500"
+                      onClick={() => onChange(null)}
+                    >
+                      <X size={16} />
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              <FieldError error={error} />
+              <FieldHelp text={field.description} />
+            </div>
+          );
+        }}
+      />
     );
   };
 
@@ -1810,7 +1799,7 @@ export function DynamicForm({
       switch (field.type) {
         case "Data":
         case "Text":
-          return renderInput(field, "text");
+          return <InputField field={field} type="text" isReadOnlyMode={isReadOnlyMode} />;
         case "Small Text":
           return renderTextarea(field, field.rows ?? 3);
         case "Long Text":
@@ -1819,21 +1808,21 @@ export function DynamicForm({
         case "Code":
           return renderTextarea(field, field.rows ?? 6);
         case "Password":
-          return renderInput(field, "password");
+          return <InputField field={field} type="password" isReadOnlyMode={isReadOnlyMode} />;
         case "Int":
-          return renderInput(field, "number");
+          return <InputField field={field} type="number" isReadOnlyMode={isReadOnlyMode} />;
         case "Float":
         case "Currency":
         case "Percent":
-          return renderInput(field, "number");
+          return <InputField field={field} type="number" isReadOnlyMode={isReadOnlyMode} />;
         case "Color":
           return renderColor(field);
         case "Date":
-          return renderDateLike(field, "date");
+          return <DateLikeField field={field} type="date" isReadOnlyMode={isReadOnlyMode} />;
         case "DateTime":
-          return renderDateLike(field, "datetime-local");
+          return <DateLikeField field={field} type="datetime-local" isReadOnlyMode={isReadOnlyMode} />;
         case "Time":
-          return renderDateLike(field, "time");
+          return <DateLikeField field={field} type="time" isReadOnlyMode={isReadOnlyMode} />;
         case "Duration":
           return renderDuration(field);
         case "Check":
@@ -1847,7 +1836,7 @@ export function DynamicForm({
         case "Link":
           return renderLink(field);
         case "Barcode":
-          return renderInput(field, "text");
+          return <InputField field={field} type="text" isReadOnlyMode={isReadOnlyMode} />;
         case "Read Only":
           return renderReadOnly(field);
         case "Rating":

@@ -617,6 +617,16 @@ select.form-control {
   outline: var(--focus-outline);
 }
 
+.form-control:disabled,
+.form-control[readonly],
+.form-control-borderless:disabled,
+.form-control-borderless[readonly] {
+  background-color: hsl(var(--muted));
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .form-label {
   display: block;
   margin-bottom: var(--space-8);

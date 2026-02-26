@@ -15,6 +15,7 @@ interface TableMultiSelectOption {
     label: string;
 }
 
+
 interface TableMultiSelectProps {
     control: any;
     field: FormField & { defaultValue?: string[]; linkTarget?: string };
@@ -257,8 +258,7 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                                     type="text"
                                     id={field.name}
                                     className={`form-control w-full pr-10 
-                    ${error ? "border-red-500" : ""}
-                    ${(!isAuthenticated || disabled) ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
+                    ${error ? "border-red-500" : ""}`}
 
                                     placeholder={field.placeholder || `Search ${field.label}...`}
                                     value={searchTerm}

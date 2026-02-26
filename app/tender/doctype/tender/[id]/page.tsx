@@ -27,6 +27,7 @@ import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 
 
 
@@ -116,6 +117,9 @@ interface TenderProjectData {
 
   custom_contractor_name?: string;
 
+  custom_aadhaar_no?: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 
@@ -790,7 +794,7 @@ export default function RecordDetailPage() {
 
         name: "custom_mobile_no",
 
-        label: "Mobile No",
+        label: "Mobile No.",
 
         type: "Read Only",
 
@@ -830,7 +834,7 @@ export default function RecordDetailPage() {
 
         name: "custom_gst",
 
-        label: "GST",
+        label: "GST No.",
 
         type: "Read Only",
 
@@ -850,7 +854,7 @@ export default function RecordDetailPage() {
 
         name: "custom_pan",
 
-        label: "PAN",
+        label: "PAN No.",
 
         type: "Read Only",
 
@@ -864,6 +868,16 @@ export default function RecordDetailPage() {
 
         },
 
+      },
+      {
+        name: "custom_aadhaar_no",
+        label: "Aadhaar No.",
+        type: "Read Only",
+        fetchFrom: {
+          sourceField: "custom_contractor_name",
+          targetDoctype: "Contractor",
+          targetField: "custom_aadhaar_no"
+        },
       },
 
     ]);
@@ -1226,7 +1240,9 @@ export default function RecordDetailPage() {
 
             "custom_gst",
 
-            "custom_pan"
+            "custom_pan",
+
+            "custom_aadhaar_no"
 
           ].includes(field.name)) {
 
@@ -1487,49 +1503,39 @@ export default function RecordDetailPage() {
 
 
   return (
-
-    <div className="space-y-4">
-
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
       <DynamicForm
-
         tabs={formTabs}
-
         onSubmit={handleSubmit}
-
         onCancel={handleCancel}
-
         onFormInit={handleFormInit}
-
         doctype={doctypeName}
-
-
-
-        title={`Tender : ${record.name}`}
-
+        title={`${doctypeName}: ${record.name}`}
         description={`Update details for record ID ${docname}`}
-
         submitLabel={isSaving ? "Saving..." : "Save"}
-
         cancelLabel="Cancel"
-
         initialStatus={record.docstatus === 0 ? "Draft" : record.docstatus === 1 ? "Submitted" : "Cancelled"}
-
         docstatus={record.docstatus}
-
         deleteConfig={{
-
-          doctypeName: doctypeName, // "Project"
-
+          doctypeName: doctypeName,
           docName: docname,
-
-          redirectUrl: "/tender/doctype/tender"
-
+          redirectUrl: "/tender/doctype/tender",
         }}
-
       />
 
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.owner}
+          modifiedStr={record.modified}
+          modifiedBy={record.modified_by}
+        />
+      </div>
     </div>
-
   );
-
 }

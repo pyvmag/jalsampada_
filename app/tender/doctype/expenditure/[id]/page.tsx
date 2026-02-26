@@ -1,5 +1,6 @@
 "use client";
 
+
 import * as React from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   FormField,
 } from "@/components/DynamicFormComponent";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import {
@@ -73,6 +75,8 @@ interface ExpenditureData {
 
   docstatus: 0 | 1 | 2 | number;
   modified: string;
+  owner?: string;
+  modified_by?: string;
 }
 
 /**
@@ -735,17 +739,42 @@ export default function RecordDetailPage() {
       return sum + (Number(row.bill_amount) || 0);
     }, 0);
 
-    const amtToBeMatched = savedAmount + totalChildBillAmt;
+    // 🟢 MENTOR'S LOGIC VALIDATION
+    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
+    // This is mathematically equivalent to: bill_upto = saved_amount
 
-    // Rule 2: Balance Check
-    if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
-      const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
-
-      toast.error("Amount Mismatch", {
-        description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Calculated Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+    // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
+    if (billAmount > tenderAmount) {
+      toast.error("Validation Failed", {
+        description: "The Bill Amount cannot be greater than the Tender Amount.",
         duration: Infinity
       });
       return;
+    }
+
+    if (data.bill_type === "Final") {
+      // Rule 2: Mentor's Rule for Final Bills
+      // bill_upto = bill_amount + prev_cumulative_amount
+      const billUpto = billAmount + prevCumulativeAmount;
+      const diff = Math.abs(billUpto - savedAmount);
+
+      if (diff > 0.01) {
+        toast.error("Saved Amount Mismatch", {
+          description: `As per rule: Tender Amount (${tenderAmount.toLocaleString()}) - Remaining Amount must equal Saved Amount (${savedAmount.toLocaleString()}). Currently there is a difference of ${diff.toLocaleString()}.`,
+          duration: Infinity,
+        });
+        return;
+      }
+    } else {
+      // Rule 3: For Running Bills, ensure table matches Bill Amount
+      if (Math.abs(billAmount - totalChildBillAmt) > 0.01) {
+        const relation = billAmount > totalChildBillAmt ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${totalChildBillAmt.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+          duration: Infinity,
+        });
+        return;
+      }
     }
 
     // If validation passes, proceed to save
@@ -852,8 +881,8 @@ export default function RecordDetailPage() {
         );
       }
 
-      // Send payload
-      console.log("Sending this PAYLOAD to Frappe:", finalPayload);
+      // // Send payload
+      // console.log("Sending this PAYLOAD to Frappe:", finalPayload);
 
       const resp = await axios.put(
         `${API_BASE_URL}/${doctypeName}/${docname}`,
@@ -993,6 +1022,51 @@ export default function RecordDetailPage() {
     setIsSaving(true);
 
     try {
+      // 🟢 VALIDATION LOGIC (Mirroring handleSubmit)
+      const billAmount = Number(formData.bill_amount) || 0;
+      const tenderAmount = Number(formData.tender_amount) || 0;
+      const savedAmount = Number(formData.saved_amount) || 0;
+
+      // Rule 1: Bill Amount cannot be > Tender Amount
+      if (billAmount > tenderAmount) {
+        toast.error("Validation Failed", {
+          description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount.",
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 2: Balance Check
+      const details = formData.expenditure_details || [];
+      const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
+
+      const amtToBeMatched = formData.bill_type === "Final"
+        ? (savedAmount - prevCumulativeAmount)
+        : (totalChildBillAmt + savedAmount);
+
+      if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+        const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
+        toast.error("Amount Mismatch", {
+          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+          duration: Infinity
+        });
+        return;
+      }
+
+      // Rule 3: Saved Amount check (Only for Final bills)
+      if (formData.bill_type === "Final") {
+        const billUpto = billAmount + prevCumulativeAmount;
+        const diff = Math.abs(billUpto - savedAmount);
+
+        if (diff > 0.01) {
+          toast.error("Saved Amount Validation Failed", {
+            description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(formData.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+            duration: Infinity,
+          });
+          return;
+        }
+      }
+
       // Prepare payload similar to handleSubmit
       const payload: Record<string, any> = JSON.parse(JSON.stringify(formData));
 
@@ -1111,26 +1185,42 @@ export default function RecordDetailPage() {
   ------------------------------------------------- */
 
   return (
-    <DynamicForm
-      key={formKey}
-      title={`Expenditure ${expenditure.name}`}
-      tabs={formTabs}
-      onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-      onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-      onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
-      isSubmittable={activeButton === "SUBMIT"}
-      docstatus={expenditure.docstatus}
-      initialStatus={
-        isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"
-      }
-      onFormInit={handleFormInit}
-      doctype={doctypeName}
-      submitLabel={getSubmitLabel()}
-      deleteConfig={{
-        doctypeName: doctypeName,
-        docName: docname,
-        redirectUrl: "/tender/doctype/expenditure",
-      }}
-    />
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
+      <DynamicForm
+        key={formKey}
+        title={`Expenditure ${expenditure.name}`}
+        tabs={formTabs}
+        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+        onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+        onCancelDocument={activeButton === "CANCEL" ? handleCancel : undefined}
+        isSubmittable={activeButton === "SUBMIT"}
+        docstatus={expenditure.docstatus}
+        initialStatus={
+          isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"
+        }
+        onFormInit={handleFormInit}
+        doctype={doctypeName}
+        submitLabel={getSubmitLabel()}
+        deleteConfig={{
+          doctypeName: doctypeName,
+          docName: docname,
+          redirectUrl: "/tender/doctype/expenditure",
+        }}
+      />
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={expenditure.owner}
+          modifiedStr={expenditure.modified}
+          modifiedBy={expenditure.modified_by}
+        />
+      </div>
+    </div>
   );
 }

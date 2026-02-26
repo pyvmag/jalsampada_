@@ -32,6 +32,7 @@ interface ContractorData {
   custom_contractor_company?: string;
   custom_gst?: string;
   custom_pan?: string;
+  custom_aadhar_no?: string;
   modified?: string;
   docstatus?: 0 | 1 | 2;
 }
@@ -55,6 +56,11 @@ export default function NewContractorPage() {
         name: "Details",
         fields: [
           // --- Main Section ---
+          {
+            name: "custom_contractor_company",
+            label: "Firm/Company Name",
+            type: "Data",
+          },
           {
             name: "contractor_name",
             label: "Contractor Name",
@@ -119,18 +125,18 @@ export default function NewContractorPage() {
             required: true,
           },
           {
-            name: "custom_contractor_company",
-            label: "Contractor Company",
-            type: "Data",
-          },
-          {
             name: "custom_gst",
-            label: "GST",
+            label: "GST No.",
             type: "Data",
           },
           {
             name: "custom_pan",
-            label: "PAN",
+            label: "PAN No.",
+            type: "Data",
+          },
+          {
+            name: "custom_aadhaar_no",
+            label: "Aadhaar No.",
             type: "Data",
           },
           {

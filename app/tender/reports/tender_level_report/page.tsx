@@ -50,16 +50,16 @@ const formatCurrency = (amount: number | string | null) => {
 };
 
 const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
-  name: "200px",
-  custom_fiscal_year: "120px",
-  custom_lis_name: "200px",
+  name: "150px",
+  custom_fiscal_year: "100px",
+  custom_lis_name: "100px",
   custom_stage: "250px",
-  custom_prapan_suchi: "250px",
-  custom_work_order: "150px",
+  custom_prapan_suchi: "150px",
+  custom_work_order: "110px",
   custom_tender_amount: "150px",
   custom_tender_status: "120px",
   expected_start_date: "120px",
-  custom_expected_date: "120px",
+  custom_expected_date: "180px", // Adjusted width for longer title
   notes: "250px",
   custom_contractor_company: "200px",
   custom_contractor_name: "200px",
@@ -67,6 +67,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
   custom_email_id: "200px",
   custom_gst: "120px",
   custom_pan: "120px",
+  custom_aadhaar_no: "150px",
   custom_supplier_address: "250px",
   custom_is_extension: "120px",
   extension_count: "120px",
@@ -74,15 +75,15 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
 };
 
 const COLUMN_ORDER = [
-  "name",
   "custom_fiscal_year",
+  "name",
+  "custom_prapan_suchi",
   "custom_lis_name",
   "custom_stage",
-  "custom_prapan_suchi",
   "custom_work_order",
+  "expected_start_date",
   "custom_tender_amount",
   "custom_tender_status",
-  "expected_start_date",
   "custom_expected_date",
   "notes",
   "custom_contractor_company",
@@ -91,14 +92,14 @@ const COLUMN_ORDER = [
   "custom_email_id",
   "custom_gst",
   "custom_pan",
+  "custom_aadhaar_no",
   "custom_supplier_address",
 ];
 
 const STICKY_COLUMNS = [
-  "name",
   "custom_fiscal_year",
-  "custom_lis_name",
-  "custom_stage",
+  "name",
+  "custom_prapan_suchi",
 ];
 
 export default function TenderLevelReport() {
@@ -149,12 +150,21 @@ export default function TenderLevelReport() {
 
     fieldMap.forEach(field => ordered.push(field));
 
-    return ordered.map(field => ({
-      fieldname: field.fieldname,
-      label: field.label,
-      width: DEFAULT_COLUMN_WIDTHS[field.fieldname] || `${field.width || 150}px`,
-      formatter: getFieldFormatter(field.fieldtype, field.fieldname),
-    }));
+    return ordered.map(field => {
+      let label = field.label;
+
+      // Override specific labels
+      if (field.fieldname === "name") label = "Tender No";
+      if (field.fieldname === "custom_prapan_suchi") label = "Name of Work";
+      if (field.fieldname === "expected_start_date") label = "Work Order Date";
+
+      return {
+        fieldname: field.fieldname,
+        label: label,
+        width: DEFAULT_COLUMN_WIDTHS[field.fieldname] || `${field.width || 150}px`,
+        formatter: getFieldFormatter(field.fieldtype, field.fieldname),
+      };
+    });
   }, [apiFields]);
 
   const stickyLeftMap = useMemo(() => {
@@ -602,9 +612,9 @@ export default function TenderLevelReport() {
                       backgroundColor: "#3683f6",
                       color: "white",
                       borderRight: "none",
-                      boxShadow: STICKY_COLUMNS.includes(column.fieldname) && 
-                                 column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1] 
-                                 ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                      boxShadow: STICKY_COLUMNS.includes(column.fieldname) &&
+                        column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1]
+                        ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                     }}
                   >
                     {column.label}
@@ -634,9 +644,9 @@ export default function TenderLevelReport() {
                           zIndex: STICKY_COLUMNS.includes(column.fieldname) ? 10 : 1,
                           backgroundColor: "white",
                           borderRight: "none",
-                          boxShadow: STICKY_COLUMNS.includes(column.fieldname) && 
-                                     column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1] 
-                                     ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                          boxShadow: STICKY_COLUMNS.includes(column.fieldname) &&
+                            column.fieldname === STICKY_COLUMNS[STICKY_COLUMNS.length - 1]
+                            ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                         }}
                       >
                         {renderCellValue(row, column)}

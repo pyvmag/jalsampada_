@@ -53,6 +53,13 @@ const formatDateTime = (dateString: string | null): string => {
   return date.toLocaleString("en-GB");
 };
 
+const toLocalYYYYMMDD = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // --- Configuration ---
 
 const columnConfig: ColumnConfig[] = [
@@ -308,7 +315,7 @@ export default function LogsheetReportPage() {
             <DatePicker
               selected={filters.from_date ? new Date(filters.from_date) : null}
               onChange={(date: Date | null) =>
-                handleFilterChange("from_date", date ? date.toISOString() : "")
+                handleFilterChange("from_date", date ? toLocalYYYYMMDD(date) : "")
               }
               placeholderText="DD/MM/YYYY"
               dateFormat="dd/MM/yyyy"
@@ -320,7 +327,7 @@ export default function LogsheetReportPage() {
             <DatePicker
               selected={filters.to_date ? new Date(filters.to_date) : null}
               onChange={(date: Date | null) =>
-                handleFilterChange("to_date", date ? date.toISOString() : "")
+                handleFilterChange("to_date", date ? toLocalYYYYMMDD(date) : "")
               }
               placeholderText="DD/MM/YYYY"
               dateFormat="dd/MM/yyyy"
@@ -339,7 +346,7 @@ export default function LogsheetReportPage() {
             />
           </div>
 
-         
+
 
           <div className="form-group relative z-[30]">
             <label className="text-sm font-medium mb-1 block">Stage</label>
