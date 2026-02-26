@@ -2000,9 +2000,17 @@ export function DynamicForm({
               {!isSubmittable && docstatus === 0 && isDirty && (
                 <button
                   type="submit"
-                  className="btn btn--primary"
+                  disabled={isSaving}
+                  className="btn btn--primary flex items-center gap-2"
                 >
-                  Save
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    submitLabel || "Save"
+                  )}
                 </button>
               )}
 
