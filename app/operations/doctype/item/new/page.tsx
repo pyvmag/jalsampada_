@@ -23,7 +23,7 @@ export default function NewItemPage() {
   const duplicateData = React.useMemo(() => {
     const duplicateParam = searchParams.get('duplicate');
     if (!duplicateParam) return null;
-    
+
     try {
       const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
       console.log("Parsed duplicate data:", decodedData);
@@ -53,7 +53,7 @@ export default function NewItemPage() {
       formData.append("file", file, file.name);
       formData.append("is_private", "0"); // Item images are usually public
       // formData.append("doctype", "Item"); // Optional: Link to doctype if needed
-      
+
       const res = await fetch(`${API_BASE_URL}/api/method/upload_file`, {
         method: "POST",
         headers: {
@@ -64,7 +64,7 @@ export default function NewItemPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.message || "File upload failed");
       }
@@ -125,7 +125,7 @@ export default function NewItemPage() {
           {
             name: "image",
             label: "Item Image",
-            type: "Attach", // Use "Attach" as it maps correctly in DynamicFormComponent
+            type: "Attach Image", // Use "Attach Image" now that it is supported
             description: "Upload an image for this item",
             defaultValue: getValue("image"),
           },
@@ -158,17 +158,17 @@ export default function NewItemPage() {
   const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
     // Check if we have valid data to submit
     const hasValidData = isDirty || (duplicateData && data.item_code);
-    
+
     if (!hasValidData) {
       toast.info("Please fill out the form.");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const payload: Record<string, any> = { ...data };
-      
+
       // 🟢 Handle Image Upload Logic
       if (payload.image instanceof File) {
         toast.info("Uploading image...");
@@ -177,7 +177,7 @@ export default function NewItemPage() {
           payload.image = fileUrl; // Replace File object with URL string
         } else {
           // If upload returned null but no error thrown, remove field to avoid error
-          delete payload.image; 
+          delete payload.image;
         }
       } else if (typeof payload.image !== 'string') {
         // If it's some other object (or null), remove it to prevent "dict" error
@@ -196,7 +196,7 @@ export default function NewItemPage() {
       });
 
       console.log("Sending NEW Item payload:", payload);
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -210,8 +210,8 @@ export default function NewItemPage() {
       const resp = await fetch(`${API_BASE_URL}/api/resource/${doctypeName}`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', 
-        body: JSON.stringify(payload), 
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
 
       const responseData = await resp.json();
@@ -220,14 +220,14 @@ export default function NewItemPage() {
         console.log("Full server error:", responseData);
         throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
       }
-      
+
       toast.success("Item created successfully!");
-      
+
       router.push(`/operations/doctype/item`);
 
     } catch (err: any) {
       console.error("Save error:", err);
-      
+
       if (err.response?.data?.exc_type === "DuplicateEntryError") {
         toast.error("Duplicate Entry Error", {
           description: "An Item with this Item Code already exists.",

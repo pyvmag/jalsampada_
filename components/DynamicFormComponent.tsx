@@ -13,7 +13,7 @@ import {
   UseFormReturn,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Upload, X, MoreVertical, Copy, Trash2, ChevronLeft, ChevronRight, Printer, Eye, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, X, MoreVertical, Copy, Trash2, ChevronLeft, ChevronRight, Printer, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -76,6 +76,7 @@ export type FieldType =
   | "Percent"
   | "Rating"
   | "Attach"
+  | "Attach Image"
   | "Custom";
 
 export interface FormField {
@@ -181,6 +182,9 @@ export interface DynamicFormProps {
   onDelete?: () => Promise<void> | void;
   deleteConfig?: DeleteConfig;
   doctype?: string;
+  defaultValues?: any;
+  isSaving?: boolean;
+  isEdit?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -345,6 +349,7 @@ function buildDefaultValues(fields: FormField[]) {
           "Select",
           "Link",
           "Attach",
+          "Attach Image",
           "Color",
           "Password",
           "Int",
@@ -592,6 +597,9 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
     return () => clearTimeout(timeoutId);
   }, [allValues?.[field.name], field.asyncValidation]);
 
+  const [showPassword, setShowPassword] = React.useState(false);
+  const inputType = type === "password" ? (showPassword ? "text" : "password") : type;
+
   return (
     <div className="form-group relative">
       <label htmlFor={field.name} className="form-label">
@@ -600,7 +608,7 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
       </label>
       <div className="relative">
         <input
-          type={type}
+          type={inputType}
           {...register(field.name, {
             ...rules,
             valueAsNumber: valueAsNumber ? true : undefined,
@@ -610,11 +618,22 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
           className={cn(
             commonProps.className,
             validationStatus === "valid" ? "!border-green-600 !border-2 !focus:ring-green-600" : "",
-            validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : ""
+            validationStatus === "invalid" ? "!border-red-500 !focus:ring-red-500" : "",
+            type === "password" ? "pr-10" : ""
           )}
         />
 
-        {field.asyncValidation && (
+        {type === "password" && (
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+
+        {field.asyncValidation && type !== "password" && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
             {validationStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
             {validationStatus === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
@@ -794,7 +813,7 @@ export function DynamicForm({
   onCancel,
   title = "Form",
   description,
-  submitLabel = "Submit",
+  submitLabel = "Save",
   cancelLabel = "Cancel",
   initialStatus = "Draft",
   docstatus = 0,
@@ -804,7 +823,10 @@ export function DynamicForm({
   onFormInit,
   onDelete,
   deleteConfig,
-  doctype
+  doctype,
+  defaultValues: externalDefaultValues,
+  isSaving = false,
+  isEdit = false
 }: DynamicFormProps) {
   const { apiKey, apiSecret } = useAuth();
 
@@ -825,8 +847,11 @@ export function DynamicForm({
   // ── ALL FIELDS (for defaultValues) ───────────────────────────────────────
   const allFields = React.useMemo(() => tabs.flatMap((t) => t.fields), [tabs]);
   const defaultValues = React.useMemo(
-    () => buildDefaultValues(allFields),
-    [allFields]
+    () => {
+      const computedDefaults = buildDefaultValues(allFields);
+      return { ...computedDefaults, ...(externalDefaultValues || {}) };
+    },
+    [allFields, externalDefaultValues]
   );
 
   // ── RHF SETUP ─────────────────────────────────────────────────────────────
@@ -971,7 +996,9 @@ export function DynamicForm({
         setCurrentStatus("Draft");
         reset(data, { keepValues: false });
       } else {
-        setCurrentStatus("Not Saved");
+        // If result is undefined/void but we're here, it's a success
+        setCurrentStatus(initialStatus);
+        reset(data, { keepValues: false });
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -1848,6 +1875,7 @@ export function DynamicForm({
         case "Button":
           return renderButton(field);
         case "Attach":
+        case "Attach Image":
           return renderAttachment(field);
         case "Custom":
           return (
@@ -2153,8 +2181,16 @@ export function DynamicForm({
               <button
                 type="submit"
                 className="btn btn--primary"
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  submitLabel || "Save"
+                )}
               </button>
             )}
 
