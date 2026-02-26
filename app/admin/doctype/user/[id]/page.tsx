@@ -11,7 +11,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function UserEditPage() {
   const params = useParams();
