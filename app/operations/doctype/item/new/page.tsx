@@ -125,7 +125,7 @@ export default function NewItemPage() {
           {
             name: "image",
             label: "Item Image",
-            type: "Attach", // Use "Attach" as it maps correctly in DynamicFormComponent
+            type: "Attach Image", // Use "Attach Image" now that it is supported
             description: "Upload an image for this item",
             defaultValue: getValue("image"),
           },
