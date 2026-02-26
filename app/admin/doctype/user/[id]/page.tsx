@@ -26,6 +26,7 @@ export default function UserEditPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [availableRoles, setAvailableRoles] = React.useState<string[]>([]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. FORM CONFIGURATION
@@ -157,6 +158,21 @@ export default function UserEditPage() {
         },
       ],
     },
+    {
+      name: "Roles",
+      fields: [
+        {
+          name: "sb_roles",
+          label: "Assign Roles",
+          type: "Section Break",
+        },
+        ...availableRoles.map(role => ({
+          name: `role_${role.replace(/\s+/g, '_')}`,
+          label: role,
+          type: "Check" as const,
+        })),
+      ],
+    },
   ];
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -190,6 +206,39 @@ export default function UserEditPage() {
     fetchDoc();
   }, [docname, isInitialized, isAuthenticated, apiKey, apiSecret]);
 
+  // Fetch Available Roles
+  React.useEffect(() => {
+    const fetchRoles = async () => {
+      if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) return;
+      try {
+        const res = await axios.get(`${API_BASE_URL}/Role`, {
+          params: {
+            limit_page_length: 1000,
+            fields: JSON.stringify(["name"]),
+          },
+          headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+        });
+        const roles = res.data.data.map((r: any) => r.name).sort();
+        setAvailableRoles(roles);
+      } catch (err) {
+        console.error("Failed to fetch roles:", err);
+      }
+    };
+    fetchRoles();
+  }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
+
+  // Map record roles to checkbox values
+  const defaultValues = React.useMemo(() => {
+    if (!record) return {};
+    const vals = { ...record };
+    if (record.roles) {
+      record.roles.forEach((r: any) => {
+        vals[`role_${r.role.replace(/\s+/g, '_')}`] = true;
+      });
+    }
+    return vals;
+  }, [record]);
+
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. SUBMIT (PUT)
   // ─────────────────────────────────────────────────────────────────────────────
@@ -207,6 +256,17 @@ export default function UserEditPage() {
       if (typeof formData.enabled === "boolean") {
         formData.enabled = formData.enabled ? 1 : 0;
       }
+
+      // Convert checkbox roles back to roles child table
+      const rolesToSave: { role: string }[] = [];
+      availableRoles.forEach(role => {
+        const key = `role_${role.replace(/\s+/g, '_')}`;
+        if (formData[key]) {
+          rolesToSave.push({ role });
+        }
+        delete formData[key];
+      });
+      formData.roles = rolesToSave;
 
       // Handle Password: If empty, don't send it to avoid overwriting or API errors
       if (!formData.new_password) {
@@ -285,7 +345,7 @@ export default function UserEditPage() {
         <DynamicForm
           title={`Edit User: ${record.full_name || record.name}`}
           tabs={userFormLayout}
-          defaultValues={record}
+          defaultValues={defaultValues}
           onSubmit={handleSubmit}
           onCancel={() => router.push("/admin/doctype/user")}
           isEdit={true}
