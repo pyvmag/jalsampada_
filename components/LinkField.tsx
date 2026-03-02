@@ -119,7 +119,11 @@ export function LinkField({ control, field, error, className, filters = {}, getQ
 
         Object.entries(filters).forEach(([key, value]) => {
           if (value != null && value !== "") {
-            searchFilters.push([field.linkTarget, key, "=", value]);
+            if (Array.isArray(value) && value.length === 2) {
+              searchFilters.push([field.linkTarget, key, value[0], value[1]]);
+            } else {
+              searchFilters.push([field.linkTarget, key, "=", value]);
+            }
           }
         });
 

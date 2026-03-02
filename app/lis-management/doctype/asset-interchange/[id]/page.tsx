@@ -140,6 +140,24 @@ export default function AssetInterchangeDetailPage() {
             return;
         }
 
+        // Logical validation before saving - use formInstance to get full values
+        const fullData = formInstance?.getValues() || data;
+        if (data.select_asset === "Motor") {
+            const currentMotor = fullData.current_motor_asset;
+            const interchangeMotor = data.interchange_motor;
+            if (currentMotor && interchangeMotor && currentMotor === interchangeMotor) {
+                toast.error("Interchange Motor cannot be same as Current Motor Asset");
+                return;
+            }
+        } else if (data.select_asset === "Pump") {
+            const currentPump = fullData.current_pump_asset;
+            const interchangePump = data.interchange_pump;
+            if (currentPump && interchangePump && currentPump === interchangePump) {
+                toast.error("Interchange Pump cannot be same as Current Pump Asset");
+                return;
+            }
+        }
+
         if (!record) {
             toast.error("Record not loaded. Cannot save.", { duration: Infinity });
             return;
@@ -231,6 +249,25 @@ export default function AssetInterchangeDetailPage() {
         try {
             // Get current form data
             const formData = formInstance.getValues();
+
+            // Logical validation before submitting
+            if (formData.select_asset === "Motor") {
+                const currentMotor = formData.current_motor_asset;
+                const interchangeMotor = formData.interchange_motor;
+                if (currentMotor && interchangeMotor && currentMotor === interchangeMotor) {
+                    toast.error("Interchange Motor cannot be same as Current Motor Asset");
+                    setIsSaving(false);
+                    return;
+                }
+            } else if (formData.select_asset === "Pump") {
+                const currentPump = formData.current_pump_asset;
+                const interchangePump = formData.interchange_pump;
+                if (currentPump && interchangePump && currentPump === interchangePump) {
+                    toast.error("Interchange Pump cannot be same as Current Pump Asset");
+                    setIsSaving(false);
+                    return;
+                }
+            }
 
             // Clean the form data
             const nonDataFields = new Set<string>();
@@ -459,7 +496,8 @@ export default function AssetInterchangeDetailPage() {
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
-                            asset_category: "Motor"
+                            asset_category: "Motor",
+                            name: ["!=", getValue("current_motor_asset")]
                         }),
                     },
                     {
@@ -556,7 +594,8 @@ export default function AssetInterchangeDetailPage() {
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
-                            asset_category: "Pump"
+                            asset_category: "Pump",
+                            name: ["!=", getValue("current_pump_asset")]
                         }),
                     },
                     {
