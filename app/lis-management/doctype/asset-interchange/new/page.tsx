@@ -46,6 +46,11 @@ export default function NewAssetInterchangePage() {
     const doctypeName = "Asset Interchange";
 
     const [isSaving, setIsSaving] = React.useState(false);
+    const [formInstance, setFormInstance] = React.useState<any>(null);
+
+    const handleFormInit = React.useCallback((form: any) => {
+        setFormInstance(form);
+    }, []);
 
     const duplicateData: AssetInterchangeData | null = React.useMemo(() => {
         const duplicateParam = searchParams.get("duplicate");
@@ -196,7 +201,8 @@ export default function NewAssetInterchangePage() {
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
-                            asset_category: "Motor"
+                            asset_category: "Motor",
+                            name: ["!=", getValue("current_motor_asset")]
                         }),
                     },
                     {
@@ -284,7 +290,8 @@ export default function NewAssetInterchangePage() {
                         filters: (getValue) => ({
                             custom_lis_name: getValue("lis_name"),
                             custom_stage_no: getValue("stage"),
-                            asset_category: "Pump"
+                            asset_category: "Pump",
+                            name: ["!=", getValue("current_pump_asset")]
                         }),
                     },
                     {
@@ -315,6 +322,24 @@ export default function NewAssetInterchangePage() {
         if (!data.select_asset) {
             toast.info("Please select Which Asset To Interchange.");
             return;
+        }
+
+        // Logical validation - use formInstance to get full values including read-only ones
+        const fullData = formInstance?.getValues() || data;
+        if (data.select_asset === "Motor") {
+            const currentMotor = fullData.current_motor_asset;
+            const interchangeMotor = data.interchange_motor;
+            if (currentMotor && interchangeMotor && currentMotor === interchangeMotor) {
+                toast.error("Interchange Motor cannot be same as Current Motor Asset");
+                return;
+            }
+        } else if (data.select_asset === "Pump") {
+            const currentPump = fullData.current_pump_asset;
+            const interchangePump = data.interchange_pump;
+            if (currentPump && interchangePump && currentPump === interchangePump) {
+                toast.error("Interchange Pump cannot be same as Current Pump Asset");
+                return;
+            }
         }
 
         setIsSaving(true);
@@ -365,6 +390,7 @@ export default function NewAssetInterchangePage() {
             description="Fill out the details to create a new Asset Interchange."
             submitLabel={isSaving ? "Saving..." : "Save"}
             cancelLabel="Cancel"
+            onFormInit={handleFormInit}
         />
     );
 }
