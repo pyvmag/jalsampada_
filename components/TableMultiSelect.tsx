@@ -55,6 +55,11 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                 searchFilters.push([field.linkTarget, "enabled", "=", 1]);
             }
 
+            // 🟢 GLOBAL FILTER: Automatically exclude disabled items for all Item link fields
+            if (field.linkTarget === "Item") {
+                searchFilters.push([field.linkTarget, "disabled", "=", 0]);
+            }
+
             Object.entries(filters).forEach(([key, value]) => {
                 if (value != null && value !== "") {
                     searchFilters.push([field.linkTarget, key, "=", value]);
