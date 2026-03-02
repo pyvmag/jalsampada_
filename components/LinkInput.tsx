@@ -138,6 +138,11 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
                     searchFilters.push([linkTarget, "enabled", "=", 1]);
                 }
 
+                // 🟢 GLOBAL FILTER: Automatically exclude disabled items for all Item link fields
+                if (linkTarget === "Item") {
+                    searchFilters.push([linkTarget, "disabled", "=", 0]);
+                }
+
                 const allFilters = buildFilterArray(searchFilters);
 
                 // Determine which fields to fetch based on linkTarget

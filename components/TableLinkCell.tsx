@@ -135,6 +135,16 @@ export function TableLinkCell({ control, fieldName, column, filters = {}, onValu
                     searchFilters.push([column.linkTarget, searchKey, "like", `%${term.trim()}%`]);
                 }
 
+                // 🟢 GLOBAL FILTER: Automatically exclude disabled users for all User link fields
+                if (column.linkTarget === "User") {
+                    searchFilters.push([column.linkTarget, "enabled", "=", 1]);
+                }
+
+                // 🟢 GLOBAL FILTER: Automatically exclude disabled items for all Item link fields
+                if (column.linkTarget === "Item") {
+                    searchFilters.push([column.linkTarget, "disabled", "=", 0]);
+                }
+
                 Object.entries(activeFilters).forEach(([key, value]) => {
                     if (value != null && value !== "") {
                         if (Array.isArray(value)) {
