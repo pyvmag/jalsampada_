@@ -138,31 +138,46 @@ export default function NewStockEntryPage() {
                 setEditDateTime(!!isEditable);
             }
 
-            if (name === "from_warehouse") {
-                const fromWh = form.getValues("from_warehouse");
-                const items = form.getValues("items") || [];
+            // 🔥 Consolidated Synchronization: Parent -> Child Items
+            if (!name ||
+                ["from_warehouse", "to_warehouse", "custom_tender", "items"].includes(name) ||
+                name.startsWith("items.")
+            ) {
+                const values = form.getValues();
+                const items = values.items || [];
+                const fromWh = values.from_warehouse;
+                const toWh = values.to_warehouse;
+                const tender = values.custom_tender;
 
-                const updatedItems = items.map((row: any) => ({
-                    ...row,
-                    s_warehouse: fromWh
-                }));
+                let hasChanged = false;
+                const updatedItems = items.map((row: any) => {
+                    const newRow = { ...row };
+                    let rowChanged = false;
 
-                form.setValue("items", updatedItems);
+                    if (fromWh && row.s_warehouse !== fromWh) {
+                        newRow.s_warehouse = fromWh;
+                        rowChanged = true;
+                    }
+                    if (toWh && row.t_warehouse !== toWh) {
+                        newRow.t_warehouse = toWh;
+                        rowChanged = true;
+                    }
+                    if (tender && row.custom_tender !== tender) {
+                        newRow.custom_tender = tender;
+                        rowChanged = true;
+                    }
+
+                    if (rowChanged) {
+                        hasChanged = true;
+                        return newRow;
+                    }
+                    return row;
+                });
+
+                if (hasChanged) {
+                    form.setValue("items", updatedItems, { shouldDirty: true });
+                }
             }
-
-            // 🔥 When Default Target Warehouse changes
-            if (name === "to_warehouse") {
-                const toWh = form.getValues("to_warehouse");
-                const items = form.getValues("items") || [];
-
-                const updatedItems = items.map((row: any) => ({
-                    ...row,
-                    t_warehouse: toWh
-                }));
-
-                form.setValue("items", updatedItems);
-            }
-
         });
 
         return () => subscription.unsubscribe();
@@ -308,9 +323,9 @@ export default function NewStockEntryPage() {
                                 label: "Item Group",
                                 type: "Data",
                                 fetchFrom: {
-                                    sourceField: "item_group",
+                                    sourceField: "item_code",
                                     targetDoctype: "Item",
-                                    targetField: "item_code"
+                                    targetField: "item_group"
                                 }
                             },
                             {
@@ -318,22 +333,12 @@ export default function NewStockEntryPage() {
                                 label: "Source Warehouse",
                                 type: "Link",
                                 linkTarget: "Warehouse",
-                                fetchFrom: {
-                                    sourceField: "parent.from_warehouse",
-                                    targetDoctype: "Warehouse",
-                                    targetField: "name"
-                                }
                             },
                             {
                                 name: "t_warehouse",
                                 label: "Target Warehouse",
                                 type: "Link",
                                 linkTarget: "Warehouse",
-                                fetchFrom: {
-                                    sourceField: "parent.to_warehouse",
-                                    targetDoctype: "Warehouse",
-                                    targetField: "name"
-                                }
                             },
 
                             {
@@ -427,14 +432,7 @@ export default function NewStockEntryPage() {
                             {
                                 name: "custom_tender",
                                 label: "Tender",
-                                type: "Link",
-                                linkTarget: "Project",
-                                fetchFrom: {
-                                    sourceField: "parent.custom_tender",
-                                    targetDoctype: "Project", // Added targetDoctype
-                                    targetField: "name"
-                                },
-                                defaultValue: ""
+                                type: "Read Only",
                             },
                         ],
                     },
