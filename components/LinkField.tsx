@@ -117,6 +117,11 @@ export function LinkField({ control, field, error, className, filters = {}, getQ
           searchFilters.push([field.linkTarget, searchKey, "like", `%${term.trim()}%`]);
         }
 
+        // 🟢 GLOBAL FILTER: Automatically exclude disabled users for all User link fields
+        if (field.linkTarget === "User") {
+          searchFilters.push([field.linkTarget, "enabled", "=", 1]);
+        }
+
         Object.entries(filters).forEach(([key, value]) => {
           if (value != null && value !== "") {
             if (Array.isArray(value) && value.length === 2) {

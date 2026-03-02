@@ -50,6 +50,11 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                 searchFilters.push([field.linkTarget, "name", "like", `%${term.trim()}%`]);
             }
 
+            // 🟢 GLOBAL FILTER: Automatically exclude disabled users for all User link fields
+            if (field.linkTarget === "User") {
+                searchFilters.push([field.linkTarget, "enabled", "=", 1]);
+            }
+
             Object.entries(filters).forEach(([key, value]) => {
                 if (value != null && value !== "") {
                     searchFilters.push([field.linkTarget, key, "=", value]);
