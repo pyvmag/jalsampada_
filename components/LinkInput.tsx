@@ -133,6 +133,11 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
                     }
                 }
 
+                // 🟢 GLOBAL FILTER: Automatically exclude disabled users for all User link fields
+                if (linkTarget === "User") {
+                    searchFilters.push([linkTarget, "enabled", "=", 1]);
+                }
+
                 const allFilters = buildFilterArray(searchFilters);
 
                 // Determine which fields to fetch based on linkTarget
