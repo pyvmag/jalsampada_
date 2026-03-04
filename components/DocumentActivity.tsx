@@ -2,8 +2,17 @@
 
 import * as React from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Clock } from "lucide-react";
-import { fetchDocumentTimeline } from "@/api/rpc";
+import { MessageSquare, Clock, Send, Bold, Italic, Link2, List, MoreVertical, Trash2 } from "lucide-react";
+import { fetchDocumentTimeline, addCommentRPC, updateCommentRPC, deleteCommentRPC } from "@/api/rpc";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+
+
 
 interface DocumentActivityProps {
     doctype: string;
@@ -23,14 +32,24 @@ const DocumentActivity = ({
     baseUrl,
     apiKey,
     apiSecret,
-    currentUserEmail,
+    currentUserEmail: propUserEmail,
     modifiedStr,
     modifiedBy,
     isInitialized,
 }: DocumentActivityProps) => {
+    const { currentUser } = useAuth();
+    const currentUserEmail = currentUser || propUserEmail;
+
     const [timelineData, setTimelineData] = React.useState<any>(null);
     const [loading, setLoading] = React.useState(false);
     const [showAll, setShowAll] = React.useState(true);
+    const [newComment, setNewComment] = React.useState("");
+    const [isPosting, setIsPosting] = React.useState(false);
+    const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null);
+    const [editingContent, setEditingContent] = React.useState("");
+    const [isUpdating, setIsUpdating] = React.useState(false);
+
+
 
     const [visibleCount, setVisibleCount] = React.useState(10);
 
@@ -54,6 +73,103 @@ const DocumentActivity = ({
             setLoading(false);
         }
     }, [doctype, docname, baseUrl, apiKey, apiSecret, isInitialized]);
+
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+    const applyFormatting = (prefix: string, suffix: string = prefix) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = newComment;
+        const selectedText = text.substring(start, end);
+        const before = text.substring(0, start);
+        const after = text.substring(end);
+
+        const newText = `${before}${prefix}${selectedText}${suffix}${after}`;
+        setNewComment(newText);
+
+        // Reset cursor position after state update
+        setTimeout(() => {
+            textarea.focus();
+            let newCursorPos;
+            if (start === end) {
+                // No selection: place cursor between prefix and suffix
+                newCursorPos = start + prefix.length;
+            } else {
+                // Text was selected: place cursor after the suffix
+                newCursorPos = start + prefix.length + selectedText.length + suffix.length;
+            }
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+
+    };
+
+    const handlePostComment = async () => {
+        if (!newComment.trim() || isPosting) return;
+
+        try {
+            setIsPosting(true);
+            const host = baseUrl.replace("/api/resource", "");
+            await addCommentRPC(
+                doctype,
+                decodeURIComponent(docname),
+                newComment,
+                host,
+                apiKey,
+                apiSecret
+            );
+            setNewComment("");
+            await fetchTimeline();
+        } catch (err: any) {
+            console.error("Failed to post comment:", err);
+            if (err.response) {
+                console.error("Server Error Data:", err.response.data);
+                console.error("Server Error Status:", err.response.status);
+            }
+        } finally {
+            setIsPosting(false);
+        }
+    };
+
+    const handleUpdateComment = async () => {
+        if (!editingCommentId || !editingContent.trim() || isUpdating) return;
+
+        try {
+            setIsUpdating(true);
+            const host = baseUrl.replace("/api/resource", "");
+            await updateCommentRPC(
+                editingCommentId,
+                editingContent,
+                host,
+                apiKey,
+                apiSecret
+            );
+            setEditingCommentId(null);
+            setEditingContent("");
+            await fetchTimeline();
+        } catch (err) {
+            console.error("Failed to update comment:", err);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        if (!confirm("Are you sure you want to delete this comment?")) return;
+
+        try {
+            const host = baseUrl.replace("/api/resource", "");
+            await deleteCommentRPC(commentId, host, apiKey, apiSecret);
+            await fetchTimeline();
+        } catch (err) {
+            console.error("Failed to delete comment:", err);
+        }
+    };
+
+
+
 
     React.useEffect(() => {
         fetchTimeline();
@@ -175,9 +291,6 @@ const DocumentActivity = ({
                             />
                         </button>
                     </div>
-                    <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-md text-sm font-semibold border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">
-                        <span className="text-lg leading-none">+</span> New Email
-                    </button>
                     <button
                         onClick={() => fetchTimeline()}
                         disabled={loading}
@@ -186,14 +299,80 @@ const DocumentActivity = ({
                     >
                         <Clock className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                     </button>
+
                 </div>
             </div>
 
-            {/* Events */}
+            <div className="mb-10 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm ring-1 ring-black/[0.02]">
+                <div className="flex gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ${getAvatarColor(currentUserEmail || "User")}`}>
+                        {getInitials(currentUserEmail || "User")}
+                    </div>
+                    <div className="flex-1 space-y-4">
+                        <textarea
+                            ref={textareaRef}
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Add a comment or share an update..."
+                            className="w-full min-h-[120px] p-4 text-sm border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/5 transition-all resize-none bg-gray-50/50 placeholder:text-gray-400"
+                        />
+                        <div className="flex justify-between items-center bg-white p-2 border border-gray-100 rounded-xl">
+                            {/* Toolbar */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => applyFormatting("**")}
+                                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all"
+                                    title="Bold"
+                                >
+                                    <Bold className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => applyFormatting("_")}
+                                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all"
+                                    title="Italic"
+                                >
+                                    <Italic className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => applyFormatting("[", "](url)")}
+                                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all"
+                                    title="Link"
+                                >
+                                    <Link2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => applyFormatting("\n- ", "")}
+                                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all"
+
+                                    title="List"
+                                >
+                                    <List className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={handlePostComment}
+                                disabled={!newComment.trim() || isPosting}
+                                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-gray-200"
+                            >
+
+
+                                {isPosting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <Send className="w-4 h-4" />
+                                )}
+                                Post Comment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <div className="relative">
                 <div className="absolute left-[11px] top-0 bottom-0 w-[1px] bg-gray-200" />
                 <div className="space-y-1">
-                    {/* Last Edited Banner */}
                     {modifiedStr && modifiedBy && (
                         <div className="relative py-3 pl-10">
                             <div className="flex items-center gap-4">
@@ -213,12 +392,12 @@ const DocumentActivity = ({
 
                     {visibleEvents.map((event, idx) => {
                         const actorEmail = event.comment_by || event.owner || event.sender;
-                        const isMe = actorEmail === currentUserEmail;
+                        const isMe = actorEmail?.toLowerCase() === currentUserEmail?.toLowerCase();
+                        const displayName = isMe ? "You" : (actorEmail || "Unknown");
                         const realName = user_info?.[actorEmail]?.fullname || actorEmail;
-                        const displayName = isMe ? "You" : realName;
                         const isCard =
                             event._category === "communication" ||
-                            (event._category === "comment" && event.comment_type === "Comment");
+                            event._category === "comment";
 
                         return (
                             <div key={idx} className="relative py-3 pl-10">
@@ -290,28 +469,77 @@ const DocumentActivity = ({
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button className="text-xs text-gray-500 hover:text-gray-900 font-semibold">
-                                                        Edit
-                                                    </button>
-                                                    <button className="text-gray-400 hover:text-gray-900">
-                                                        ···
-                                                    </button>
+                                                <div className="flex items-center gap-3">
+                                                    {isCard && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingCommentId(event.name);
+                                                                    setEditingContent(event.content);
+                                                                }}
+                                                                className="text-xs text-gray-500 hover:text-gray-900 font-semibold"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <button className="text-gray-400 hover:text-gray-900 p-1 rounded-md hover:bg-gray-50">
+                                                                        <MoreVertical className="w-4 h-4" />
+                                                                    </button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-32">
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleDeleteComment(event.name)}
+                                                                        className="text-red-600 focus:text-red-600 cursor-pointer"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="p-4">
-                                                <div
-                                                    className="text-sm text-gray-700 prose prose-sm max-w-none prose-p:my-0 leading-relaxed"
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: formatContent(
-                                                            event.content ||
-                                                            (event.subject
-                                                                ? `<b>${event.subject}</b><br/>${event.content}`
-                                                                : "")
-                                                        ),
-                                                    }}
-                                                />
+                                                {editingCommentId === event.name ? (
+                                                    <div className="space-y-3">
+                                                        <textarea
+                                                            value={editingContent}
+                                                            onChange={(e) => setEditingContent(e.target.value)}
+                                                            className="w-full min-h-[100px] p-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/5 transition-all resize-none"
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => setEditingCommentId(null)}
+                                                                className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                onClick={handleUpdateComment}
+                                                                disabled={isUpdating}
+                                                                className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-gray-800 disabled:opacity-50"
+                                                            >
+                                                                {isUpdating ? "Saving..." : "Save Changes"}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="text-sm text-gray-700 prose prose-sm max-w-none prose-p:my-0 leading-relaxed"
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: formatContent(
+                                                                event.content ||
+                                                                (event.subject
+                                                                    ? `<b>${event.subject}</b><br/>${event.content}`
+                                                                    : "")
+                                                            ),
+                                                        }}
+                                                    />
+                                                )}
                                             </div>
+
                                         </div>
                                     </div>
                                 )}
