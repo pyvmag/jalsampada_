@@ -18,8 +18,9 @@ const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
 interface StockReconciliationItemRow {
     item_code?: string;          // Link -> Item
-    store_location?: string;     // Link -> Store Location
-    qty?: number;           // Float
+    warehouse?: string;          // Link -> Warehouse (Store Location)
+    current_qty?: number;        // Float (Current stock in warehouse)
+    qty?: number;           // Float (Reconciled qty)
     stock_uom?: string;          // Data
     valuation_rate?: number;     // Currency
     barcode?: string;           // Data
@@ -70,35 +71,114 @@ export default function NewStockReconciliationPage() {
     };
 
     const handleFormInit = React.useCallback((form: any) => {
-    setFormInstance(form);
+        setFormInstance(form);
 
-    form.setValue("posting_date", getCurrentDate());
-    form.setValue("posting_time", getCurrentTime());
+        form.setValue("posting_date", getCurrentDate());
+        form.setValue("posting_time", getCurrentTime());
 
-    const subscription = form.watch((value: any, { name }: { name?: string }) => {
+        const subscription = form.watch(async (value: any, { name }: { name?: string }) => {
+            if (name === "set_posting_time" || name === undefined) {
+                const isEditable = form.getValues("set_posting_time");
+                setEditDateTime(!!isEditable);
+            }
 
-        if (name === "set_posting_time" || name === undefined) {
-            const isEditable = form.getValues("set_posting_time");
-            setEditDateTime(!!isEditable);
-        }
-
-        // ✅ AUTO FILL CHILD WAREHOUSE
-        if (name === "set_warehouse") {
             const warehouse = form.getValues("set_warehouse");
-            const items = form.getValues("items") || [];
 
-            const updatedItems = items.map((row: any) => ({
-                ...row,
-                warehouse: warehouse
-            }));
+            // ✅ AUTO FILL CHILD WAREHOUSE (Sync Default Warehouse to all items)
+            if (name === "set_warehouse" || name === "items" || name === undefined) {
+                const items = form.getValues("items") || [];
+                let changed = false;
 
-            form.setValue("items", updatedItems);
-        }
+                const updatedItems = items.map((row: any) => {
+                    const rowWh = row.warehouse || "";
+                    if (warehouse && rowWh !== warehouse) {
+                        changed = true;
+                        return { ...row, warehouse: warehouse };
+                    }
+                    return row;
+                });
 
-    });
+                if (changed) {
+                    form.setValue("items", updatedItems, { shouldDirty: true });
+                    // If warehouse changed, we might need to re-fetch all items' stock balance
+                    // But usually, the user sets warehouse first.
+                }
+            }
 
-    return () => subscription.unsubscribe();
-}, []);
+            // ✅ AUTO FETCH ITEM DETAILS (When item_code changes)
+            if (name && name.startsWith("items.") && name.endsWith(".item_code")) {
+                const fieldPath = name.split(".");
+                const rowIndex = parseInt(fieldPath[1]);
+                const items = form.getValues("items");
+                const row = items[rowIndex];
+                const itemCode = row?.item_code;
+
+                if (itemCode && warehouse && apiKey && apiSecret) {
+                    try {
+                        // 1. Fetch Item details
+                        const itemResp = await axios.get(`${API_BASE_URL}/Item/${itemCode}`, {
+                            headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+                        });
+                        const itemData = itemResp.data.data;
+
+                        // 2. Fetch Bin details for current quantity and valuation rate
+                        const binResp = await axios.get(`${API_BASE_URL.replace("/resource", "")}/resource/Bin`, {
+                            params: {
+                                filters: JSON.stringify([
+                                    ["item_code", "=", itemCode],
+                                    ["warehouse", "=", warehouse],
+                                ]),
+                                fields: JSON.stringify(["actual_qty", "valuation_rate"]),
+                            },
+                            headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+                        });
+                        const binData = binResp.data.data?.[0] || { actual_qty: 0, valuation_rate: 0 };
+
+                        // 3. Update the specific row
+                        const updatedItems = [...items];
+                        updatedItems[rowIndex] = {
+                            ...updatedItems[rowIndex],
+                            item_group: itemData.item_group,
+                            stock_uom: itemData.stock_uom,
+                            current_qty: binData.actual_qty || 0,
+                            valuation_rate: binData.valuation_rate || itemData.valuation_rate || 0,
+                        };
+
+                        // Recalculate amount if qty exists
+                        if (updatedItems[rowIndex].qty) {
+                            updatedItems[rowIndex].amount = updatedItems[rowIndex].qty * updatedItems[rowIndex].valuation_rate;
+                        }
+
+                        form.setValue("items", updatedItems, { shouldDirty: true });
+                    } catch (err) {
+                        console.error("Failed to fetch item details", err);
+                    }
+                }
+            }
+
+            // ✅ AUTO CALCULATE AMOUNT (When qty or valuation_rate changes)
+            if (name && name.startsWith("items.") && (name.endsWith(".qty") || name.endsWith(".valuation_rate"))) {
+                const fieldPath = name.split(".");
+                const rowIndex = parseInt(fieldPath[1]);
+                const items = form.getValues("items");
+                const row = items[rowIndex];
+
+                if (row) {
+                    const qty = Number(row.qty) || 0;
+                    const rate = Number(row.valuation_rate) || 0;
+                    const amount = Number((qty * rate).toFixed(2));
+
+                    if (row.amount !== amount) {
+                        const updatedItems = [...items];
+                        updatedItems[rowIndex] = { ...row, amount };
+                        form.setValue("items", updatedItems, { shouldDirty: true });
+                    }
+                }
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [apiKey, apiSecret]);
 
     const formTabs: TabbedLayout[] = React.useMemo(() => {
         return [
@@ -158,12 +238,6 @@ export default function NewStockReconciliationPage() {
                     },
 
                     {
-                        name: "scan_mode",
-                        label: "Scan Mode",
-                        type: "Check",
-                        fieldColumns: 1,
-                    },
-                    {
                         name: "items",
                         label: "Items",
                         type: "Table",
@@ -181,6 +255,7 @@ export default function NewStockReconciliationPage() {
                                 label: "Store Location",
                                 type: "Link",
                                 linkTarget: "Warehouse",
+                                readOnly: true,
                                 customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
                                 customSearchParams: {
                                     filters: [
@@ -190,7 +265,7 @@ export default function NewStockReconciliationPage() {
                                 },
                                 referenceDoctype: "Stock Reconciliation Item",
                                 doctype: "Warehouse",
-                                 fetchFrom: {
+                                fetchFrom: {
                                     sourceField: "parent.set_warehouse",
                                     targetDoctype: "Warehouse",
                                     targetField: "name"
