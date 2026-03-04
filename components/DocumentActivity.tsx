@@ -127,6 +127,17 @@ const DocumentActivity = ({
         return colors[Math.abs(hash) % colors.length];
     };
 
+    const formatContent = (text: string, isAttachment: boolean = false) => {
+        if (!text) return "";
+        let res = text.replace(/\/files\//g, "http://103.219.1.138:4412/files/");
+        if (res.includes("<a")) {
+            res = res.replace(/<a /g, '<a target="_blank" ');
+        } else if (isAttachment && !res.includes("<") && res.trim().length > 0) {
+            res = `<a href="http://103.219.1.138:4412/files/${res.trim()}" target="_blank" class="text-blue-600 hover:underline font-medium">${res.trim()}</a>`;
+        }
+        return res;
+    };
+
     if (loading && !timelineData) {
         return (
             <div className="flex items-center justify-center p-12">
@@ -228,7 +239,11 @@ const DocumentActivity = ({
                                             {event._category === "attachment" && (
                                                 <span>
                                                     attached{" "}
-                                                    <span dangerouslySetInnerHTML={{ __html: event.content }} />
+                                                    <span
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: formatContent(event.content, true),
+                                                        }}
+                                                    />
                                                 </span>
                                             )}
                                             {event._category === "assignment" && (
@@ -239,7 +254,7 @@ const DocumentActivity = ({
                                                     event.comment_type !== "Comment")) && (
                                                     <span
                                                         dangerouslySetInnerHTML={{
-                                                            __html: event.content || "updated the status",
+                                                            __html: formatContent(event.content || "updated the status"),
                                                         }}
                                                     />
                                                 )}
@@ -288,11 +303,12 @@ const DocumentActivity = ({
                                                 <div
                                                     className="text-sm text-gray-700 prose prose-sm max-w-none prose-p:my-0 leading-relaxed"
                                                     dangerouslySetInnerHTML={{
-                                                        __html:
+                                                        __html: formatContent(
                                                             event.content ||
                                                             (event.subject
                                                                 ? `<b>${event.subject}</b><br/>${event.content}`
-                                                                : ""),
+                                                                : "")
+                                                        ),
                                                     }}
                                                 />
                                             </div>
