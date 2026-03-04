@@ -722,26 +722,30 @@ export default function RecordDetailPage() {
     const billAmount = Number(data.bill_amount) || 0;
     const tenderAmount = Number(data.tender_amount) || 0;
     const savedAmount = Number(data.saved_amount) || 0;
+    const details = data.expenditure_details || [];
+    const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
     isProgrammaticUpdate.current = true;
 
-    // Rule 1: Bill Amount cannot be > Tender Amount
-    if (billAmount > tenderAmount) {
+    // Validation: Bill Remaining Amount
+    const remainingAmount = Number(data.remaining_amount) || 0;
+
+    // 1) Bill Remaining Amount should not be negative.
+    if (remainingAmount < 0) {
       toast.error("Validation Failed", {
-        description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount."
-        , duration: Infinity
+        description: "Bill Remaining Amount should not be negative.",
+        duration: Infinity
       });
       return;
     }
 
-    // Calculate sum of child table rows
-    const details = data.expenditure_details || [];
-    const totalChildBillAmt = details.reduce((sum: number, row: any) => {
-      return sum + (Number(row.bill_amount) || 0);
-    }, 0);
-
-    // 🟢 MENTOR'S LOGIC VALIDATION
-    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
-    // This is mathematically equivalent to: bill_upto = saved_amount
+    // 2) If Bill Remaining Amount is greater than Tender Amount then it will show error.
+    if (remainingAmount > tenderAmount) {
+      toast.error("Transaction cannot be processed", {
+        description: "Tender amount is insufficient to cover the remaining bill amount.",
+        duration: Infinity
+      });
+      return;
+    }
 
     // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
     if (billAmount > tenderAmount) {

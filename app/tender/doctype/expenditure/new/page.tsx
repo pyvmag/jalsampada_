@@ -459,7 +459,7 @@ export default function NewExpenditurePage() {
           },
           {
             name: "remaining_amount",
-            label: "Bill Remaining",
+            label: "Bill Remaining Amount",
             type: "Read Only",
             precision: 2,
             defaultValue: "0.00",
@@ -604,6 +604,27 @@ export default function NewExpenditurePage() {
     // 🟢 MENTOR'S LOGIC VALIDATION
     // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
     // This is mathematically equivalent to: bill_upto = saved_amount
+
+    // Validation: Bill Remaining Amount
+    const remainingAmount = Number(data.remaining_amount) || 0;
+
+    // 1) Bill Remaining Amount should not be negative.
+    if (remainingAmount < 0) {
+      toast.error("Validation Failed", {
+        description: "Bill Remaining Amount should not be negative.",
+        duration: Infinity
+      });
+      return;
+    }
+
+    // 2) If Bill Remaining Amount is greater than Tender Amount then it will show error.
+    if (remainingAmount > tenderAmount) {
+      toast.error("Transaction cannot be processed", {
+        description: "Tender amount is insufficient to cover the remaining bill amount.",
+        duration: Infinity
+      });
+      return;
+    }
 
     // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
     if (billAmount > tenderAmount) {
