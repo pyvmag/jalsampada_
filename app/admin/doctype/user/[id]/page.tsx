@@ -10,6 +10,8 @@ import {
   TabbedLayout,
 } from "@/components/DynamicFormComponent";
 import { getApiMessages } from "@/lib/utils";
+import DocumentActivity from "@/components/DocumentActivity";
+
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -358,7 +360,22 @@ export default function UserEditPage() {
           submitLabel="Save Changes"
         />
       </div>
+
+      <div className="w-full px-4 md:px-8">
+        <DocumentActivity
+          doctype={doctypeName}
+          docname={docname}
+          baseUrl={API_BASE_URL.replace("/api/resource", "")}
+          apiKey={apiKey || ""}
+          apiSecret={apiSecret || ""}
+          isInitialized={isInitialized}
+          currentUserEmail={record.email}
+          modifiedStr={record.modified}
+          modifiedBy={undefined}
+        />
+      </div>
     </div>
+
   );
 }
 
