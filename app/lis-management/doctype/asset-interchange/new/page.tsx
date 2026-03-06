@@ -37,6 +37,9 @@ interface AssetInterchangeData {
     interchange_pump?: string;
     interchange_pump_no?: string;
     interchange_pump_serial_no?: string;
+
+    description?: string;
+    ordered_by?: string;
 }
 
 export default function NewAssetInterchangePage() {
@@ -129,6 +132,18 @@ export default function NewAssetInterchangePage() {
                         ],
                         defaultValue: getValue("select_asset"),
                         onChange: handleAssetChange,
+                    },
+                    {
+                        name: "ordered_by",
+                        label: "Ordered By",
+                        type: "Data",
+                        defaultValue: getValue("ordered_by"),
+                    },
+                    {
+                        name: "description",
+                        label: "Description",
+                        type: "Small Text",
+                        defaultValue: getValue("description"),
                     },
 
                     // INTERCHANGE MOTOR SECTION
