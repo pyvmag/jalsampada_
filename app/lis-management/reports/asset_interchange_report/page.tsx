@@ -5,6 +5,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { LinkInput } from "@/components/LinkInput";
 import { useAuth } from "@/context/AuthContext";
 import jsPDF from 'jspdf';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // --- API Configuration ---
 const API_BASE_URL = "http://103.219.1.138:4412/";
@@ -44,6 +46,14 @@ const formatDate = (dateString: string | null): string => {
     return date.toLocaleDateString("en-GB");
 };
 
+const formatDateForAPI = (date: Date | null): string => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 // --- Configuration ---
 const COLUMN_CONFIG: ColumnConfig[] = [
     { fieldname: "sr_no", label: "Sr.No.", width: "80px" },
@@ -53,6 +63,8 @@ const COLUMN_CONFIG: ColumnConfig[] = [
     { fieldname: "select_asset", label: "Asset", width: "150px" },
     { fieldname: "old_linked_asset", label: "Old Linked Asset", width: "200px" },
     { fieldname: "new_linked_asset", label: "New Linked Asset", width: "200px" },
+    { fieldname: "ordered_by", label: "Ordered By", width: "150px" },
+    { fieldname: "description", label: "Description", width: "250px" },
 ];
 
 export default function AssetInterchangeReportPage() {
@@ -167,8 +179,11 @@ export default function AssetInterchangeReportPage() {
 
     useEffect(() => {
         if (!isInitialized || !isAuthenticated) return;
-        fetchReportData(filters);
-    }, [fetchReportData, isInitialized, isAuthenticated]);
+        const timer = setTimeout(() => {
+            fetchReportData(filters);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [filters, fetchReportData, isInitialized, isAuthenticated]);
 
     const handleFilterChange = (field: keyof Filters, value: string) => {
         setFilters((prev) => ({
@@ -234,7 +249,7 @@ export default function AssetInterchangeReportPage() {
             pdf.setFillColor(240, 240, 240);
             pdf.rect(margin, y, usableWidth, 10, 'F');
 
-            const colWidths = [15, 25, 45, 35, 35, 50, 50]; // Total: 255 (A4 Landscape is 297mm)
+            const colWidths = [15, 20, 35, 25, 25, 35, 35, 30, 45]; // Total: 265
             const scale = usableWidth / colWidths.reduce((a, b) => a + b, 0);
             const finalWidths = colWidths.map(w => w * scale);
 
@@ -318,21 +333,23 @@ export default function AssetInterchangeReportPage() {
                 <div className="filters-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 relative z-[60]">
                     <div className="form-group z-[70]">
                         <label className="text-sm font-medium mb-1 block">From Date</label>
-                        <input
-                            type="date"
+                        <DatePicker
+                            selected={filters.from_date ? new Date(filters.from_date) : null}
+                            onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))}
+                            placeholderText="DD-MM-YYYY"
+                            dateFormat="dd-MM-yyyy"
                             className="form-control w-full"
-                            value={filters.from_date}
-                            onChange={(e) => handleFilterChange("from_date", e.target.value)}
                         />
                     </div>
 
                     <div className="form-group z-[69]">
                         <label className="text-sm font-medium mb-1 block">To Date</label>
-                        <input
-                            type="date"
+                        <DatePicker
+                            selected={filters.to_date ? new Date(filters.to_date) : null}
+                            onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))}
+                            placeholderText="DD-MM-YYYY"
+                            dateFormat="dd-MM-yyyy"
                             className="form-control w-full"
-                            value={filters.to_date}
-                            onChange={(e) => handleFilterChange("to_date", e.target.value)}
                         />
                     </div>
 
