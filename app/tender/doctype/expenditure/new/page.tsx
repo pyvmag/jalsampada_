@@ -190,7 +190,8 @@ export default function NewExpenditurePage() {
 
             if (prevDetails) {
               // 🟢 Auto-populate the fields using the CORRECT variable names
-              formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+              const lastBillNo = prevDetails.bill_number || "";
+              formInstance.setValue("prev_bill_no", lastBillNo || 0);
               formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
 
               // Map the API's 'mb_no' to our UI's 'previous_mb_no'
@@ -199,6 +200,20 @@ export default function NewExpenditurePage() {
               formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
 
               setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
+
+              // 🟢 Auto-fill Bill Number (RA sequence) - Instead of naming validations
+              if (lastBillNo) {
+                const match = lastBillNo.match(/(.*?)(\d+)$/);
+                if (match) {
+                  const prefix = match[1];
+                  const num = parseInt(match[2]);
+                  formInstance.setValue("bill_number", `${prefix}${num + 1}`, { shouldDirty: true });
+                } else {
+                  formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+                }
+              } else {
+                formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+              }
             } else {
               console.log("⚠️ No Previous Bill Details Found");
               // Reset if no previous record found
@@ -207,6 +222,9 @@ export default function NewExpenditurePage() {
               formInstance.setValue("previous_mb_no", 0);
               formInstance.setValue("previous_page_no", 0);
               setPrevCumulativeAmount(0);
+
+              // First bill for this tender
+              formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
             }
           } catch (err) {
             console.error("Error setting previous bill details", err);
@@ -406,22 +424,7 @@ export default function NewExpenditurePage() {
             label: "Bill Number",
             type: "Data",
             fieldColumns: 1,
-            asyncValidation: async (value, allValues) => {
-              if (!value || !allValues.tender_number) return { isValid: true };
-
-              const isUnique = await checkBillNumberUniqueness(
-                allValues.tender_number,
-                value,
-                docName || "new",
-                apiKey || "",
-                apiSecret || ""
-              );
-
-              return {
-                isValid: isUnique,
-                message: isUnique ? "Bill Number is available" : "Bill Number already exists for this tender"
-              };
-            }
+            readOnly: true,
           },
           {
             name: "bill_amount",

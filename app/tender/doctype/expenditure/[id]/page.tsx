@@ -310,19 +310,37 @@ export default function RecordDetailPage() {
             );
 
             if (prevDetails) {
-              formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+              const lastBillNo = prevDetails.bill_number || "";
+              formInstance.setValue("prev_bill_no", lastBillNo || 0);
               formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
               // Correct Mapping
               formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
               formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
 
               setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
+
+              // 🟢 Auto-fill Bill Number (RA sequence) - Instead of naming validations
+              if (lastBillNo) {
+                const match = lastBillNo.match(/(.*?)(\d+)$/);
+                if (match) {
+                  const prefix = match[1];
+                  const num = parseInt(match[2]);
+                  formInstance.setValue("bill_number", `${prefix}${num + 1}`, { shouldDirty: true });
+                } else {
+                  formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+                }
+              } else {
+                formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+              }
             } else {
               formInstance.setValue("prev_bill_no", 0);
               formInstance.setValue("prev_bill_amt", 0);
               formInstance.setValue("previous_mb_no", 0);
               formInstance.setValue("previous_page_no", 0);
               setPrevCumulativeAmount(0);
+
+              // First bill for this tender
+              formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
             }
           } catch (err) { console.error("Error setting previous bill details", err); }
         };
@@ -544,8 +562,8 @@ export default function RecordDetailPage() {
             name: "bill_number",
             label: "Bill Number",
             type: "Data",
-            defaultValue: "0",
             fieldColumns: 1,
+            readOnly: true,
           },
 
           {
