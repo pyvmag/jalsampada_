@@ -7,13 +7,17 @@ import { Workspace, Doctype, DoctypeGroup } from "@/components/Workspace";
 import {
 
   User,
+  Shield,
+  Contact
 } from "lucide-react";
 
 const adminDoctypeGroups: DoctypeGroup[] = [
   {
     title: "User Management",
     doctypes: [
-      { name: "user", title: "User", icon: User }
+      { name: "user", title: "User", icon: User },
+      { name: "role", title: "Role", icon: Shield },
+      { name: "role-profile", title: "Role Profile", icon: Contact },
     ]
   }
 ];
