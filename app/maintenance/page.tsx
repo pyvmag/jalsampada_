@@ -5,16 +5,12 @@ import { Workspace, Doctype, DoctypeGroup } from "@/components/Workspace";
 
 import {
   ListChecks,
-  ClipboardList,
   CalendarCheck,
   FileText,
 } from "lucide-react";
 
 const maintenanceDoctypes: Doctype[] = [
   { name: "parameter-checklist", title: "Parameter Checklist", icon: ListChecks },
-  { name: "parameter-category", title: "Parameter Category", icon: ClipboardList },
-  { name: "parameter-type", title: "Parameter Type", icon: CalendarCheck },
-  { name: "device-type", title: "Device Type", icon: FileText },
 ];
 
 const transactionDoctypes: Doctype[] = [
