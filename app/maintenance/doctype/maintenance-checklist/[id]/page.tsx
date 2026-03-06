@@ -154,8 +154,9 @@ export default function MaintenanceChecklistDetailPage() {
           {
             name: "checklist_data",
             label: "Checklist Data",
-            type: "Read Only", // Or "Table" if you want to see the raw table below
-            defaultValue: record.checklist_data || []
+            type: "Read Only",
+            defaultValue: record.checklist_data || [],
+            displayDependsOn: () => false
           },
 
           // 🟢 MATRIX UI SECTION
