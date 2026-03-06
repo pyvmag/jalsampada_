@@ -1767,6 +1767,8 @@ export function DynamicForm({
     const getValue = (name: string) => watch(name);
     const filtersToPass = buildDynamicFilters(field, getValue);
 
+    const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
+
     return (
       <LinkField
         key={field.name}
@@ -1775,7 +1777,7 @@ export function DynamicForm({
         error={(errors as FieldErrors<Record<string, any>>)[field.name]}
         filters={filtersToPass}
         className={getErrorClass(field.name) ? "!border-red-500 !focus:ring-red-500" : ""}
-        disabled={isReadOnlyMode}
+        disabled={isReadOnlyMode || isFieldReadOnly}
       />
     );
   };

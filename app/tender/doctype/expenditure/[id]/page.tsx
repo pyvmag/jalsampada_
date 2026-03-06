@@ -116,7 +116,38 @@ async function uploadFile(
 }
 
 /* -------------------------------------------------
-2. Page component
+2. Helper functions for Bill Numbering
+------------------------------------------------- */
+
+const getOrdinalSuperscript = (n: number) => {
+  const s = n % 100;
+  let suffix = "ᵗʰ"; // Default "th"
+  if (s < 11 || s > 13) {
+    switch (n % 10) {
+      case 1:
+        suffix = "ˢᵗ";
+        break;
+      case 2:
+        suffix = "ⁿᵈ";
+        break;
+      case 3:
+        suffix = "ʳᵈ";
+        break;
+    }
+  }
+  return `${n}${suffix}`;
+};
+
+const formatBillNumber = (n: number, billType: string) => {
+  const ordinalNum = getOrdinalSuperscript(n);
+  if (billType === "Final") {
+    return `${ordinalNum} & Final`;
+  }
+  return `RA ${ordinalNum}`;
+};
+
+/* -------------------------------------------------
+3. Page component
 ------------------------------------------------- */
 
 export default function RecordDetailPage() {
@@ -320,18 +351,15 @@ export default function RecordDetailPage() {
               setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
 
               // 🟢 Auto-fill Bill Number (RA sequence) - Instead of naming validations
+              let nextNum = 1;
               if (lastBillNo) {
-                const match = lastBillNo.match(/(.*?)(\d+)$/);
+                const match = lastBillNo.match(/\d+/);
                 if (match) {
-                  const prefix = match[1];
-                  const num = parseInt(match[2]);
-                  formInstance.setValue("bill_number", `${prefix}${num + 1}`, { shouldDirty: true });
-                } else {
-                  formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+                  nextNum = parseInt(match[0]) + 1;
                 }
-              } else {
-                formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
               }
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             } else {
               formInstance.setValue("prev_bill_no", 0);
               formInstance.setValue("prev_bill_amt", 0);
@@ -340,7 +368,9 @@ export default function RecordDetailPage() {
               setPrevCumulativeAmount(0);
 
               // First bill for this tender
-              formInstance.setValue("bill_number", "RA1", { shouldDirty: true });
+              const nextNum = 1;
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             }
           } catch (err) { console.error("Error setting previous bill details", err); }
         };
@@ -436,6 +466,17 @@ export default function RecordDetailPage() {
     form.watch((value: any, { name }: { name?: string }) => {
       if (name === "bill_type") {
         setBillType(value.bill_type);
+
+        // 🟢 Update bill_number format
+        const currentBillNo = form.getValues('bill_number');
+        if (currentBillNo) {
+          const match = currentBillNo.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0]);
+            form.setValue("bill_number", formatBillNumber(num, value.bill_type), { shouldDirty: true });
+          }
+        }
+
         // When bill type changes, update button logic
         if (!formDirty && expenditure?.docstatus === 0) {
           if (value.bill_type === "Final") {
