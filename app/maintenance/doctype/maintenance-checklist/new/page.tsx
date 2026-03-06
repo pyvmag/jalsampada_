@@ -56,12 +56,13 @@ export default function NewMaintenanceChecklistPage() {
                         required: true,
                         defaultValue: getValue("lis_name"),
                     },
-                    { 
-                        name: "stage", 
-                        label: "Stage", 
-                        type: "Link", 
+                    {
+                        name: "stage",
+                        label: "Stage",
+                        type: "Link",
                         linkTarget: "Stage No", // Or handle dynamic filtering via props if needed later
                         defaultValue: getValue("stage"),
+                        required: true,
                         // Note: You mentioned filtering stage by LIS. 
                         // The LinkField component handles basic filters if configured, 
                         // but for advanced dependency, we rely on the Matrix component to react to changes.
@@ -107,8 +108,13 @@ export default function NewMaintenanceChecklistPage() {
                     },
                     // We also need a hidden field to actually hold the data if DynamicForm 
                     // doesn't automatically pick up values set via setValue that aren't in the fields list.
-                    // However, DynamicFormComponent usually submits all data in `methods.getValues()`.
-                    // The Matrix component calls setValue("checklist_data", ...).
+                    {
+                        name: "checklist_data",
+                        label: "Checklist Data",
+                        type: "Read Only",
+                        defaultValue: [],
+                        displayDependsOn: () => false
+                    },
                 ],
             }
         ];
@@ -124,19 +130,88 @@ export default function NewMaintenanceChecklistPage() {
         try {
             // 1. Prepare Payload
             const payload = { ...data };
-            
+
+            // 1.5 Validation: All checklist items must be selected
+            const matrixConfig = data.matrix_config;
+            const checklistData = data.checklist_data || [];
+
+            if (matrixConfig && matrixConfig.assets && matrixConfig.parameters) {
+                for (const asset of matrixConfig.assets) {
+                    for (const param of matrixConfig.parameters) {
+                        const entry = checklistData.find((d: any) => d.asset === asset.name && d.parameter === param.name);
+                        if (!entry || entry.checked === null) {
+                            toast.error(`Incomplete Checklist`, {
+                                description: `Please select OK or Not OK for "${asset.name}" - "${param.name}". All checks are mandatory.`,
+                                duration: 5000,
+                            });
+                            setIsSaving(false);
+                            return;
+                        }
+
+                        // Also validate that Not OK items have a description
+                        if (entry.checked === 0 && !entry.description?.trim()) {
+                            toast.error(`Description Required`, {
+                                description: `Please provide a description for the issue at "${asset.name}" - "${param.name}".`,
+                                duration: 5000,
+                            });
+                            setIsSaving(false);
+                            return;
+                        }
+                    }
+                }
+            } else {
+                toast.error("Invalid Checklist Data", {
+                    description: "The checklist matrix has not been properly loaded. Please ensure all filters are selected.",
+                });
+                setIsSaving(false);
+                return;
+            }
+
             // Remove the UI placeholder field
             delete payload.checklist_ui;
             delete payload.checklist_matrix_section;
+            delete payload.matrix_config;
 
             // Ensure checklist_data is present (it might be in 'data' because setValue was called)
             // If not, we might need to grab it from the form state manually, 
             // but `data` passed here usually contains all registered values.
 
-            if (payload.name === "Will be auto-generated") delete payload.name;
+            // 1.8 Clean Payload (System Fields)
+            const cleanObj = (obj: any): any => {
+                if (Array.isArray(obj)) return obj.map(cleanObj);
+                if (obj !== null && typeof obj === 'object') {
+                    const newObj = { ...obj };
+                    delete newObj.modified;
+                    delete newObj.creation;
+                    delete newObj.owner;
+                    delete newObj.docstatus;
+                    delete newObj.idx;
+                    delete newObj.modified_by;
+                    delete newObj.parent;
+                    delete newObj.parentfield;
+                    delete newObj.parenttype;
+
+                    // Specific to child items in New mode: remove name
+                    if (newObj.doctype && newObj.doctype.includes("Item")) {
+                        delete newObj.name;
+                    }
+
+                    // Recursively clean
+                    for (const key in newObj) {
+                        if (typeof newObj[key] === 'object') {
+                            newObj[key] = cleanObj(newObj[key]);
+                        }
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
+
+            const finalizedPayload = cleanObj(payload);
+            if (finalizedPayload.name === "Will be auto-generated" || !finalizedPayload.name) delete finalizedPayload.name;
 
             // 2. Submit
-            const response = await axios.post(`${API_BASE_URL}/${doctypeName}`, payload, {
+            const response = await axios.post(`${API_BASE_URL}/${doctypeName}`, finalizedPayload, {
                 headers: {
                     Authorization: `token ${apiKey}:${apiSecret}`,
                     "Content-Type": "application/json",
