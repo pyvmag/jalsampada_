@@ -83,27 +83,38 @@ const DocumentActivity = ({
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const text = newComment;
-        const selectedText = text.substring(start, end);
-        const before = text.substring(0, start);
-        const after = text.substring(end);
 
-        const newText = `${before}${prefix}${selectedText}${suffix}${after}`;
-        setNewComment(newText);
+        if (start === end) {
+            // No selection: place cursor between prefix and suffix
+            const before = text.substring(0, start);
+            const after = text.substring(end);
+            const newText = `${before}${prefix}${suffix}${after}`;
+            setNewComment(newText);
 
-        // Reset cursor position after state update
-        setTimeout(() => {
-            textarea.focus();
-            let newCursorPos;
-            if (start === end) {
-                // No selection: place cursor between prefix and suffix
-                newCursorPos = start + prefix.length;
-            } else {
-                // Text was selected: place cursor after the suffix
-                newCursorPos = start + prefix.length + selectedText.length + suffix.length;
-            }
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+            }, 0);
+        } else {
+            // Text was selected: handle potential leading/trailing whitespace
+            const selectedText = text.substring(start, end);
+            const before = text.substring(0, start);
+            const after = text.substring(end);
 
+            const leadingWhitespace = selectedText.match(/^\s*/)?.[0] || "";
+            const trailingWhitespace = selectedText.match(/\s*$/)?.[0] || "";
+            const content = selectedText.trim();
+
+            const newText = `${before}${leadingWhitespace}${prefix}${content}${suffix}${trailingWhitespace}${after}`;
+            setNewComment(newText);
+
+            setTimeout(() => {
+                textarea.focus();
+                // Move cursor to the end of the newly formatted text
+                const newCursorPos = start + leadingWhitespace.length + prefix.length + content.length + suffix.length + trailingWhitespace.length;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+        }
     };
 
     const handlePostComment = async () => {
@@ -246,6 +257,19 @@ const DocumentActivity = ({
     const formatContent = (text: string, isAttachment: boolean = false) => {
         if (!text) return "";
         let res = text.replace(/\/files\//g, "http://103.219.1.138:4412/files/");
+
+        // --- Basic Markdown Support ---
+        // Bold: **text**
+        res = res.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italic: _text_
+        res = res.replace(/_(.*?)_/g, '<em>$1</em>');
+        // Links: [text](url)
+        res = res.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:underline">$1</a>');
+        // Lists/Bullets: line starting with "- "
+        res = res.replace(/^\- (.*)/gm, '• $1');
+        // Convert remaining newlines to <br/>
+        res = res.replace(/\n/g, '<br/>');
+
         if (res.includes("<a")) {
             res = res.replace(/<a /g, '<a target="_blank" ');
         } else if (isAttachment && !res.includes("<") && res.trim().length > 0) {
