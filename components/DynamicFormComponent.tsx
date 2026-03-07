@@ -38,6 +38,7 @@ import { ToggleButton } from "./ToggleButton";
 import { PumpStatusToggle } from "./PumpStatusToggle";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getApiMessages } from "@/lib/utils";
+import { DurationHHMMField } from "./DurationHHMMField";
 
 const DEFAULT_API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
@@ -77,6 +78,7 @@ export type FieldType =
   | "Rating"
   | "Attach"
   | "Attach Image"
+  | "DurationHHMM"
   | "Custom";
 
 export interface FormField {
@@ -151,6 +153,7 @@ export interface FormField {
 
   // Validation
   asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
+  isDuration?: boolean;
 }
 
 export interface TabbedLayout {
@@ -395,7 +398,7 @@ function buildDefaultValues(fields: FormField[]) {
   return dv;
 }
 
-function rulesFor(
+export function rulesFor(
   field: FormField
 ): RegisterOptions<Record<string, any>, string> {
   const rules: RegisterOptions<Record<string, any>, string> = {};
@@ -461,7 +464,7 @@ function sanitizeForDuplication(data: any): any {
   return data;
 }
 
-function FieldHelp({ text }: { text?: string }) {
+export function FieldHelp({ text }: { text?: string }) {
   if (!text) return null;
   return (
     <div
@@ -476,7 +479,7 @@ function FieldHelp({ text }: { text?: string }) {
   );
 }
 
-function FieldError({ error }: { error?: any }) {
+export function FieldError({ error }: { error?: any }) {
   if (!error) return null;
   return (
     <div className="text-red-500 font-medium" style={{ marginTop: 6, fontSize: "0.85rem" }}>
@@ -1617,6 +1620,15 @@ export function DynamicForm({
       }
     }
 
+    // Format as duration if isDuration is true
+    if (field.isDuration && (typeof val === "number" || !isNaN(Number(val)))) {
+      const num = Number(val);
+      const hours = Math.floor(num);
+      const mins = Math.round((num - hours) * 60);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      displayValue = `${hours}:${pad(mins)}`;
+    }
+
     return (
       <div className="form-group">
         <label className="form-label">{field.label}</label>
@@ -1854,6 +1866,8 @@ export function DynamicForm({
           return <DateLikeField field={field} type="time" isReadOnlyMode={isReadOnlyMode} />;
         case "Duration":
           return renderDuration(field);
+        case "DurationHHMM":
+          return <DurationHHMMField field={field} control={control} error={errors[field.name]} disabled={isReadOnlyMode} />;
         case "Check":
           return renderCheckbox(field);
         case "Radio":
