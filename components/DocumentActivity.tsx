@@ -256,7 +256,7 @@ const DocumentActivity = ({
 
     const formatContent = (text: string, isAttachment: boolean = false) => {
         if (!text) return "";
-        let res = text.replace(/\/files\//g, "http://103.219.1.138:4412/files/");
+        let res = text.replace(/\/files\//g, "http://103.219.3.169:2223/files/");
 
         // --- Basic Markdown Support ---
         // Bold: **text**
@@ -273,7 +273,7 @@ const DocumentActivity = ({
         if (res.includes("<a")) {
             res = res.replace(/<a /g, '<a target="_blank" ');
         } else if (isAttachment && !res.includes("<") && res.trim().length > 0) {
-            res = `<a href="http://103.219.1.138:4412/files/${res.trim()}" target="_blank" class="text-blue-600 hover:underline font-medium">${res.trim()}</a>`;
+            res = `<a href="http://103.219.3.169:2223/files/${res.trim()}" target="_blank" class="text-blue-600 hover:underline font-medium">${res.trim()}</a>`;
         }
         return res;
     };

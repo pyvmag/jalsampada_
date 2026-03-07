@@ -508,7 +508,7 @@ export default function StockReconciliationDetailPage() {
                 type: "Link",
                 linkTarget: "Warehouse",
                 readOnly: true,
-                customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
                 customSearchParams: {
                   filters: [
                     ["Warehouse", "company", "=", "quantbit"],

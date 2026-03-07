@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       // First get the username
       const userResponse = await fetch(
-        "http://103.219.1.138:4412//api/method/frappe.auth.get_logged_user",
+        "http://103.219.3.169:2223//api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers: {
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Now get the full user details including full_name
       try {
         const userDetailResponse = await fetch(
-          `http://103.219.1.138:4412/api/resource/User/${encodeURIComponent(username)}`,
+          `http://103.219.3.169:2223/api/resource/User/${encodeURIComponent(username)}`,
           {
             method: "GET",
             headers: {

@@ -432,7 +432,7 @@ export default function NewLisIncidentRecordPage() {
         let designation = null;
 
         // Phase 1: API Discovery (Same logic as automated signatures)
-        const infoResp = await fetch("http://103.219.1.138:4412/api/method/quantlis_management.api.get_current_user_info", {
+        const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
           headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
         });
         const infoData = await infoResp.json();

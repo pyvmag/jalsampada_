@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 const INITIAL_PAGE_SIZE = 25;
 const LOAD_MORE_SIZE = 10;
@@ -112,7 +112,7 @@ export default function RoleProfileDoctypePage() {
 
         const [dataResp, countResp] = await Promise.all([
           axios.get(`${API_BASE_URL}/${doctypeName}`, { params, headers: commonHeaders, withCredentials: true }),
-          isReset ? axios.get(`http://103.219.1.138:4412/api/method/frappe.client.get_count`, {
+          isReset ? axios.get(`http://103.219.3.169:2223/api/method/frappe.client.get_count`, {
             params: { doctype: doctypeName }, headers: commonHeaders,
           }).catch(() => ({ data: { message: 0 } })) : Promise.resolve({ data: { message: 0 } })
         ]);
@@ -168,7 +168,7 @@ export default function RoleProfileDoctypePage() {
     if (!window.confirm(`Delete ${count} role profiles permanently?`)) return;
     setIsDeleting(true);
     try {
-      const response = await bulkDeleteRPC(doctypeName, Array.from(selectedIds), "http://103.219.1.138:4412", apiKey!, apiSecret!);
+      const response = await bulkDeleteRPC(doctypeName, Array.from(selectedIds), "http://103.219.3.169:2223", apiKey!, apiSecret!);
       if (response._server_messages) {
         const msgs = JSON.parse(response._server_messages).map((m: string) => JSON.parse(m).message);
         if (msgs.length) {
