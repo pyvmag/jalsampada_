@@ -47,11 +47,10 @@ type ColumnConfig = {
 // --- CONFIG: Define Fixed Columns Order & Widths ---
 // Ensure these fieldnames match exactly what Frappe returns
 const FIXED_COLUMNS_ORDER = [
-    { fieldname: "name", label: "Logbook ID", width: 100 }, // Assuming 'name' is the ID
-    { fieldname: "lis_name", label: "LIS", width: 100 },
-    { fieldname: "stage", label: "Stage", width: 140 },
-    { fieldname: "asset", label: "Asset", width: 180 },
-    { fieldname: "asset_no", label: "Asset No", width: 50 }
+  { fieldname: "name", label: "Logbook ID", width: 100 }, // Assuming 'name' is the ID
+  { fieldname: "lis_name", label: "LIS", width: 100 },
+  { fieldname: "stage", label: "Stage", width: 140 },
+  { fieldname: "asset_no", label: "Asset No", width: 50 }
 ];
 
 // --- Helper Functions ---
@@ -67,28 +66,28 @@ const formatDateForAPI = (date: Date | null): string => {
 const formatDateTime = (dateString: string | null): string => {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleString("en-GB"); 
+  return date.toLocaleString("en-GB");
 };
 
 const formatCurrency = (value: number | string): string => {
-   if (!value) return "-";
-   return `₹ ${parseFloat(String(value)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  if (!value) return "-";
+  return `₹ ${parseFloat(String(value)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 };
 
 const formatDuration = (value: any): string => {
-    if (value === null || value === undefined || value === "") return "00:00";
-    
-    const num = Number(value);
-    if (isNaN(num)) return "00:00";
+  if (value === null || value === undefined || value === "") return "00:00";
 
-    const totalMinutes = Math.round(num * 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+  const num = Number(value);
+  if (isNaN(num)) return "00:00";
 
-    const hh = String(hours).padStart(2, '0');
-    const mm = String(minutes).padStart(2, '0');
+  const totalMinutes = Math.round(num * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
 
-    return `${hh}:${mm}`;
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+
+  return `${hh}:${mm}`;
 };
 
 export default function LogBookSheetReportPage() {
@@ -96,7 +95,7 @@ export default function LogBookSheetReportPage() {
 
   // --- State ---
   const [reportData, setReportData] = useState<ReportData[]>([]);
-  const [apiFields, setApiFields] = useState<ReportField[]>([]); 
+  const [apiFields, setApiFields] = useState<ReportField[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,20 +117,20 @@ export default function LogBookSheetReportPage() {
 
   // --- Dynamic Column Configuration ---
   const getFieldFormatter = (fieldtype: string, fieldname: string) => {
-      // Special handling for operator_id field - display operator_name instead
-      if (fieldname === 'operator_id') {
-          return (value: any, row?: ReportData) => {
-              return row?.['operator_name'] || value || "-";
-          };
-      }
-      
-      switch (fieldtype) {
-          case "Datetime": return formatDateTime;
-          case "Date": return (val: string) => val ? new Date(val).toLocaleDateString("en-GB") : "-";
-          case "Currency": return formatCurrency;
-          case "Float": return formatDuration; 
-          default: return undefined;
-      }
+    // Special handling for operator_id field - display operator_name instead
+    if (fieldname === 'operator_id') {
+      return (value: any, row?: ReportData) => {
+        return row?.['operator_name'] || value || "-";
+      };
+    }
+
+    switch (fieldtype) {
+      case "Datetime": return formatDateTime;
+      case "Date": return (val: string) => val ? new Date(val).toLocaleDateString("en-GB") : "-";
+      case "Currency": return formatCurrency;
+      case "Float": return formatDuration;
+      default: return undefined;
+    }
   };
 
   // --- MODIFIED: Column Logic with Sticky Calculations ---
@@ -141,49 +140,49 @@ export default function LogBookSheetReportPage() {
     // 1. Separate Fixed columns from Scrollable columns
     let fixedCols: ColumnConfig[] = [];
     let scrollableCols: ColumnConfig[] = [];
-    
+
     // Create a map for quick lookup of API fields
     const apiFieldMap = new Map(apiFields.map(f => [f.fieldname, f]));
 
     // Process Fixed Columns based on defined order
     FIXED_COLUMNS_ORDER.forEach(fixedDef => {
-        const apiField = apiFieldMap.get(fixedDef.fieldname);
-        // We include it even if API didn't return it (optional), or only if it exists
-        if (apiField) {
-            fixedCols.push({
-                fieldname: apiField.fieldname,
-                label: apiField.label, // Use label from API or Config
-                width: `${fixedDef.width}px`,
-                widthInt: fixedDef.width,
-                formatter: getFieldFormatter(apiField.fieldtype, apiField.fieldname),
-                isSticky: true,
-                stickyLeft: 0 // Will calculate below
-            });
-            apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
-        }
+      const apiField = apiFieldMap.get(fixedDef.fieldname);
+      // We include it even if API didn't return it (optional), or only if it exists
+      if (apiField) {
+        fixedCols.push({
+          fieldname: apiField.fieldname,
+          label: apiField.label, // Use label from API or Config
+          width: `${fixedDef.width}px`,
+          widthInt: fixedDef.width,
+          formatter: getFieldFormatter(apiField.fieldtype, apiField.fieldname),
+          isSticky: true,
+          stickyLeft: 0 // Will calculate below
+        });
+        apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
+      }
     });
 
     // Process remaining fields as Scrollable
     apiFields.forEach(field => {
-        if (apiFieldMap.has(field.fieldname)) {
-            const width = field.width || 150;
-            scrollableCols.push({
-                fieldname: field.fieldname,
-                label: field.label,
-                width: `${width}px`,
-                widthInt: width,
-                formatter: getFieldFormatter(field.fieldtype, field.fieldname),
-                isSticky: false
-            });
-        }
+      if (apiFieldMap.has(field.fieldname)) {
+        const width = field.width || 150;
+        scrollableCols.push({
+          fieldname: field.fieldname,
+          label: field.label,
+          width: `${width}px`,
+          widthInt: width,
+          formatter: getFieldFormatter(field.fieldtype, field.fieldname),
+          isSticky: false
+        });
+      }
     });
 
     // 2. Calculate Left Offsets for Sticky Columns
     let currentLeftOffset = 0;
     fixedCols = fixedCols.map(col => {
-        const updatedCol = { ...col, stickyLeft: currentLeftOffset };
-        currentLeftOffset += col.widthInt;
-        return updatedCol;
+      const updatedCol = { ...col, stickyLeft: currentLeftOffset };
+      currentLeftOffset += col.widthInt;
+      return updatedCol;
     });
 
     // 3. Combine
@@ -231,7 +230,7 @@ export default function LogBookSheetReportPage() {
       const result = await response.json();
 
       if (result.message) {
-        setApiFields(result.message.columns || []); 
+        setApiFields(result.message.columns || []);
         setReportData(result.message.result || []);
       } else {
         setApiFields([]);
@@ -262,12 +261,12 @@ export default function LogBookSheetReportPage() {
       return columnConfig.map(col => {
         let val = row[col.fieldname];
         if (col.formatter) {
-             val = col.formatter(val, row);
+          val = col.formatter(val, row);
         } else {
-             val = val === null || val === undefined ? "" : String(val);
+          val = val === null || val === undefined ? "" : String(val);
         }
         if (val.includes(",") || val.includes("\n") || val.includes('"')) {
-            val = `"${val.replace(/"/g, '""')}"`;
+          val = `"${val.replace(/"/g, '""')}"`;
         }
         return val;
       }).join(",");
@@ -352,7 +351,7 @@ export default function LogBookSheetReportPage() {
             <i className="fas fa-sync-alt"></i> {loading ? "Refreshing..." : "Refresh"}
           </button>
           <button className="btn btn--outline" onClick={handleExportCSV}>
-             <i className="fas fa-file-csv"></i> CSV
+            <i className="fas fa-file-csv"></i> CSV
           </button>
         </div>
       </div>
@@ -365,22 +364,22 @@ export default function LogBookSheetReportPage() {
           {/* Filters remain the same as your original code */}
           <div className="form-group z-[150]">
             <label className="text-sm font-medium mb-1 block">From Date</label>
-            <DatePicker 
-                selected={filters.from_date ? new Date(filters.from_date) : null} 
-                onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))} 
-                placeholderText="DD/MM/YYYY" 
-                dateFormat="dd/MM/yyyy" 
-                className="form-control w-full" 
+            <DatePicker
+              selected={filters.from_date ? new Date(filters.from_date) : null}
+              onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))}
+              placeholderText="DD/MM/YYYY"
+              dateFormat="dd/MM/yyyy"
+              className="form-control w-full"
             />
           </div>
           <div className="form-group z-[150]">
             <label className="text-sm font-medium mb-1 block">To Date</label>
-            <DatePicker 
-                selected={filters.to_date ? new Date(filters.to_date) : null} 
-                onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))} 
-                placeholderText="DD/MM/YYYY" 
-                dateFormat="dd/MM/yyyy" 
-                className="form-control w-full" 
+            <DatePicker
+              selected={filters.to_date ? new Date(filters.to_date) : null}
+              onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))}
+              placeholderText="DD/MM/YYYY"
+              dateFormat="dd/MM/yyyy"
+              className="form-control w-full"
             />
           </div>
           <div className="form-group z-[110]">
@@ -427,19 +426,19 @@ export default function LogBookSheetReportPage() {
             <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
               <tr>
                 {columnConfig.map((column) => (
-                  <th 
+                  <th
                     key={column.fieldname}
-                    style={{ 
-                        width: column.width,
-                        minWidth: column.width,
-                        // Sticky Logic for Header
-                        position: column.isSticky ? "sticky" : "relative",
-                        left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                        zIndex: column.isSticky ? 30 : 20, // Sticky headers higher than normal headers
-                        backgroundColor: "#3683f6", // Blue background matching stock-table style
-                        color: "white", // White text for blue background
-                        borderRight: column.isSticky ? "none" : "none", // Remove border divider
-                        boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none" // Shadow on last sticky col
+                    style={{
+                      width: column.width,
+                      minWidth: column.width,
+                      // Sticky Logic for Header
+                      position: column.isSticky ? "sticky" : "relative",
+                      left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                      zIndex: column.isSticky ? 30 : 20, // Sticky headers higher than normal headers
+                      backgroundColor: "#3683f6", // Blue background matching stock-table style
+                      color: "white", // White text for blue background
+                      borderRight: column.isSticky ? "none" : "none", // Remove border divider
+                      boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none" // Shadow on last sticky col
                     }}
                   >
                     {column.label}
@@ -454,16 +453,16 @@ export default function LogBookSheetReportPage() {
                 reportData.map((row, index) => (
                   <tr key={index}>
                     {columnConfig.map((column) => (
-                      <td 
+                      <td
                         key={`${index}-${column.fieldname}`}
                         style={{
-                            // Sticky Logic for Body
-                            position: column.isSticky ? "sticky" : "relative",
-                            left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                            zIndex: column.isSticky ? 10 : 1, // Sticky body higher than normal body
-                            backgroundColor: "white", // CRITICAL: Opaque background so text doesn't overlap
-                            borderRight: column.isSticky ? "none" : "none",
-                            boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                          // Sticky Logic for Body
+                          position: column.isSticky ? "sticky" : "relative",
+                          left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                          zIndex: column.isSticky ? 10 : 1, // Sticky body higher than normal body
+                          backgroundColor: "white", // CRITICAL: Opaque background so text doesn't overlap
+                          borderRight: column.isSticky ? "none" : "none",
+                          boxShadow: column.isSticky && column.fieldname === "asset_no" ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
                         }}
                       >
                         {renderCellValue(row, column)}

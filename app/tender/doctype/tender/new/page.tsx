@@ -263,19 +263,20 @@ export default function NewTenderPage() {
         type: "Section Break",
       },
       {
-        name: "custom_contractor_name",
-        label: "Contractor Name",
+        name: "custom_contractor_company",
+        label: "Contractor Company",
         type: "Link",
         linkTarget: "Contractor",
+        searchField: "custom_contractor_company",
       },
       {
-        name: "custom_contractor_company",
-        label: "Firm/Company Name",
+        name: "custom_contractor_name",
+        label: "Contractor Name",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-          targetField: "custom_contractor_company"
+          targetField: "contractor_name"
         },
       },
       {
@@ -283,7 +284,7 @@ export default function NewTenderPage() {
         label: "Contractor Address",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "address"
         }
@@ -293,7 +294,7 @@ export default function NewTenderPage() {
         label: "Mobile No",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "phone"
         }
@@ -303,7 +304,7 @@ export default function NewTenderPage() {
         label: "Email ID",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "email_address"
         },
@@ -313,7 +314,7 @@ export default function NewTenderPage() {
         label: "GST No.",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "custom_gst"
         },
@@ -323,7 +324,7 @@ export default function NewTenderPage() {
         label: "PAN No.",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "custom_pan"
         },
@@ -333,7 +334,7 @@ export default function NewTenderPage() {
         label: "Aadhaar No.",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "custom_aadhaar_no"
         },
@@ -545,6 +546,7 @@ export default function NewTenderPage() {
           // Don't exclude contractor fields even if they are Read Only
           // because they need to be saved with the tender record
           if (field.type === "Read Only" && ![
+            "custom_contractor_name",
             "custom_contractor_company",
             "custom_mobile_no",
             "custom_supplier_address",

@@ -38,6 +38,7 @@ interface AssetInterchange {
   posting_date?: string;
   stage?: string;
   select_asset?: string;
+  description_ordered_by?: string;
   modified?: string;
 }
 
@@ -131,6 +132,7 @@ export default function AssetInterchangeListPage() {
                 "posting_date",
                 "stage",
                 "select_asset",
+                "description_ordered_by",
                 "modified"
               ]),
               limit_start: start,
@@ -163,6 +165,7 @@ export default function AssetInterchangeListPage() {
             posting_date: r.posting_date ?? "",
             stage: r.stage ?? "",
             select_asset: r.select_asset ?? "",
+            description_ordered_by: r.description_ordered_by ?? "",
             modified: r.modified,
           };
         });
@@ -264,6 +267,10 @@ export default function AssetInterchangeListPage() {
         label: "Which Asset to Interchange",
         value: record.select_asset || "-",
       },
+      {
+        label: "Description & Ordered By",
+        value: record.description_ordered_by || "-",
+      },
     ];
 
   const renderListView = () => (
@@ -284,6 +291,7 @@ export default function AssetInterchangeListPage() {
             <th>Posting Date</th>
             <th>Stage</th>
             <th>Which Asset to Interchange</th>
+            <th>Description & Ordered By</th>
             <th className="text-right pr-4" style={{ width: "120px" }}>
               <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
                 {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (
@@ -320,6 +328,7 @@ export default function AssetInterchangeListPage() {
                 <td>{r.posting_date}</td>
                 <td>{r.stage}</td>
                 <td>{r.select_asset}</td>
+                <td>{r.description_ordered_by}</td>
                 <td className="text-right pr-4"><TimeAgo date={r.modified} /></td>
               </tr>
             );

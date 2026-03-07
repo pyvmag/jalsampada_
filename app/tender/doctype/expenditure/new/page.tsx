@@ -112,7 +112,38 @@ async function uploadFile(
 }
 
 /* -------------------------------------------------
-2. Page component
+2. Helper functions for Bill Numbering
+------------------------------------------------- */
+
+const getOrdinalSuperscript = (n: number) => {
+  const s = n % 100;
+  let suffix = "ᵗʰ"; // Default "th"
+  if (s < 11 || s > 13) {
+    switch (n % 10) {
+      case 1:
+        suffix = "ˢᵗ";
+        break;
+      case 2:
+        suffix = "ⁿᵈ";
+        break;
+      case 3:
+        suffix = "ʳᵈ";
+        break;
+    }
+  }
+  return `${n}${suffix}`;
+};
+
+const formatBillNumber = (n: number, billType: string) => {
+  const ordinalNum = getOrdinalSuperscript(n);
+  if (billType === "Final") {
+    return `${ordinalNum} & Final`;
+  }
+  return `RA ${ordinalNum}`;
+};
+
+/* -------------------------------------------------
+3. Page component
 ------------------------------------------------- */
 
 export default function NewExpenditurePage() {
@@ -121,7 +152,7 @@ export default function NewExpenditurePage() {
 
   const doctypeName = "Expenditure";
   const [isSaving, setIsSaving] = React.useState(false);
-  const [billType, setBillType] = React.useState<string>("");
+  const [billType, setBillType] = React.useState<string>("Running");
   const [docName, setDocName] = React.useState<string | null>(null);
   const [docStatus, setDocStatus] = React.useState<0 | 1 | 2>(0);
 
@@ -190,7 +221,8 @@ export default function NewExpenditurePage() {
 
             if (prevDetails) {
               // 🟢 Auto-populate the fields using the CORRECT variable names
-              formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+              const lastBillNo = prevDetails.bill_number || "";
+              formInstance.setValue("prev_bill_no", lastBillNo || 0);
               formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
 
               // Map the API's 'mb_no' to our UI's 'previous_mb_no'
@@ -199,6 +231,17 @@ export default function NewExpenditurePage() {
               formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
 
               setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
+
+              // 🟢 Auto-fill Bill Number (RA sequence) - Instead of naming validations
+              let nextNum = 1;
+              if (lastBillNo) {
+                const match = lastBillNo.match(/\d+/);
+                if (match) {
+                  nextNum = parseInt(match[0]) + 1;
+                }
+              }
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             } else {
               console.log("⚠️ No Previous Bill Details Found");
               // Reset if no previous record found
@@ -207,6 +250,11 @@ export default function NewExpenditurePage() {
               formInstance.setValue("previous_mb_no", 0);
               formInstance.setValue("previous_page_no", 0);
               setPrevCumulativeAmount(0);
+
+              // First bill for this tender
+              const nextNum = 1;
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             }
           } catch (err) {
             console.error("Error setting previous bill details", err);
@@ -306,6 +354,16 @@ export default function NewExpenditurePage() {
       if (name === 'bill_type') {
         const currentType = form.getValues('bill_type');
         setBillType(currentType); // this controls DynamicForm buttons
+
+        // 🟢 Update bill_number based on type (RA Xst vs Xst & Final)
+        const currentBillNo = form.getValues('bill_number');
+        if (currentBillNo) {
+          const match = currentBillNo.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0]);
+            form.setValue("bill_number", formatBillNumber(num, currentType), { shouldDirty: true });
+          }
+        }
       }
     });
   }, []);
@@ -406,22 +464,7 @@ export default function NewExpenditurePage() {
             label: "Bill Number",
             type: "Data",
             fieldColumns: 1,
-            asyncValidation: async (value, allValues) => {
-              if (!value || !allValues.tender_number) return { isValid: true };
-
-              const isUnique = await checkBillNumberUniqueness(
-                allValues.tender_number,
-                value,
-                docName || "new",
-                apiKey || "",
-                apiSecret || ""
-              );
-
-              return {
-                isValid: isUnique,
-                message: isUnique ? "Bill Number is available" : "Bill Number already exists for this tender"
-              };
-            }
+            readOnly: true,
           },
           {
             name: "bill_amount",
@@ -459,7 +502,7 @@ export default function NewExpenditurePage() {
           },
           {
             name: "remaining_amount",
-            label: "Bill Remaining",
+            label: "Bill Remaining Amount",
             type: "Read Only",
             precision: 2,
             defaultValue: "0.00",
@@ -604,6 +647,27 @@ export default function NewExpenditurePage() {
     // 🟢 MENTOR'S LOGIC VALIDATION
     // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
     // This is mathematically equivalent to: bill_upto = saved_amount
+
+    // Validation: Bill Remaining Amount
+    const remainingAmount = Number(data.remaining_amount) || 0;
+
+    // 1) Bill Remaining Amount should not be negative.
+    if (remainingAmount < 0) {
+      toast.error("Validation Failed", {
+        description: "Bill Remaining Amount should not be negative.",
+        duration: Infinity
+      });
+      return;
+    }
+
+    // 2) If Bill Remaining Amount is greater than Tender Amount then it will show error.
+    if (remainingAmount > tenderAmount) {
+      toast.error("Transaction cannot be processed", {
+        description: "Tender amount is insufficient to cover the remaining bill amount.",
+        duration: Infinity
+      });
+      return;
+    }
 
     // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
     if (billAmount > tenderAmount) {

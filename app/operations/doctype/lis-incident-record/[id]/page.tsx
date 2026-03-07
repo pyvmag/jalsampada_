@@ -148,7 +148,7 @@ export default function EditLisIncidentRecordPage() {
           { name: "issue_type", label: "Issue Type", type: "Link", linkTarget: "Issue Type", defaultValue: getValue("issue_type") },
           { name: "priority", label: "Priority", type: "Link", linkTarget: "Issue Priority", defaultValue: getValue("priority") },
           { name: "status", label: "Status", type: "Select", options: "Open\nReplied\nOn Hold\nResolved\nClosed", defaultValue: getValue("status", "Open") },
-          { name: "custom_reported_by", label: "Reported By", type: "Link", linkTarget: "Employee", searchField: "employee_name", defaultValue: getValue("custom_reported_by") },
+          { name: "custom_reported_by", label: "Reported By", type: "Link", linkTarget: "Employee", searchField: "employee_name", defaultValue: getValue("custom_reported_by"), readOnly: true },
 
           // Row 3: Designation
           {
@@ -156,7 +156,7 @@ export default function EditLisIncidentRecordPage() {
             label: "Designation",
             type: "Data",
             defaultValue: getValue("custom_designation_"),
-            fetchFrom: { sourceField: "custom_reported_by", targetDoctype: "Employee", targetField: "designation" }
+            readOnly: true
           },
 
           /* -----------------------------------------------------------
@@ -274,7 +274,7 @@ export default function EditLisIncidentRecordPage() {
           { name: "opening_date", label: "Opening Date", type: "Date", defaultValue: getValue("opening_date") },
 
           /* -----------------------------------------------------------
-             Section 10: Resolution Status
+             Section 10: Resolution Status (First Instance)
              ----------------------------------------------------------- */
           { name: "custom_status_of_resolution", label: "Resolution Status", type: "Section Break" },
           {
@@ -282,36 +282,123 @@ export default function EditLisIncidentRecordPage() {
             label: "Resolved On-site",
             type: "Check",
             defaultValue: getValue("custom_resolved_onsite"),
-            readOnlyDependsOn: "custom_escalated_to_higher_authority || custom_intervention_required || custom_equipment_replacement_pending || custom_under_investigation"
+            readOnlyDependsOn: "custom_escalated_to_higher_authority == true"
           },
           {
             name: "custom_escalated_to_higher_authority",
             label: "Escalated",
             type: "Check",
             defaultValue: getValue("custom_escalated_to_higher_authority"),
-            readOnlyDependsOn: "custom_resolved_onsite || custom_intervention_required || custom_equipment_replacement_pending || custom_under_investigation"
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true"
           },
           {
             name: "custom_intervention_required",
             label: "Intervention Required",
             type: "Check",
             defaultValue: getValue("custom_intervention_required"),
-            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_equipment_replacement_pending || custom_under_investigation"
+            readOnlyDependsOn: "custom_escalated_to_higher_authority == true"
           },
-          { name: "custom_resolution_date", label: "Resolution Date", type: "Date", defaultValue: getValue("custom_resolution_date") },
+          { name: "custom_resolution_date", label: "Resolution Date", type: "Date", defaultValue: getValue("custom_resolution_date"), readOnlyDependsOn: "custom_escalated_to_higher_authority == true" },
           {
             name: "custom_equipment_replacement_pending",
             label: "Replacement Pending",
             type: "Check",
             defaultValue: getValue("custom_equipment_replacement_pending"),
-            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_intervention_required || custom_under_investigation"
+            readOnlyDependsOn: "custom_escalated_to_higher_authority == true"
           },
           {
             name: "custom_under_investigation",
             label: "Under Investigation",
             type: "Check",
             defaultValue: getValue("custom_under_investigation"),
-            readOnlyDependsOn: "custom_resolved_onsite || custom_escalated_to_higher_authority || custom_intervention_required || custom_equipment_replacement_pending"
+            readOnlyDependsOn: "custom_escalated_to_higher_authority == true"
+          },
+
+          /* -----------------------------------------------------------
+             Section 10.2: Resolution Status (Second Instance)
+             ----------------------------------------------------------- */
+          { name: "custom_status_of_resolution_2", label: "Resolution Status - Escalated", type: "Section Break", displayDependsOn: "custom_escalated_to_higher_authority == true" },
+          {
+            name: "custom_resolved_onsite_2",
+            label: "Resolved On-site",
+            type: "Check",
+            defaultValue: getValue("custom_resolved_onsite_2"),
+            displayDependsOn: "custom_escalated_to_higher_authority == true",
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          {
+            name: "custom_escalated_to_higher_authority_2",
+            label: "Escalated",
+            type: "Check",
+            defaultValue: getValue("custom_escalated_to_higher_authority_2"),
+            displayDependsOn: "custom_escalated_to_higher_authority == true",
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_3 == true"
+          },
+          {
+            name: "custom_intervention_required_2",
+            label: "Intervention Required",
+            type: "Check",
+            defaultValue: getValue("custom_intervention_required_2"),
+            displayDependsOn: "custom_escalated_to_higher_authority == true",
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          { name: "custom_resolution_date_2", label: "Resolution Date", type: "Date", defaultValue: getValue("custom_resolution_date_2"), displayDependsOn: "custom_escalated_to_higher_authority == true", readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true" },
+          {
+            name: "custom_equipment_replacement_pending_2",
+            label: "Replacement Pending",
+            type: "Check",
+            defaultValue: getValue("custom_equipment_replacement_pending_2"),
+            displayDependsOn: "custom_escalated_to_higher_authority == true",
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          {
+            name: "custom_under_investigation_2",
+            label: "Under Investigation",
+            type: "Check",
+            defaultValue: getValue("custom_under_investigation_2"),
+            displayDependsOn: "custom_escalated_to_higher_authority == true",
+            readOnlyDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+
+          /* -----------------------------------------------------------
+             Section 10.3: Resolution Status (Third Instance)
+             ----------------------------------------------------------- */
+          { name: "custom_status_of_resolution_3", label: "Resolution Status - Escalated (Final)", type: "Section Break", displayDependsOn: "custom_escalated_to_higher_authority_2 == true" },
+          {
+            name: "custom_resolved_onsite_3",
+            label: "Resolved On-site",
+            type: "Check",
+            defaultValue: getValue("custom_resolved_onsite_3"),
+            displayDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          {
+            name: "custom_escalated_to_higher_authority_3",
+            label: "Escalated",
+            type: "Check",
+            defaultValue: getValue("custom_escalated_to_higher_authority_3"),
+            displayDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          {
+            name: "custom_intervention_required_3",
+            label: "Intervention Required",
+            type: "Check",
+            defaultValue: getValue("custom_intervention_required_3"),
+            displayDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          { name: "custom_resolution_date_3", label: "Resolution Date", type: "Date", defaultValue: getValue("custom_resolution_date_3"), displayDependsOn: "custom_escalated_to_higher_authority_2 == true" },
+          {
+            name: "custom_equipment_replacement_pending_3",
+            label: "Replacement Pending",
+            type: "Check",
+            defaultValue: getValue("custom_equipment_replacement_pending_3"),
+            displayDependsOn: "custom_escalated_to_higher_authority_2 == true"
+          },
+          {
+            name: "custom_under_investigation_3",
+            label: "Under Investigation",
+            type: "Check",
+            defaultValue: getValue("custom_under_investigation_3"),
+            displayDependsOn: "custom_escalated_to_higher_authority_2 == true"
           },
 
           /* -----------------------------------------------------------
@@ -341,27 +428,9 @@ export default function EditLisIncidentRecordPage() {
     ];
   }, [record]);
 
-  // 3. Form Initialization Hook (The Subject Hack)
+  // 3. Form Initialization Hook
   const handleFormInit = (methods: UseFormReturn<any>) => {
-    const setInitialUser = async () => {
-      if (!apiKey || !apiSecret) return;
-      try {
-        if (!methods.getValues("custom_reported_by")) {
-
-          const infoResp = await fetch("http://103.219.3.169:2223/api/method/quantlis_management.api.get_current_user_info", {
-            headers: { 'Authorization': `token ${apiKey}:${apiSecret}` }
-          });
-          const infoData = await infoResp.json();
-          const empId = infoData.message?.employee || infoData.message?.employee_id;
-          if (empId) {
-            methods.setValue("custom_reported_by", empId, { shouldDirty: true });
-          }
-        }
-      } catch (e) { console.error("Initial user fetch failed:", e); }
-    };
-    setInitialUser();
-
-    // B. Watch 'custom_incident_subject' and copy it to 'subject'
+    // Watch 'custom_incident_subject' and copy it to 'subject'
     const subscription = methods.watch((value, { name, type }) => {
       if (name === "custom_incident_subject") {
         methods.setValue("subject", value.custom_incident_subject || record?.subject || "Incident");
@@ -543,7 +612,12 @@ export default function EditLisIncidentRecordPage() {
         "custom_control_scada", "custom_structural_damage", "custom_fire__short_circuit",
         "custom_personnel_injury", "custom_other", "custom_resolved_onsite",
         "custom_escalated_to_higher_authority", "custom_intervention_required",
-        "custom_equipment_replacement_pending", "custom_under_investigation"
+        "custom_equipment_replacement_pending", "custom_under_investigation",
+        "custom_resolved_onsite_2", "custom_escalated_to_higher_authority_2",
+        "custom_intervention_required_2", "custom_equipment_replacement_pending_2",
+        "custom_under_investigation_2", "custom_resolved_onsite_3",
+        "custom_escalated_to_higher_authority_3", "custom_intervention_required_3",
+        "custom_equipment_replacement_pending_3", "custom_under_investigation_3"
       ];
 
       checkFields.forEach(field => {

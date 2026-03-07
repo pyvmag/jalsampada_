@@ -10,6 +10,7 @@ import {
 } from "@/components/DynamicFormComponent";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -24,6 +25,8 @@ interface AttendanceSheetData {
   remarks?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  modified_by: string;
+  owner: string;
 }
 
 /* ---------------------- COMPONENT ---------------------- */
@@ -197,6 +200,7 @@ export default function AttendanceSheetDetailPage() {
   if (!record) return <div style={{ padding: "2rem" }}>Attendance Sheet not found.</div>;
 
   return (
+    <div className="w-full">
     <DynamicForm
       tabs={formTabs}
       onSubmit={handleSubmit}
@@ -211,5 +215,17 @@ export default function AttendanceSheetDetailPage() {
         redirectUrl: "/attendance/doctype/attendance-sheet",
       }}
     />
+    <DocumentActivity
+      doctype={doctypeName}
+      docname={docname}
+      baseUrl={API_BASE_URL.replace("/api/resource", "")}
+      apiKey={apiKey || ""}
+      apiSecret={apiSecret || ""}
+      isInitialized={isInitialized}
+      currentUserEmail={record.owner}
+      modifiedStr={record.modified}
+      modifiedBy={record.modified_by}
+    />
+    </div>
   );
 }

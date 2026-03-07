@@ -154,8 +154,9 @@ export default function MaintenanceChecklistDetailPage() {
           {
             name: "checklist_data",
             label: "Checklist Data",
-            type: "Read Only", // Or "Table" if you want to see the raw table below
-            defaultValue: record.checklist_data || []
+            type: "Read Only",
+            defaultValue: record.checklist_data || [],
+            displayDependsOn: () => false
           },
 
           // 🟢 MATRIX UI SECTION
@@ -193,20 +194,72 @@ export default function MaintenanceChecklistDetailPage() {
       /* 🧹 CLEAN PAYLOAD */
       const payload: Record<string, any> = { ...data };
 
-      // Remove UI-only fields
-      delete payload.checklist_ui;
-      delete payload.checklist_matrix_section;
+      // 1.5 Validation: All checklist items must be selected
+      const matrixConfig = data.matrix_config;
+      const checklistData = data.checklist_data || [];
 
-      delete payload.modified;
-      delete payload.creation;
-      delete payload.owner;
-      delete payload.docstatus;
-      delete payload.idx;
+      if (matrixConfig && matrixConfig.assets && matrixConfig.parameters) {
+        for (const asset of matrixConfig.assets) {
+          for (const param of matrixConfig.parameters) {
+            const entry = checklistData.find((d: any) => d.asset === asset.name && d.parameter === param.name);
+            if (!entry || entry.checked === null) {
+              toast.error(`Incomplete Checklist`, {
+                description: `Please select OK or Not OK for "${asset.name}" - "${param.name}". All checks are mandatory.`,
+                duration: 5000,
+              });
+              setIsSaving(false);
+              return;
+            }
+
+            // Also validate that Not OK items have a description
+            if (entry.checked === 0 && !entry.description?.trim()) {
+              toast.error(`Description Required`, {
+                description: `Please provide a description for the issue at "${asset.name}" - "${param.name}".`,
+                duration: 5000,
+              });
+              setIsSaving(false);
+              return;
+            }
+          }
+        }
+      }
+
+      // 1.8 Clean Payload (System Fields)
+      const cleanObj = (obj: any): any => {
+        if (Array.isArray(obj)) return obj.map(cleanObj);
+        if (obj !== null && typeof obj === 'object') {
+          const newObj = { ...obj };
+          delete newObj.modified;
+          delete newObj.creation;
+          delete newObj.owner;
+          delete newObj.docstatus;
+          delete newObj.idx;
+          delete newObj.modified_by;
+          // Note: In EDIT mode, we DO NOT delete 'name' for child items 
+          // because Frappe needs them to update existing rows.
+
+          // Recursively clean
+          for (const key in newObj) {
+            if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+              newObj[key] = cleanObj(newObj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
+      const finalizedPayload = cleanObj(payload);
+
+      // Remove UI-only fields
+      delete finalizedPayload.checklist_ui;
+      delete finalizedPayload.checklist_matrix_section;
+      delete finalizedPayload.matrix_config;
 
       /* 💾 UPDATE */
       const resp = await axios.put(
         `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(currentDocname)}`,
-        payload,
+        finalizedPayload,
         {
           headers: {
             Authorization: `token ${apiKey}:${apiSecret}`,

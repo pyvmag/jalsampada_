@@ -44,6 +44,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   const { isInitialized, isAuthenticated, currentUser, logout } = useAuth();
 
+  // Debug: Log currentUser changes
+  React.useEffect(() => {
+  }, [currentUser]);
+
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const isLoginPage = pathname === "/login";
 
@@ -102,7 +106,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="user-info">
-            <span>Welcome, {currentUser ?? "Admin"}</span>
+            <span>Welcome. {currentUser || "Guest"}</span>
             <ModeToggle />
           </div>
         </div>

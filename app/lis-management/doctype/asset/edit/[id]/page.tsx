@@ -864,6 +864,31 @@ export default function RecordDetailPage() {
                 finalPayload[f] = Number(finalPayload[f]) || 0;
             });
 
+            if (finalPayload.custom_drawing_attachment && Array.isArray(finalPayload.custom_drawing_attachment)) {
+                const attachmentsWithFiles = finalPayload.custom_drawing_attachment.filter((item: any) => item.attachment instanceof File);
+
+                if (attachmentsWithFiles.length > 0) {
+                    toast.loading(`Uploading ${attachmentsWithFiles.length} file(s)...`);
+                    try {
+                        const updatedAttachments = await Promise.all(
+                            finalPayload.custom_drawing_attachment.map(async (item: any) => {
+                                if (item.attachment instanceof File) {
+                                    const fileUrl = await uploadFile(item.attachment, apiKey || "", apiSecret || "", API_BASE_URL);
+                                    return { ...item, attachment: fileUrl };
+                                }
+                                return item;
+                            })
+                        );
+                        finalPayload.custom_drawing_attachment = updatedAttachments;
+                        toast.dismiss();
+                    } catch (uploadErr) {
+                        toast.dismiss();
+                        toast.error("Failed to upload drawing attachments. Some files might be missing.");
+                        console.error("Upload error:", uploadErr);
+                    }
+                }
+            }
+
             delete finalPayload.naming_series;
 
             const resp = await axios.put(`${API_BASE_URL}/${doctypeName}/${docname}`, finalPayload, {

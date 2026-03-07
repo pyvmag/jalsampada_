@@ -116,7 +116,38 @@ async function uploadFile(
 }
 
 /* -------------------------------------------------
-2. Page component
+2. Helper functions for Bill Numbering
+------------------------------------------------- */
+
+const getOrdinalSuperscript = (n: number) => {
+  const s = n % 100;
+  let suffix = "ᵗʰ"; // Default "th"
+  if (s < 11 || s > 13) {
+    switch (n % 10) {
+      case 1:
+        suffix = "ˢᵗ";
+        break;
+      case 2:
+        suffix = "ⁿᵈ";
+        break;
+      case 3:
+        suffix = "ʳᵈ";
+        break;
+    }
+  }
+  return `${n}${suffix}`;
+};
+
+const formatBillNumber = (n: number, billType: string) => {
+  const ordinalNum = getOrdinalSuperscript(n);
+  if (billType === "Final") {
+    return `${ordinalNum} & Final`;
+  }
+  return `RA ${ordinalNum}`;
+};
+
+/* -------------------------------------------------
+3. Page component
 ------------------------------------------------- */
 
 export default function RecordDetailPage() {
@@ -310,19 +341,36 @@ export default function RecordDetailPage() {
             );
 
             if (prevDetails) {
-              formInstance.setValue("prev_bill_no", prevDetails.bill_number || 0);
+              const lastBillNo = prevDetails.bill_number || "";
+              formInstance.setValue("prev_bill_no", lastBillNo || 0);
               formInstance.setValue("prev_bill_amt", prevDetails.bill_amount || 0);
               // Correct Mapping
               formInstance.setValue("previous_mb_no", prevDetails.mb_no || 0);
               formInstance.setValue("previous_page_no", prevDetails.page_no || 0);
 
               setPrevCumulativeAmount(prevDetails.cumulative_amount || 0);
+
+              // 🟢 Auto-fill Bill Number (RA sequence) - Instead of naming validations
+              let nextNum = 1;
+              if (lastBillNo) {
+                const match = lastBillNo.match(/\d+/);
+                if (match) {
+                  nextNum = parseInt(match[0]) + 1;
+                }
+              }
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             } else {
               formInstance.setValue("prev_bill_no", 0);
               formInstance.setValue("prev_bill_amt", 0);
               formInstance.setValue("previous_mb_no", 0);
               formInstance.setValue("previous_page_no", 0);
               setPrevCumulativeAmount(0);
+
+              // First bill for this tender
+              const nextNum = 1;
+              const currentBillType = formInstance.getValues("bill_type") || "Running";
+              formInstance.setValue("bill_number", formatBillNumber(nextNum, currentBillType), { shouldDirty: true });
             }
           } catch (err) { console.error("Error setting previous bill details", err); }
         };
@@ -418,6 +466,17 @@ export default function RecordDetailPage() {
     form.watch((value: any, { name }: { name?: string }) => {
       if (name === "bill_type") {
         setBillType(value.bill_type);
+
+        // 🟢 Update bill_number format
+        const currentBillNo = form.getValues('bill_number');
+        if (currentBillNo) {
+          const match = currentBillNo.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0]);
+            form.setValue("bill_number", formatBillNumber(num, value.bill_type), { shouldDirty: true });
+          }
+        }
+
         // When bill type changes, update button logic
         if (!formDirty && expenditure?.docstatus === 0) {
           if (value.bill_type === "Final") {
@@ -544,8 +603,8 @@ export default function RecordDetailPage() {
             name: "bill_number",
             label: "Bill Number",
             type: "Data",
-            defaultValue: "0",
             fieldColumns: 1,
+            readOnly: true,
           },
 
           {
@@ -722,26 +781,30 @@ export default function RecordDetailPage() {
     const billAmount = Number(data.bill_amount) || 0;
     const tenderAmount = Number(data.tender_amount) || 0;
     const savedAmount = Number(data.saved_amount) || 0;
+    const details = data.expenditure_details || [];
+    const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
     isProgrammaticUpdate.current = true;
 
-    // Rule 1: Bill Amount cannot be > Tender Amount
-    if (billAmount > tenderAmount) {
+    // Validation: Bill Remaining Amount
+    const remainingAmount = Number(data.remaining_amount) || 0;
+
+    // 1) Bill Remaining Amount should not be negative.
+    if (remainingAmount < 0) {
       toast.error("Validation Failed", {
-        description: "The Bill Amount cannot be greater than the Tender Amount. Please verify the bill amount."
-        , duration: Infinity
+        description: "Bill Remaining Amount should not be negative.",
+        duration: Infinity
       });
       return;
     }
 
-    // Calculate sum of child table rows
-    const details = data.expenditure_details || [];
-    const totalChildBillAmt = details.reduce((sum: number, row: any) => {
-      return sum + (Number(row.bill_amount) || 0);
-    }, 0);
-
-    // 🟢 MENTOR'S LOGIC VALIDATION
-    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
-    // This is mathematically equivalent to: bill_upto = saved_amount
+    // 2) If Bill Remaining Amount is greater than Tender Amount then it will show error.
+    if (remainingAmount > tenderAmount) {
+      toast.error("Transaction cannot be processed", {
+        description: "Tender amount is insufficient to cover the remaining bill amount.",
+        duration: Infinity
+      });
+      return;
+    }
 
     // Rule 1: Bill Amount cannot be > Tender Amount (Hard Limit)
     if (billAmount > tenderAmount) {

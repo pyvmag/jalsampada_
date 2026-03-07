@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { renameDocument } from "@/lib/services";
+import DocumentActivity from "@/components/DocumentActivity";
 
 const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
@@ -21,6 +22,8 @@ interface DesignationData {
   description?: string;
   docstatus: 0 | 1 | 2;
   modified: string;
+  modified_by: string;
+  owner: string;
 }
 
 /* ---------------------- COMPONENT ---------------------- */
@@ -192,6 +195,7 @@ export default function DesignationDetailPage() {
   if (!record) return <div style={{ padding: "2rem" }}>Designation not found.</div>;
 
   return (
+    <div className="w-full">
     <DynamicForm
       tabs={formTabs}
       onSubmit={handleSubmit}
@@ -205,6 +209,19 @@ export default function DesignationDetailPage() {
         docName: docname,
         redirectUrl: "/attendance/doctype/designation",
       }}
+
     />
+    <DocumentActivity
+      doctype={doctypeName}
+      docname={docname}
+      baseUrl={API_BASE_URL.replace("/api/resource", "")}
+      apiKey={apiKey || ""}
+      apiSecret={apiSecret || ""}
+      isInitialized={isInitialized}
+      currentUserEmail={record.owner}
+      modifiedStr={record.modified}
+      modifiedBy={record.modified_by}
+    />
+    </div>
   );
 }

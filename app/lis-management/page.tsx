@@ -37,6 +37,7 @@ const transactionDoctypes: Doctype[] = [
 const reportDoctypes: Doctype[] = [
   // Add transaction doctypes here as needed
   { name: "reports/asset_register_report", title: "Asset Register Report", icon: Package },
+  { name: "reports/asset_interchange_report", title: "Asset Interchange Report", icon: Package },
 ];
 
 const doctypeGroups: DoctypeGroup[] = [

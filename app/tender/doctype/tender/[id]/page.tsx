@@ -739,142 +739,79 @@ export default function RecordDetailPage() {
       },
 
       {
-
-        name: "custom_contractor_name",
-
-        label: "Contractor Name",
-
-        type: "Link",
-
-        linkTarget: "Contractor",
-
-      },
-
-      {
-
         name: "custom_contractor_company",
-
         label: "Contractor Company",
-
+        type: "Link",
+        linkTarget: "Contractor",
+        searchField: "custom_contractor_company",
+      },
+      {
+        name: "custom_contractor_name",
+        label: "Contractor Name",
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
-          targetField: "custom_contractor_company"
-
+          targetField: "contractor_name"
         },
-
       },
 
       {
-
         name: "custom_supplier_address",
-
         label: "Contractor Address",
-
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
           targetField: "address"
-
         }
-
       },
-
       {
-
         name: "custom_mobile_no",
-
         label: "Mobile No.",
-
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
           targetField: "phone"
-
         }
-
       },
-
       {
-
         name: "custom_email_id",
-
         label: "Email ID",
-
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
           targetField: "email_address"
-
         },
-
       },
-
       {
-
         name: "custom_gst",
-
         label: "GST No.",
-
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
           targetField: "custom_gst"
-
         },
-
       },
-
       {
-
         name: "custom_pan",
-
         label: "PAN No.",
-
         type: "Read Only",
-
         fetchFrom: {
-
-          sourceField: "custom_contractor_name",
-
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
-
           targetField: "custom_pan"
-
         },
-
       },
       {
         name: "custom_aadhaar_no",
         label: "Aadhaar No.",
         type: "Read Only",
         fetchFrom: {
-          sourceField: "custom_contractor_name",
+          sourceField: "custom_contractor_company",
           targetDoctype: "Contractor",
           targetField: "custom_aadhaar_no"
         },
@@ -1229,21 +1166,14 @@ export default function RecordDetailPage() {
           // because they need to be saved with the tender record
 
           if (field.type === "Read Only" && ![
-
+            "custom_contractor_name",
             "custom_contractor_company",
-
             "custom_mobile_no",
-
             "custom_supplier_address",
-
             "custom_email_id",
-
             "custom_gst",
-
             "custom_pan",
-
             "custom_aadhaar_no"
-
           ].includes(field.name)) {
 
             nonDataFields.add(field.name);

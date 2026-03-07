@@ -56,15 +56,10 @@ function TriStateToggle({ value, onChange }: TriStateToggleProps) {
           <Check className={cn("w-4 h-4", value === 1 ? "text-white" : "text-gray-500 hover:text-green-600")} />
         </button>
 
-        {/* Option: Neutral */}
-        <button
-          type="button"
-          onClick={() => onChange(null)} // Click middle to reset
-          className="flex-1 z-10 flex justify-center items-center text-xs font-bold transition-colors focus:outline-none"
-          title="Reset"
-        >
-          <Minus className={cn("w-4 h-4", value === null ? "text-white" : "text-gray-500")} />
-        </button>
+        {/* Option: Neutral (Hidden in UI to enforce selection) */}
+        <div className="flex-1 z-10 flex justify-center items-center">
+          <Minus className={cn("w-4 h-4", value === null ? "text-gray-400" : "text-transparent")} />
+        </div>
 
         {/* Option: Closed (Fail) */}
         <button
@@ -93,7 +88,6 @@ export function MaintenanceChecklistMatrix() {
 
   const [matrix, setMatrix] = React.useState<MatrixData | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [assetSearch, setAssetSearch] = React.useState("");
 
   // 2. Watch data
   const checklistData: ChecklistItem[] = useWatch({
@@ -139,8 +133,11 @@ export function MaintenanceChecklistMatrix() {
 
         if (resp.data.message) {
           setMatrix(resp.data.message);
+          // Store matrix structure in form so it can be used for validation on submit
+          setValue("matrix_config", resp.data.message);
         } else {
           setMatrix(null);
+          setValue("matrix_config", null);
         }
       } catch (error) {
         console.error("Failed to fetch matrix data", error);
@@ -189,39 +186,28 @@ export function MaintenanceChecklistMatrix() {
   if (loading) return <div className="p-8 text-center text-sm text-gray-500 animate-pulse bg-gray-50 rounded border">Loading checklist configuration...</div>;
   if (!matrix || !matrix.assets || matrix.assets.length === 0) return null;
 
-  const filteredAssets = matrix.assets.filter(a =>
-    a.name.toLowerCase().includes(assetSearch.toLowerCase())
+  const sortedAssets = [...matrix.assets].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
   );
 
   return (
     <div className="border rounded-md shadow-sm overflow-hidden bg-white">
-      <div className="p-3 bg-gray-50 border-b flex items-center justify-between">
-        <h4 className="font-medium text-sm text-gray-700">Checklist Matrix</h4>
-        <input
-          type="text"
-          placeholder="Search Asset..."
-          className="text-sm p-1.5 px-3 border rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={assetSearch}
-          onChange={(e) => setAssetSearch(e.target.value)}
-        />
-      </div>
-
       <div className="overflow-x-auto max-h-[600px]">
         <table className="w-full text-sm border-collapse">
-          <thead className="bg-orange-100 text-gray-700 sticky top-0 z-20 shadow-sm">
+          <thead className="bg-[#3683f6] text-white sticky top-0 z-40 shadow-sm">
             <tr>
-              <th className="p-3 border-b border-r text-left min-w-[200px] font-semibold bg-orange-100">Asset</th>
+              <th className="p-3 border-b border-r text-left min-w-[200px] font-semibold bg-[#3683f6] sticky left-0 top-0 z-50">Asset</th>
               {matrix.parameters.map(p => (
-                <th key={p.name} className="p-3 border-b border-r text-center min-w-[160px] font-semibold bg-orange-200/50">
+                <th key={p.name} className="p-3 border-b border-r text-center min-w-[160px] font-semibold bg-[#3683f6]">
                   {p.name}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredAssets.map(asset => (
+            {sortedAssets.map(asset => (
               <tr key={asset.name} className="hover:bg-gray-50 transition-colors">
-                <td className="p-3 border-r font-medium text-gray-900 bg-gray-50/50 sticky left-0 z-10">{asset.name}</td>
+                <td className="p-3 border-r font-medium text-gray-900 bg-white sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{asset.name}</td>
 
                 {matrix.parameters.map(param => {
                   const entry = checklistData.find(d => d.asset === asset.name && d.parameter === param.name);
@@ -244,7 +230,7 @@ export function MaintenanceChecklistMatrix() {
                         <div className="text-[10px] text-gray-400 font-medium">
                           {statusValue === 1 && <span className="text-green-600">OK</span>}
                           {statusValue === 0 && <span className="text-red-600">Not OK</span>}
-                          {statusValue === null && <span>Please Select</span>}
+                          {statusValue === null && <span className="text-amber-600 animate-pulse font-bold">Selection Required</span>}
                         </div>
 
                         {/* Description Box - Slides down only when "Closed" (0) */}

@@ -117,9 +117,23 @@ export function LinkField({ control, field, error, className, filters = {}, getQ
           searchFilters.push([field.linkTarget, searchKey, "like", `%${term.trim()}%`]);
         }
 
+        // 🟢 GLOBAL FILTER: Automatically exclude disabled users for all User link fields
+        if (field.linkTarget === "User") {
+          searchFilters.push([field.linkTarget, "enabled", "=", 1]);
+        }
+
+        // 🟢 GLOBAL FILTER: Automatically exclude disabled items for all Item link fields
+        if (field.linkTarget === "Item") {
+          searchFilters.push([field.linkTarget, "disabled", "=", 0]);
+        }
+
         Object.entries(filters).forEach(([key, value]) => {
           if (value != null && value !== "") {
-            searchFilters.push([field.linkTarget, key, "=", value]);
+            if (Array.isArray(value) && value.length === 2) {
+              searchFilters.push([field.linkTarget, key, value[0], value[1]]);
+            } else {
+              searchFilters.push([field.linkTarget, key, "=", value]);
+            }
           }
         });
 

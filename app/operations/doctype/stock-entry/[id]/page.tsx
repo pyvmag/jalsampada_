@@ -194,6 +194,47 @@ export default function StockEntryDetailPage() {
                     setActiveButton("SAVE");
                 }
             }
+
+            // Sync parent fields to child items
+            if (!name ||
+                ["from_warehouse", "to_warehouse", "custom_tender", "items"].includes(name) ||
+                name.startsWith("items.")
+            ) {
+                const values = formInstance.getValues();
+                const items = values.items || [];
+                const fromWh = values.from_warehouse;
+                const toWh = values.to_warehouse;
+                const tender = values.custom_tender;
+
+                let hasChanged = false;
+                const updatedItems = items.map((row: any) => {
+                    const newRow = { ...row };
+                    let rowChanged = false;
+
+                    if (fromWh && row.s_warehouse !== fromWh) {
+                        newRow.s_warehouse = fromWh;
+                        rowChanged = true;
+                    }
+                    if (toWh && row.t_warehouse !== toWh) {
+                        newRow.t_warehouse = toWh;
+                        rowChanged = true;
+                    }
+                    if (tender && row.custom_tender !== tender) {
+                        newRow.custom_tender = tender;
+                        rowChanged = true;
+                    }
+
+                    if (rowChanged) {
+                        hasChanged = true;
+                        return newRow;
+                    }
+                    return row;
+                });
+
+                if (hasChanged) {
+                    formInstance.setValue("items", updatedItems, { shouldDirty: true });
+                }
+            }
         });
 
         return () => {
@@ -359,9 +400,9 @@ export default function StockEntryDetailPage() {
                                 label: "Item Group",
                                 type: "Data",
                                 fetchFrom: {
-                                    sourceField: "item_group",
+                                    sourceField: "item_code",
                                     targetDoctype: "Item",
-                                    targetField: "item_code"
+                                    targetField: "item_group"
                                 }
                             },
                             {
@@ -378,11 +419,6 @@ export default function StockEntryDetailPage() {
                                         filters.company = company;
                                     }
                                     return filters;
-                                },
-                                fetchFrom: {
-                                    sourceField: "parent.from_warehouse",
-                                    targetDoctype: "Warehouse",
-                                    targetField: "name"
                                 },
                                 referenceDoctype: "Stock Entry Detail",
                                 doctype: "Warehouse",
@@ -401,11 +437,6 @@ export default function StockEntryDetailPage() {
                                         filters.company = company;
                                     }
                                     return filters;
-                                },
-                                fetchFrom: {
-                                    sourceField: "parent.to_warehouse",
-                                    targetDoctype: "Warehouse",
-                                    targetField: "name"
                                 },
                                 referenceDoctype: "Stock Entry Detail",
                                 doctype: "Warehouse",
@@ -501,14 +532,7 @@ export default function StockEntryDetailPage() {
                             {
                                 name: "custom_tender",
                                 label: "Tender",
-                                type: "Link",
-                                linkTarget: "Project",
-                                fetchFrom: {
-                                    sourceField: "parent.custom_tender",
-                                    targetDoctype: "Project", // Added targetDoctype
-                                    targetField: "name"
-                                },
-                                defaultValue: ""
+                                type: "Read Only",
                             },
                         ],
                     },

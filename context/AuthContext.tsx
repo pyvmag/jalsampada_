@@ -11,7 +11,7 @@ interface AuthContextType {
   setPosProfile: (profile: string) => void;
   login: (apiKey: string, apiSecret: string) => void;
   logout: () => void;
-  getCurrentUser: () => Promise<string | null>;
+  getCurrentUser: (apiKey: string | null, apiSecret: string | null) => Promise<string | null>;
   isInitialized: boolean;
   csrfToken: string | null;
 }
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Auto-fetch current user if authenticated but user not known
     if (storedApiKey && storedApiSecret && !storedUser) {
-      getCurrentUser().then((user) => {
+      getCurrentUser(storedApiKey, storedApiSecret).then((user) => {
         if (user) {
           setCurrentUser(user);
           localStorage.setItem("currentUser", user);
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("apiSecret", apiSecret);
 
     // Fetch current user after login
-    getCurrentUser().then((user) => {
+    getCurrentUser(apiKey, apiSecret).then((user) => {
       if (user) {
         setCurrentUser(user);
         localStorage.setItem("currentUser", user);
@@ -106,40 +106,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     router.push("/login");
   };
 
-  const getCurrentUser = async (): Promise<string | null> => {
-    if (!apiKey || !apiSecret) return null;
+  const getCurrentUser = async (currentApiKey: string | null, currentApiSecret: string | null): Promise<string | null> => {
+    if (!currentApiKey || !currentApiSecret) {
+      return null;
+    }
 
     try {
-      const response = await fetch(
-        "http://103.219.3.169:2223//api/method/frappe.auth.get_logged_user",
+      // First get the username
+      const userResponse = await fetch(
+        "http://103.219.1.138:4412//api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
-            Authorization: `token ${apiKey}:${apiSecret}`,
+            Authorization: `token ${currentApiKey}:${currentApiSecret}`,
           },
           credentials: "include",
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!userResponse.ok) {
+        throw new Error(`HTTP ${userResponse.status}: ${userResponse.statusText}`);
       }
 
-      const data = await response.json();
-      return data.message || null;
+      const userData = await userResponse.json();
+      const username = userData.message;
+
+      if (!username) {
+        return null;
+      }
+
+      // Now get the full user details including full_name
+      try {
+        const userDetailResponse = await fetch(
+          `http://103.219.1.138:4412/api/resource/User/${encodeURIComponent(username)}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: `token ${currentApiKey}:${currentApiSecret}`,
+            },
+            credentials: "include",
+          }
+        );
+
+        if (userDetailResponse.ok) {
+          const userDetailData = await userDetailResponse.json();
+          // Return full_name if available, otherwise fall back to username
+          return userDetailData.data?.full_name || username;
+        }
+      } catch (error) {
+        console.warn("Could not fetch user full name, using username:", error);
+      }
+
+      // Fallback to username if full name fetch fails
+      return username;
     } catch (error) {
       console.error("Error fetching current user:", error);
       return null;
     }
   };
-
-
-
-
-
-
 
   const contextValue: AuthContextType = {
     isAuthenticated,
