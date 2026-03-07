@@ -63,8 +63,7 @@ const COLUMN_CONFIG: ColumnConfig[] = [
     { fieldname: "select_asset", label: "Asset", width: "150px" },
     { fieldname: "old_linked_asset", label: "Old Linked Asset", width: "200px" },
     { fieldname: "new_linked_asset", label: "New Linked Asset", width: "200px" },
-    { fieldname: "ordered_by", label: "Ordered By", width: "150px" },
-    { fieldname: "description", label: "Description", width: "250px" },
+    { fieldname: "description_ordered_by", label: "Description & Ordered By", width: "350px" },
 ];
 
 export default function AssetInterchangeReportPage() {
@@ -249,7 +248,7 @@ export default function AssetInterchangeReportPage() {
             pdf.setFillColor(240, 240, 240);
             pdf.rect(margin, y, usableWidth, 10, 'F');
 
-            const colWidths = [15, 20, 35, 25, 25, 35, 35, 30, 45]; // Total: 265
+            const colWidths = [15, 20, 35, 25, 25, 35, 35, 75]; // Total: 265
             const scale = usableWidth / colWidths.reduce((a, b) => a + b, 0);
             const finalWidths = colWidths.map(w => w * scale);
 
