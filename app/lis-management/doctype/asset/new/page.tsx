@@ -181,9 +181,10 @@ export default function NewRecordPage() {
             defaultValue: getValue("custom_condition"),
 
           },
-          { name: "custom_previous_hours", label: "Previous Running Hours", type: "Float", defaultValue: getValue("custom_previous_hours") },
-          { name: "custom_hours_before_system", label: "Hours Before System", type: "Float", defaultValue: getValue("custom_hours_before_system") },
-          { name: "custom_cumulative_hours", label: "Cumulative Hours", type: "Float", defaultValue: getValue("custom_cumulative_hours") },
+          { name: "go_live_date", label: "Go Live Date", type: "Date", defaultValue: getValue("go_live_date") },
+          { name: "custom_hours_before_system", label: "Hours Before System", type: "DurationHHMM", defaultValue: getValue("custom_hours_before_system") },
+          { name: "custom_running_hours", label: "Running Hours", type: "Read Only", isDuration: true, defaultValue: getValue("custom_running_hours") },
+          { name: "custom_cumulative_hours", label: "Cumulative Hours", type: "Read Only", isDuration: true, defaultValue: getValue("custom_cumulative_hours") },
           { name: "maintenance_required", label: "Maintenance Required", type: "Check", defaultValue: getValue("maintenance_required", false) },
           {
             name: "custom_description", label: "Description", type: "Small Text", defaultValue: getValue("custom_description"),
@@ -282,7 +283,7 @@ export default function NewRecordPage() {
         "gross_purchase_amount", "additional_asset_cost",
         "asset_quantity", "opening_accumulated_depreciation",
         "opening_number_of_booked_depreciations",
-        "custom_previous_hours", "insured_value"
+        "insured_value"
       ];
       numericFields.forEach((f) => {
         finalPayload[f] = Number(finalPayload[f]) || 0;
