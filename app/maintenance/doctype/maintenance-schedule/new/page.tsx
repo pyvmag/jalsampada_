@@ -15,7 +15,7 @@ import { getApiMessages } from "@/lib/utils";
 const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
 
 /* -------------------------------------------------
- 1. Maintenance Schedule type – mirrors the API
+ 1. Work Schedule type – mirrors the API
  ------------------------------------------------- */
 interface AssetCategoryData {
     name?: string;
@@ -31,7 +31,7 @@ const handleFormInit = (methods: any) => {
 
     watch((formValues: any, { name }: any) => {
         if (!name) return;
-        
+
         if (!name.startsWith("asset_maintenance_tasks")) return;
 
         const rows = formValues.asset_maintenance_tasks;
@@ -305,7 +305,7 @@ export default function NewMaintenanceSchedulePage() {
                 maxContentLength: Infinity,
             });
 
-            const messages = getApiMessages(response, null, "Maintenance Schedule created successfully!", "Failed to create Maintenance Schedule");
+            const messages = getApiMessages(response, null, "Work Schedule created successfully!", "Failed to create Work Schedule");
 
             if (messages.success) {
                 toast.success(messages.message, { description: messages.description });
@@ -325,15 +325,15 @@ export default function NewMaintenanceSchedulePage() {
             // Handle duplicate entry error specifically
             if (err.response?.data?.exc_type === "DuplicateEntryError") {
                 const errorMessage = err.response?.data?._server_messages ||
-                    "An maintenance schedule with this name already exists. Please use a different name.";
+                    "A work schedule with this name already exists. Please use a different name.";
                 toast.error("Duplicate Entry Error", {
-                    description: "Maintenance Schedule with this name already exists. Please change the category name and try again.",
+                    description: "Work Schedule with this name already exists. Please change the category name and try again.",
                     duration: Infinity
                 });
             } else {
                 const errorMessage = err.response?.data?.message ||
                     err.response?.data?.error ||
-                    "Failed to create Maintenance Schedule. Check console for details.";
+                    "Failed to create Work Schedule. Check console for details.";
                 toast.error(`Error: ${errorMessage}`, { duration: Infinity });
             }
         } finally {
@@ -352,9 +352,9 @@ export default function NewMaintenanceSchedulePage() {
             onFormInit={handleFormInit}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
-            title={`New ${doctypeName}`}
-            description="Create a new maintenance schedule with specifications"
-            submitLabel={isSaving ? "Saving..." : "New Maintenance Schedule"}
+            title="New Work Schedule"
+            description="Create a new work schedule with specifications"
+            submitLabel={isSaving ? "Saving..." : "New Work Schedule"}
             cancelLabel="Cancel"
         />
     );

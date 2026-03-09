@@ -263,8 +263,8 @@ export default function MaintenanceScheduleDetailPage() {
         tabs={formTabs}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
-        title={`${doctypeName}: ${record.name}`}
-        description="Update Maintenance Schedule"
+        title={`Work Schedule: ${record.name}`}
+        description="Update Work Schedule"
         submitLabel={isSaving ? "Saving..." : "Save"}
         cancelLabel="Cancel"
         deleteConfig={{

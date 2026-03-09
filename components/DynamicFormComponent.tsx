@@ -1282,7 +1282,14 @@ export function DynamicForm({
     const doctypeSlug = segments[doctypeIndex + 1];
 
     const moduleName = formatSlug(moduleSlug);
-    const doctypeName = formatSlug(doctypeSlug);
+
+    // 🟢 Rename "maintenance-schedule" to "Work Schedule" in breadcrumbs
+    const DOCTYPE_TITLE_MAP: Record<string, string> = {
+      "maintenance-schedule": "Work Schedule",
+      "maintenance-schedule-report": "Work Schedule Report",
+    };
+
+    const doctypeName = DOCTYPE_TITLE_MAP[doctypeSlug] || formatSlug(doctypeSlug);
 
     const moduleUrl = `/${segments.slice(0, doctypeIndex).join("/")}`;
     const listUrl = `/${segments.slice(0, doctypeIndex + 2).join("/")}`;

@@ -118,7 +118,7 @@ export default function MaintenanceLogDetailPage() {
           // Top identifiers row
           {
             name: "asset_maintenance",
-            label: "Maintenance Schedule",
+            label: "Work Schedule",
             type: "Link",
             linkTarget: "Asset Maintenance",
             defaultValue: getValue("asset_maintenance"),
