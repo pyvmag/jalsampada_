@@ -50,7 +50,6 @@ const formatDateTime = (dateString: string | null): string => {
 const columnConfig: ColumnConfig[] = [
   { fieldname: "name", label: "ID", width: "150px" },
   { fieldname: "asset_name", label: "Asset Name", width: "180px" },
-  { fieldname: "maintenance_team", label: "Maintenance Team", width: "220px" },
 ];
 
 export default function MaintenanceScheduleReportPage() {
