@@ -19,7 +19,7 @@ const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
  ------------------------------------------------- */
 interface AssetCategoryData {
     name?: string;
-    asset_category_name?: string;
+
     custom_specifications?: Array<{
         specification_type: string;
         details: string;
@@ -152,20 +152,59 @@ export default function NewMaintenanceSchedulePage() {
                         defaultValue: getValue("asset"),
                     },
 
+
+
                     {
-                        name: "asset_category", label: "Asset Category", type: "Read Only",
-                        displayDependsOn: "asset_name",
-
-                        fetchFrom: { sourceField: "asset_name", targetDoctype: "Asset", targetField: "asset_category" }
+                        name: "custom_tender_no",
+                        label: "Tender No.",
+                        type: "Link",
+                        linkTarget: "Project",
+                        defaultValue: getValue("custom_tender_no"),
                     },
-
-                    // { name: "company", label: "Company", type: "Link", linkTarget: "Company", },
                     {
-                        name: "maintenance_team", label: "Maintenance Team", type: "Link",
-                        linkTarget: "Asset Maintenance Team"
+                        name: "custom_firm_company_name",
+                        label: "Firm/Company Name",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_contractor_company"
+                        },
+                        defaultValue: getValue("custom_firm_company_name"),
                     },
-
-                    { name: "custom_contact_no", label: "Contact No", type: "Text", },
+                    {
+                        name: "custom_contractor_name",
+                        label: "Contractor Name",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_contractor_name"
+                        },
+                        defaultValue: getValue("custom_contractor_name"),
+                    },
+                    {
+                        name: "custom_email_id",
+                        label: "Email ID",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_email_id"
+                        },
+                        defaultValue: getValue("custom_email_id"),
+                    },
+                    {
+                        name: "custom_contact_no",
+                        label: "Contact No.",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_mobile_no"
+                        },
+                        defaultValue: getValue("custom_contact_no"),
+                    },
 
                     {
                         name: "asset_maintenance_tasks",
@@ -261,9 +300,6 @@ export default function NewMaintenanceSchedulePage() {
                             },
                         ],
                     }
-
-
-
                 ],
             }
         ];
@@ -279,7 +315,7 @@ export default function NewMaintenanceSchedulePage() {
         }
 
         // Check if we have valid data to submit (either dirty changes or duplicate data)
-        const hasValidData = (duplicateData && data.asset_category_name) || !duplicateData;
+        const hasValidData = true;
 
         if (!hasValidData) {
             toast.info("Please fill out the form.");

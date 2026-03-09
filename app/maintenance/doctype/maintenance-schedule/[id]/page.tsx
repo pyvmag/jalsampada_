@@ -35,8 +35,12 @@ interface AssetMaintenanceRecord {
   custom_stage?: string;
   asset_name?: string;
   company?: string;
-  maintenance_team?: string;
+  custom_tender_no?: string;
+  custom_firm_company_name?: string;
+  custom_contractor_name?: string;
+  custom_email_id?: string;
   custom_contact_no?: string;
+
   maintenance_tasks?: MaintenanceTaskRow[];
   docstatus: 0 | 1 | 2;
   modified: string;
@@ -142,9 +146,53 @@ export default function MaintenanceScheduleDetailPage() {
             referenceDoctype: "Asset Maintenance",
             doctype: "Asset"
           },
-          // { name: "company", label: "Company", type: "Link", linkTarget: "Company" },
-          { name: "maintenance_team", label: "Maintenance Team", type: "Link", linkTarget: "Asset Maintenance Team" },
-          { name: "custom_contact_no", label: "Contact No", type: "Text" },
+          {
+            name: "custom_tender_no",
+            label: "Tender No.",
+            type: "Link",
+            linkTarget: "Project",
+          },
+          {
+            name: "custom_firm_company_name",
+            label: "Firm/Company Name",
+            type: "Read Only",
+            fetchFrom: {
+              sourceField: "custom_tender_no",
+              targetDoctype: "Project",
+              targetField: "custom_contractor_company"
+            }
+          },
+          {
+            name: "custom_contractor_name",
+            label: "Contractor Name",
+            type: "Read Only",
+            fetchFrom: {
+              sourceField: "custom_tender_no",
+              targetDoctype: "Project",
+              targetField: "custom_contractor_name"
+            }
+          },
+          {
+            name: "custom_email_id",
+            label: "Email ID",
+            type: "Read Only",
+            fetchFrom: {
+              sourceField: "custom_tender_no",
+              targetDoctype: "Project",
+              targetField: "custom_email_id"
+            }
+          },
+          {
+            name: "custom_contact_no",
+            label: "Contact No.",
+            type: "Read Only",
+            fetchFrom: {
+              sourceField: "custom_tender_no",
+              targetDoctype: "Project",
+              targetField: "custom_mobile_no"
+            }
+          },
+
 
           {
             name: "asset_maintenance_tasks",
