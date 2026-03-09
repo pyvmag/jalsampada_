@@ -63,7 +63,7 @@ export default function MaintenanceScheduleListPage() {
   const selectedStage = watch("custom_stage");
   const selectedAsset = watch("asset_name"); // Added
 
-  const title = "Maintenance Schedule";
+  const title = "Work Schedule";
 
   /* ── Client-side Filtering ─────────────────────────────── */
   const filteredRecords = React.useMemo(() => {
@@ -351,7 +351,7 @@ export default function MaintenanceScheduleListPage() {
   );
 
   if (loading && records.length === 0)
-    return <p style={{ padding: "2rem" }}>Loading Maintenance Schedule...</p>;
+    return <p style={{ padding: "2rem" }}>Loading Work Schedule...</p>;
   if (error && records.length === 0)
     return <p style={{ padding: "2rem", color: "red" }}>{error}</p>;
 
@@ -359,8 +359,8 @@ export default function MaintenanceScheduleListPage() {
     <div className="module active">
       <div className="module-header">
         <div>
-          <h2>Maintenance Schedule</h2>
-          <p>Manage Maintenance Schedule</p>
+          <h2>Work Schedule</h2>
+          <p>Manage Work Schedule</p>
         </div>
 
         {selectedIds.size > 0 ? (
@@ -377,7 +377,7 @@ export default function MaintenanceScheduleListPage() {
               router.push("/maintenance/doctype/maintenance-schedule/new")
             }
           >
-            <Plus className="w-4 h-4" /> Add Maintenance Schedule
+            <Plus className="w-4 h-4" /> Add Work Schedule
           </button>
         )}
       </div>

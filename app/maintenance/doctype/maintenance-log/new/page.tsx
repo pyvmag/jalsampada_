@@ -83,7 +83,7 @@ export default function NewMaintenanceLogPage() {
           // Top identifiers row
           {
             name: "asset_maintenance",
-            label: "Maintenance Schedule",
+            label: "Work Schedule",
             type: "Link",
             linkTarget: "Asset Maintenance",
             // defaultValue: getValue("asset_maintenance"),
@@ -98,11 +98,11 @@ export default function NewMaintenanceLogPage() {
               const lisName = getValue("lis");
               const lisPhase = getValue("lis_phase");
               const stageNo = getValue("stage");
-              
+
               if (lisName) filters["lis"] = lisName;
               if (lisPhase) filters["lis_phase"] = lisPhase;
               if (stageNo) filters["stage"] = stageNo;
-              
+
               return filters;
             },
           },
@@ -121,7 +121,7 @@ export default function NewMaintenanceLogPage() {
             type: "Read Only",
             linkTarget: "Item",
             displayDependsOn: { asset_maintenance: true }
-            ,fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
+            , fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
           },
           {
             name: "asset_maintenance",
@@ -142,7 +142,7 @@ export default function NewMaintenanceLogPage() {
             required: true,
             defaultValue: getValue("lis"),
           },
-          
+
           {
             name: "stage",
             label: "Stage",
@@ -206,7 +206,7 @@ export default function NewMaintenanceLogPage() {
             label: "Periodicity",
             type: "Read Only",
             defaultValue: getValue("task"),
-           displayDependsOn: { task: true },
+            displayDependsOn: { task: true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "periodicity" }
           },
@@ -217,7 +217,7 @@ export default function NewMaintenanceLogPage() {
             defaultValue: getValue("task"),
             displayDependsOn: { task: true },
 
-             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "description" }
+            fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "description" }
 
           },
           {
@@ -238,7 +238,7 @@ export default function NewMaintenanceLogPage() {
             label: "Completion Date",
             type: "Date",
             defaultValue: getValue("completion_date"),
-             disableAutoToday: true, 
+            disableAutoToday: true,
           },
 
           { name: "section_break_2", type: "Section Break", label: "Certificate" },
@@ -275,87 +275,87 @@ export default function NewMaintenanceLogPage() {
   /* -------------------------------------------------
    Submit handler
   ------------------------------------------------- */
- const handleSubmit = async (data: Record<string, any>) => {
-  if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) {
-    toast.error("Authentication required. Please log in.");
-    return;
-  }
-
-  if (!data.task) {
-    toast.info("Task field is required.");
-    return;
-  }
-
-  setIsSaving(true);
-
-  try {
-    const payload = { ...data };
-
-    // Remove auto placeholder name
-    if (payload.name === "Will be auto-generated") {
-      delete payload.name;
-    }
-
-    const response = await axios.post(
-      `${API_BASE_URL}/${doctypeName}`,
-      payload,
-      {
-        headers: {
-          Authorization: `token ${apiKey}:${apiSecret}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      }
-    );
-
-    toast.success("Maintenance Log created successfully!");
-
-    const newName = response.data?.data?.name;
-    if (newName) {
-      router.push(`/maintenance/doctype/maintenance-log/${newName}`);
-    }
-  } catch (err: any) {
-    console.error("Create error:", err);
-
-    const res = err.response?.data;
-
-    // ⭐ 1. FRAPPE VALIDATION ERRORS (MOST IMPORTANT)
-    if (res?._server_messages) {
-      try {
-        const messages = JSON.parse(res._server_messages); // array of strings
-
-        const cleanMessage = messages
-          .map((msg: string) => {
-            const parsed = JSON.parse(msg);
-            return parsed.message;
-          })
-          .join("\n");
-
-        toast.error(cleanMessage);
-        return;
-      } catch (parseErr) {
-        console.error("Server message parse error:", parseErr);
-      }
-    }
-
-    if (res?.exc_type === "DuplicateEntryError") {
-      toast.error("Duplicate Entry Error", {
-        description: "A Maintenance Log with this series already exists.",
-      });
+  const handleSubmit = async (data: Record<string, any>) => {
+    if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) {
+      toast.error("Authentication required. Please log in.");
       return;
     }
 
-    const errorMessage =
-      res?.message ||
-      res?.exception ||
-      res?.error ||
-      "Failed to create Maintenance Log.";
+    if (!data.task) {
+      toast.info("Task field is required.");
+      return;
+    }
 
-    toast.error(errorMessage);
-  } finally {
-    setIsSaving(false);
-  }
-};
+    setIsSaving(true);
+
+    try {
+      const payload = { ...data };
+
+      // Remove auto placeholder name
+      if (payload.name === "Will be auto-generated") {
+        delete payload.name;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/${doctypeName}`,
+        payload,
+        {
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      toast.success("Maintenance Log created successfully!");
+
+      const newName = response.data?.data?.name;
+      if (newName) {
+        router.push(`/maintenance/doctype/maintenance-log/${newName}`);
+      }
+    } catch (err: any) {
+      console.error("Create error:", err);
+
+      const res = err.response?.data;
+
+      // ⭐ 1. FRAPPE VALIDATION ERRORS (MOST IMPORTANT)
+      if (res?._server_messages) {
+        try {
+          const messages = JSON.parse(res._server_messages); // array of strings
+
+          const cleanMessage = messages
+            .map((msg: string) => {
+              const parsed = JSON.parse(msg);
+              return parsed.message;
+            })
+            .join("\n");
+
+          toast.error(cleanMessage);
+          return;
+        } catch (parseErr) {
+          console.error("Server message parse error:", parseErr);
+        }
+      }
+
+      if (res?.exc_type === "DuplicateEntryError") {
+        toast.error("Duplicate Entry Error", {
+          description: "A Maintenance Log with this series already exists.",
+        });
+        return;
+      }
+
+      const errorMessage =
+        res?.message ||
+        res?.exception ||
+        res?.error ||
+        "Failed to create Maintenance Log.";
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleCancel = () => router.back();
 

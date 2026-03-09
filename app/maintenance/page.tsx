@@ -15,11 +15,11 @@ const maintenanceDoctypes: Doctype[] = [
 
 const transactionDoctypes: Doctype[] = [
   { name: "maintenance-checklist", title: "Maintenance Checklist", icon: ListChecks },
-  { name: "maintenance-schedule", title: "Maintenance Schedule", icon: CalendarCheck },
+  { name: "maintenance-schedule", title: "Work Schedule", icon: CalendarCheck },
   { name: "maintenance-log", title: "Maintenance Log", icon: FileText },
 ];
 const reportsDoctypes: Doctype[] = [
-  { name: "maintenance-schedule-report", title: "Maintenance Schedule Report", icon: FileText },
+  { name: "maintenance-schedule-report", title: "Work Schedule Report", icon: FileText },
 ];
 
 const maintenanceDoctypeGroups: DoctypeGroup[] = [

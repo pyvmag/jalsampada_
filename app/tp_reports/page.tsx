@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { Workspace } from "@/components/Workspace";
-import { 
-  FileText, 
-  Wrench, 
-  FileText as FileInvoice, 
-  Activity, 
+import {
+  FileText,
+  Wrench,
+  FileText as FileInvoice,
+  Activity,
   ClipboardList,
   Book,
   AlertTriangle,
@@ -40,7 +40,7 @@ const reportDoctypeGroups = [
         icon: FileText
       },
       {
-        name: "logbook-report", 
+        name: "logbook-report",
         title: "Logbook Report",
         icon: Book
       },
@@ -78,12 +78,12 @@ const reportDoctypeGroups = [
     doctypes: [
       {
         name: "maintenance-schedule-report",
-        title: "Maintenance Schedule Report",
+        title: "Work Schedule Report",
         icon: Calendar
       }
     ]
   },
-  
+
   // {
   //   title: "LIS Management Reports",
   //   basePath: "/lis-management/reports",
