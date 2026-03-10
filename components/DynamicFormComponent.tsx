@@ -1186,11 +1186,11 @@ export function DynamicForm({
 
     const previousValues = new Map<string, any>();
 
-    const handleFetchForSource = async (sourceFieldName: string) => {
+    const handleFetchForSource = async (sourceFieldName: string, force: boolean = false) => {
       const sourceValue = watch(sourceFieldName);
       const previousValue = previousValues.get(sourceFieldName);
 
-      if (sourceValue !== previousValue) {
+      if (sourceValue !== previousValue || force) {
         previousValues.set(sourceFieldName, sourceValue);
 
         const dependentFields = sourceFieldMap.get(sourceFieldName) || [];
@@ -1257,7 +1257,7 @@ export function DynamicForm({
       previousValues.set(sourceField, watch(sourceField));
     });
 
-    sourceFields.forEach(handleFetchForSource);
+    sourceFields.forEach(f => handleFetchForSource(f, true));
 
     const subscription = watch((value, { name, type }) => {
       if (name && sourceFieldMap.has(name)) {

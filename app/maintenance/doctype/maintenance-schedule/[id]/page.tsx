@@ -36,12 +36,13 @@ interface AssetMaintenanceRecord {
   asset_name?: string;
   company?: string;
   custom_tender_no?: string;
-  custom_firm_company_name?: string;
+  custom_firmcompany_name?: string;
   custom_contractor_name?: string;
   custom_email_id?: string;
   custom_contact_no?: string;
-
-  maintenance_tasks?: MaintenanceTaskRow[];
+  maintenance_team?: string;
+  asset_maintenance_tasks?: MaintenanceTaskRow[];
+  maintenance_tasks?: MaintenanceTaskRow[]; // Backward compatibility
   docstatus: 0 | 1 | 2;
   modified: string;
   owner?: string;
@@ -153,7 +154,7 @@ export default function MaintenanceScheduleDetailPage() {
             linkTarget: "Project",
           },
           {
-            name: "custom_firm_company_name",
+            name: "custom_firmcompany_name",
             label: "Firm/Company Name",
             type: "Read Only",
             fetchFrom: {
@@ -192,13 +193,11 @@ export default function MaintenanceScheduleDetailPage() {
               targetField: "custom_mobile_no"
             }
           },
-
-
           {
             name: "asset_maintenance_tasks",
             label: "Maintenance Tasks",
             type: "Table",
-            defaultValue: record.maintenance_tasks || [],
+            defaultValue: record.asset_maintenance_tasks || record.maintenance_tasks || [],
             columns: [
               { name: "maintenance_task", label: "Maintenance Task", type: "Text" },
               { name: "maintenance_status", label: "Maintenance Status", type: "Select", options: "Planned\nOverdue\nCancelled" },
@@ -263,6 +262,7 @@ export default function MaintenanceScheduleDetailPage() {
 
       const finalPayload: Record<string, any> = {
         ...payload,
+        maintenance_team: payload.maintenance_team || "Test",
         modified: record.modified,
         docstatus: record.docstatus,
       };
