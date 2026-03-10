@@ -12,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412//api/resource";
+const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
 /* -------------------------------------------------
  1. Work Schedule type – mirrors the API
@@ -149,7 +149,15 @@ export default function NewMaintenanceSchedulePage() {
                         }),
                         referenceDoctype: "Asset Maintenance",
                         doctype: "Asset",
-                        defaultValue: getValue("asset"),
+                        defaultValue: getValue("asset_name") || getValue("asset"),
+                    },
+                    {
+                        name: "asset",
+                        label: "Asset",
+                        type: "Link",
+                        linkTarget: "Asset",
+                        displayDependsOn: () => false, // Hidden but used for payload
+                        defaultValue: getValue("asset") || getValue("asset_name"),
                     },
 
 
@@ -162,7 +170,7 @@ export default function NewMaintenanceSchedulePage() {
                         defaultValue: getValue("custom_tender_no"),
                     },
                     {
-                        name: "custom_firm_company_name",
+                        name: "custom_firmcompany_name",
                         label: "Firm/Company Name",
                         type: "Read Only",
                         fetchFrom: {
@@ -170,7 +178,7 @@ export default function NewMaintenanceSchedulePage() {
                             targetDoctype: "Project",
                             targetField: "custom_contractor_company"
                         },
-                        defaultValue: getValue("custom_firm_company_name"),
+                        defaultValue: getValue("custom_firmcompany_name"),
                     },
                     {
                         name: "custom_contractor_name",
@@ -205,7 +213,6 @@ export default function NewMaintenanceSchedulePage() {
                         },
                         defaultValue: getValue("custom_contact_no"),
                     },
-
                     {
                         name: "asset_maintenance_tasks",
                         label: "Maintenance Tasks",
@@ -299,6 +306,7 @@ export default function NewMaintenanceSchedulePage() {
                                 inListView: false,
                             },
                         ],
+                        defaultValue: getValue("asset_maintenance_tasks") || getValue("maintenance_tasks") || [],
                     }
                 ],
             }
@@ -324,21 +332,76 @@ export default function NewMaintenanceSchedulePage() {
 
         setIsSaving(true);
         try {
+            // 1. Prepare Payload
             const payload = { ...data };
 
-            // Remove name if it's the placeholder
-            // if (payload.name === "Will be auto-generated") {
-            //     delete payload.name;
-            // }
+            // 2. Clean Payload (System Fields)
+            const cleanObj = (obj: any): any => {
+                if (Array.isArray(obj)) return obj.map(cleanObj);
+                if (obj !== null && typeof obj === 'object') {
+                    const newObj = { ...obj };
+                    // Remove Frappe system fields
+                    const systemFields = [
+                        'modified', 'creation', 'owner', 'docstatus', 'idx',
+                        'modified_by', 'parent', 'parentfield', 'parenttype',
+                        '_user_tags', '_comments', '_assign', '_liked_by'
+                    ];
+                    systemFields.forEach(field => delete newObj[field]);
 
-            const response = await axios.post(`${API_BASE_URL}/${doctypeName}`, payload, {
+                    // Specific to child table items: remove name and doctype if present
+                    // asset_maintenance_tasks is the child table here
+                    if (newObj.maintenance_task || newObj.periodicity || newObj.start_date) {
+                        delete newObj.name;
+                        delete newObj.id; // Remove React-specific ID
+                        newObj.doctype = "Asset Maintenance Task"; // Explicit child doctype
+                    }
+
+                    // Recursively clean
+                    for (const key in newObj) {
+                        if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+                            newObj[key] = cleanObj(newObj[key]);
+                        }
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
+
+            const cleaned = cleanObj(payload);
+
+            const finalizedPayload = {
+                ...cleaned,
+                doctype: "Asset Maintenance" // Explicit main doctype
+            };
+
+
+            // 2.5 Validation: Ensure the table is not empty if the server is complaining
+            if (!finalizedPayload.asset_maintenance_tasks || finalizedPayload.asset_maintenance_tasks.length === 0) {
+                toast.error("Data missing", { description: "Please add at least one row to the Maintenance Tasks table." });
+                setIsSaving(false);
+                return;
+            }
+
+
+            // 3. Manually add hidden mandatory field
+            if (!finalizedPayload.maintenance_team) {
+                finalizedPayload.maintenance_team = "Test";
+            }
+
+            // Log payload for debugging (visible in browser console)
+            console.log("Submitting finalized payload:", finalizedPayload);
+
+            if (finalizedPayload.name === "Will be auto-generated" || !finalizedPayload.name) delete finalizedPayload.name;
+
+            const frappeClientUrl = `${API_BASE_URL.replace("/api/resource", "/api/method/frappe.client.insert")}`;
+            const response = await axios.post(frappeClientUrl, {
+                doc: finalizedPayload
+            }, {
                 headers: {
                     Authorization: `token ${apiKey}:${apiSecret}`,
                     "Content-Type": "application/json",
                 },
                 withCredentials: true,
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
             });
 
             const messages = getApiMessages(response, null, "Work Schedule created successfully!", "Failed to create Work Schedule");
@@ -348,7 +411,7 @@ export default function NewMaintenanceSchedulePage() {
             }
 
 
-            const docName = response.data.data.name;
+            const docName = response.data?.data?.name || response.data?.message?.name;
             if (docName) {
                 router.push(`/maintenance/doctype/maintenance-schedule/${encodeURIComponent(docName)}`);
             } else {
@@ -356,21 +419,25 @@ export default function NewMaintenanceSchedulePage() {
             }
 
         } catch (err: any) {
-            console.error("Create error:", err);
+            console.error("Full Create Error Object:", err);
 
-            // Handle duplicate entry error specifically
+            const apiResult = getApiMessages(null, err, null, "Failed to create Work Schedule");
+
+            // Extract the most descriptive message possible
+            const detailedDescription = apiResult.description ||
+                err.response?.data?.message ||
+                err.message;
+
             if (err.response?.data?.exc_type === "DuplicateEntryError") {
-                const errorMessage = err.response?.data?._server_messages ||
-                    "A work schedule with this name already exists. Please use a different name.";
                 toast.error("Duplicate Entry Error", {
-                    description: "Work Schedule with this name already exists. Please change the category name and try again.",
+                    description: "Work Schedule with this name already exists. Please change the data or category name and try again.",
                     duration: Infinity
                 });
             } else {
-                const errorMessage = err.response?.data?.message ||
-                    err.response?.data?.error ||
-                    "Failed to create Work Schedule. Check console for details.";
-                toast.error(`Error: ${errorMessage}`, { duration: Infinity });
+                toast.error(`Submission Refused (417)`, {
+                    description: detailedDescription,
+                    duration: Infinity
+                });
             }
         } finally {
             setIsSaving(false);
