@@ -26,6 +26,7 @@ interface MaintenanceTaskRow {
   assign_to?: string;
   next_due_date?: string;
   last_completion_date?: string;
+  period_in_days?: string;
   description?: string;
 }
 
@@ -49,13 +50,43 @@ interface AssetMaintenanceRecord {
   modified_by?: string;
 }
 
+const handleFormInit = (methods: any) => {
+  const { watch, setValue } = methods;
+
+  watch((formValues: any, { name }: any) => {
+    if (!name) return;
+    if (!name.startsWith("asset_maintenance_tasks")) return;
+
+    const rows = formValues.asset_maintenance_tasks;
+    if (!Array.isArray(rows)) return;
+
+    rows.forEach((row: any, index: number) => {
+      const { start_date, period_in_days } = row;
+      if (!start_date || !period_in_days) return;
+
+      const start = new Date(start_date);
+      const days = parseInt(period_in_days);
+      if (isNaN(days)) return;
+
+      start.setDate(start.getDate() + days);
+      const endDate = start.toISOString().split("T")[0];
+
+      const path = `asset_maintenance_tasks.${index}.end_date`;
+
+      if (row.end_date !== endDate) {
+        setValue(path, endDate, { shouldDirty: true });
+      }
+    });
+  });
+};
+
 /* --------------------------------------------------
   COMPONENT
 -------------------------------------------------- */
 export default function MaintenanceScheduleDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
+  const { apiKey, apiSecret, isAuthenticated, isInitialized, currentUser, userId } = useAuth();
 
   const docname = decodeURIComponent(params.id as string);
   const doctypeName = "Asset Maintenance";
@@ -134,19 +165,7 @@ export default function MaintenanceScheduleDetailPage() {
               { sourceField: "custom_lis", targetField: "lis_name" }
             ]
           },
-          {
-            name: "asset_name",
-            label: "Asset Name",
-            type: "Link",
-            linkTarget: "Asset",
-            customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
-            filters: (getValue) => ({
-              custom_stage_no: getValue("custom_stage"),
-              custom_lis_name: getValue("custom_lis")
-            }),
-            referenceDoctype: "Asset Maintenance",
-            doctype: "Asset"
-          },
+
           {
             name: "custom_tender_no",
             label: "Tender No.",
@@ -199,6 +218,30 @@ export default function MaintenanceScheduleDetailPage() {
             type: "Table",
             defaultValue: record.asset_maintenance_tasks || record.maintenance_tasks || [],
             columns: [
+              {
+                name: "custom_asset",
+                label: "Asset",
+                type: "Link",
+                linkTarget: "Asset",
+                customSearchUrl: "http://103.219.1.138:4412/api/method/frappe.desk.search.search_link",
+                filters: (getValue) => ({
+                  custom_stage_no: getValue("custom_stage"),
+                  custom_lis_name: getValue("custom_lis")
+                }),
+                referenceDoctype: "Asset Maintenance",
+                doctype: "Asset",
+              },
+              {
+                name: "asset_name",
+                label: "Asset Name",
+                type: "Data",
+                displayDependsOn: () => false,
+                fetchFrom: {
+                  sourceField: "custom_asset",
+                  targetDoctype: "Asset",
+                  targetField: "asset_name"
+                }
+              },
               { name: "maintenance_task", label: "Maintenance Task", type: "Text" },
               { name: "maintenance_status", label: "Maintenance Status", type: "Select", options: "Planned\nOverdue\nCancelled" },
               {
@@ -214,11 +257,16 @@ export default function MaintenanceScheduleDetailPage() {
                 type: "Date",
               },
               {
-                name: "end_date",
-                label: "End Date",
-                type: "Date",
+                name: "period_in_days",
+                label: "Period (In Days)",
+                type: "Int",
               },
-              { name: "periodicity", label: "Periodicity", type: "Select", options: "Daily\nWeekly\nMonthly\nQuarterly\nYearly" },
+              {
+                name: "end_date",
+                label: "Expected End Date",
+                type: "Read Only",
+              },
+
               {
                 name: "certificate_required",
                 label: "Certificate Required",
@@ -230,9 +278,6 @@ export default function MaintenanceScheduleDetailPage() {
                 type: "Attach",
                 displayDependsOn: "certificate_required", // simpler dependency
               },
-              { name: "assign_to", label: "Assign To", type: "Link", linkTarget: "User" },
-              { name: "next_due_date", label: "Next Due Date", type: "Date" },
-              { name: "last_completion_date", label: "Last Completion Date", type: "Date" },
               { name: "description", label: "Description", type: "Text" },
             ],
           },
@@ -260,12 +305,91 @@ export default function MaintenanceScheduleDetailPage() {
     try {
       const payload = JSON.parse(JSON.stringify(data));
 
+      // Clean Payload (System Fields and removed UI fields)
+      const cleanObj = (obj: any): any => {
+        if (Array.isArray(obj)) return obj.map(cleanObj);
+        if (obj !== null && typeof obj === 'object') {
+          const newObj = { ...obj };
+          const fieldsToRemove = [
+            'modified', 'creation', 'owner', 'docstatus', 'idx',
+            'modified_by', 'parent', 'parentfield', 'parenttype',
+            '_user_tags', '_comments', '_assign', '_liked_by',
+            'parent_task',
+            'id'
+          ];
+          fieldsToRemove.forEach(f => delete newObj[f]);
+
+          // Force periodicity to Daily for tasks
+          if (newObj.maintenance_task || newObj.period_in_days || newObj.start_date) {
+            newObj.periodicity = "Daily";
+            newObj.doctype = "Asset Maintenance Task";
+
+            // Strict whitelist for child table rows to prevent AttributeErrors
+            const allowedForTask = [
+              'name', 'maintenance_task', 'maintenance_status', 'maintenance_type',
+              'start_date', 'period_in_days', 'end_date', 'next_due_date',
+              'assign_to', 'assign_to_name', 'last_completion_date',
+              'description', 'certificate_required', 'certificate_upload',
+              'periodicity', 'doctype', 'custom_asset', 'asset_name'
+            ];
+
+            // Background requirement: set next_due_date to end_date
+            if (newObj.end_date) {
+              newObj.next_due_date = newObj.end_date;
+            }
+
+            // 🛡️ SMART ASSIGNMENT RESOLUTION
+            const safeUser = (userId && userId !== "admin@example.com" && userId !== "null")
+              ? userId
+              : "vikas.deshmukh@erpdata.in";
+
+            newObj.assign_to = safeUser;
+            newObj.assign_to_name = safeUser;
+
+            console.log(`DEBUG [Smart Sync Edit]: Assigned to:`, safeUser);
+
+            if ('id' in newObj) delete newObj.id;
+            if (!("last_completion_date" in newObj)) newObj.last_completion_date = null;
+
+            for (const key in newObj) {
+              if (!allowedForTask.includes(key)) {
+                delete newObj[key];
+              }
+            }
+          }
+
+          for (const key in newObj) {
+            if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+              newObj[key] = cleanObj(newObj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
+      const cleaned = cleanObj(payload);
+
       const finalPayload: Record<string, any> = {
-        ...payload,
-        maintenance_team: payload.maintenance_team || "Test",
+        ...cleaned,
+        maintenance_team: cleaned.maintenance_team || "Test",
         modified: record.modified,
         docstatus: record.docstatus,
       };
+
+      // 🔄 BACKGROUND SYNC: Take asset from the first child row for the parent
+      const firstTaskAsset = finalPayload.asset_maintenance_tasks?.[0]?.custom_asset;
+      if (firstTaskAsset) {
+        finalPayload.custom_asset = firstTaskAsset;
+        finalPayload.asset_name = firstTaskAsset;
+      }
+
+      // 🔍 DEBUG: Exact payload being sent to Frappe
+      console.log("DEBUG: User Info from Auth:", { userId, currentUser });
+      console.log("DEBUG: Final Payload for Put:", JSON.stringify(finalPayload, null, 2));
+      if (finalPayload.asset_maintenance_tasks) {
+        console.table(finalPayload.asset_maintenance_tasks);
+      }
 
       const resp = await axios.put(
         `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${docname}`,
@@ -315,6 +439,7 @@ export default function MaintenanceScheduleDetailPage() {
         description="Update Work Schedule"
         submitLabel={isSaving ? "Saving..." : "Save"}
         cancelLabel="Cancel"
+        onFormInit={handleFormInit}
         deleteConfig={{
           doctypeName: doctypeName,
           docName: docname,
