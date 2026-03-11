@@ -51,6 +51,19 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const isLoginPage = pathname === "/login";
 
+  // automatically collapse sidebar on narrow viewports
+  React.useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth <= 768) {
+        setSidebarOpen(false);
+      }
+    }
+    // run once to set initial state
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Helper function to get initials from full name
   const getInitials = (fullName: string) => {
     if (!fullName) return "U";
@@ -96,6 +109,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       {/* HEADER */}
       <header className="header">
         <div className="header-content">
+          {/* logo doubles as toggle on all screen sizes */}
           <div
             className="logo-section"
             onClick={() => setSidebarOpen((v) => !v)}
@@ -113,6 +127,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* SIDEBAR */}
+      <div
+        className={`mobile-overlay ${sidebarOpen ? "mobile-overlay-visible" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
       <nav className="sidebar">
         <div className="nav-items">
           {[
@@ -129,6 +147,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => {
+                if (window.innerWidth <= 768) {
+                  setSidebarOpen(false);
+                }
+              }}
               className={`nav-item ${pathname === item.href ||
                 (item.href !== "/" && pathname.startsWith(item.href))
                 ? "active"

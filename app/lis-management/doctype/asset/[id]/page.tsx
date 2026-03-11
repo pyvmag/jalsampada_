@@ -287,7 +287,7 @@ export default function AssetDetailPage() {
     <div className="py-4 px-2 test-module-page">
       {/* Compact Header Section - Single Line */}
       <div className="test-module-header py-2">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <h1 className="text-2xl font-bold truncate">{asset.asset_name}</h1>
             <span className={`status-badge text-xs whitespace-nowrap status-badge-draft`}>
@@ -301,16 +301,16 @@ export default function AssetDetailPage() {
             </span>
           </div>
 
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="grid grid-cols-1 sm:flex sm:justify-end gap-2 flex-shrink-0 mt-2 sm:mt-0 w-full">
             <Link href={`/lis-management/doctype/asset/edit/${docname}`}>
-              <button className="btn-header-primary-asset bg-green-600 hover:bg-green-700 text-sm">
+              <button className="btn-header-primary-asset bg-green-600 hover:bg-green-700 text-sm w-full">
                 <Pencil size={16} /> Edit
               </button>
             </Link>
-            <button onClick={handleDownloadReport} className="btn-header-secondary-asset text-sm">
+            <button onClick={handleDownloadReport} className="btn-header-secondary-asset text-sm w-full">
               <Download size={16} /> Report
             </button>
-            <button onClick={handleQRClick} className="btn-header-secondary-asset text-sm">
+            <button onClick={handleQRClick} className="btn-header-secondary-asset text-sm w-full">
               <QrCode size={16} /> QR
             </button>
           </div>
