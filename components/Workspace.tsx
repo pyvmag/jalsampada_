@@ -32,18 +32,18 @@ export function Workspace({
   basePath,
 }: WorkspaceProps) {
   return (
-    <div className="module active min-h-screen bg-[#F9FBFC] p-4 sm:p-6 w-full mx-auto max-w-screen-lg">
+    <div className="module active min-h-screen bg-[#F9FBFC] p-6">
       {/* Refined Header */}
-      <div className="mb-8 sm:mb-10 max-w-4xl">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight mb-2">
+      <div className="mb-10 max-w-4xl">
+        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight mb-2">
           {title}
         </h2>
-        <p className="text-slate-500 text-base sm:text-lg font-medium leading-relaxed">
+        <p className="text-slate-500 text-lg font-medium leading-relaxed">
           {description}
         </p>
       </div>
 
-      <div className="columns-1 xl:columns-2 gap-8 sm:gap-10 space-y-8 sm:space-y-10">
+      <div className="columns-1 xl:columns-2 gap-10 space-y-10">
         {doctypeGroups.map((group, index) => {
           const isMaster = group.title.toLowerCase() === "master";
           const themeColor = isMaster ? "text-emerald-600" : "text-blue-600";
@@ -72,7 +72,7 @@ export function Workspace({
                       key={doc.name}
                       asChild
                       variant="ghost"
-                      className="group relative w-full justify-start h-auto p-3 sm:p-4 rounded-xl transition-all duration-300 hover:bg-[#FEF9EC] overflow-hidden"
+                      className="group relative w-full justify-start h-auto p-4 rounded-xl transition-all duration-300 hover:bg-[#FEF9EC] overflow-hidden"
                     >
                       <Link href={`${group.basePath || basePath}/${doc.name}`} className="flex items-center justify-between w-full">
                         {/* Hover Left Indicator Bar */}
