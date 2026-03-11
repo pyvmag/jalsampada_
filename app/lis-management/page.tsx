@@ -27,6 +27,7 @@ const masterDoctypes: Doctype[] = [
   { name: "doctype/rating", title: "Rating", icon: Star },
   { name: "doctype/district", title: "District", icon: MapPin },  // Change icon to represent a district location
   { name: "doctype/taluka", title: "Taluka", icon: Star },        // You could keep Star for Taluka as a general icon
+  { name: "doctype/location", title: "Location", icon: MapPin },
   { name: "doctype/village", title: "Village", icon: Home }
 ];
 
