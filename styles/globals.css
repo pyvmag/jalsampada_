@@ -1597,18 +1597,24 @@ th span[class*="dark:text-gray-200"] {
   height: auto;
 }
 
+/* Show mobile overlay ONLY on mobile */
+.mobile-overlay {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* helper class toggled by React to make overlay visible */
+.mobile-overlay-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform var(--duration-normal) var(--ease-standard);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
   .mobile-overlay {
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
@@ -1616,10 +1622,6 @@ th span[class*="dark:text-gray-200"] {
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 998;
-  }
-
-  .main-content {
-    margin-left: 0;
   }
 
   .dashboard-grid {
@@ -1732,7 +1734,9 @@ th span[class*="dark:text-gray-200"] {
 
 .sidebar {
   width: 220px;
-  transition: width 0.3s ease;
+  /* allow both width changes (desktop) and sliding (mobile) to animate */
+  transition: width 0.3s ease, transform 0.3s ease;
+  transform: translateX(0);
 }
 
 .main-content {
@@ -1754,6 +1758,54 @@ th span[class*="dark:text-gray-200"] {
 
 .app-container.sidebar-collapsed .main-content {
   margin-left: 90px;
+}
+
+/* Mobile Responsive Sidebar Fixes */
+@media (max-width: 768px) {
+
+  /* On mobile, standard 'open' sidebar takes full screen or drawer width, completely overlays */
+  .app-container .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    z-index: 1000;
+    /* start hidden by default, only slides in when container has no collapsed class */
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* open state on mobile */
+  .app-container:not(.sidebar-collapsed) .sidebar {
+    transform: translateX(0);
+  }
+
+  /* When collapsed on mobile, we hide it completely to the left */
+  .app-container.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+    width: 250px;
+    /* Don't squash to 80px, just move it off-screen */
+  }
+
+  .app-container.sidebar-collapsed .sidebar .nav-item span {
+    display: block;
+    /* keep text visible when it slides back in */
+  }
+
+  .app-container.sidebar-collapsed .sidebar .nav-item {
+    justify-content: flex-start;
+  }
+
+  /* Main content should take full width on mobile always */
+  .app-container .main-content {
+    margin-left: 0;
+  }
+
+  .app-container.sidebar-collapsed .main-content {
+    margin-left: 0;
+  }
 }
 
 /* === Keep/Update this in styles/globals.css === */
@@ -1812,6 +1864,21 @@ body {
 .test-module-page {
   /* This text color will be overridden by cards, but sets a base */
   color: var(--color-text-primary);
+  /* prevent horizontal overflow on small screens */
+  overflow-x: hidden;
+}
+
+/* responsive tweaks for module header */
+@media (max-width: 640px) {
+  .test-module-header {
+    padding: 1rem; /* reduce padding for narrow screens */
+  }
+  .test-module-header .flex {
+    flex-wrap: wrap;
+  }
+  .test-module-header .flex-shrink-0 {
+    margin-top: 0.5rem;
+  }
 }
 
 /* --- Back Link --- */
@@ -2432,4 +2499,337 @@ body {
   padding: 7px 15px;
   /* Example padding */
   /* ... more existing styles ... */
+}
+
+/* ── Mobile Responsive Styles ──────────────────────────────────────── */
+
+/* Mobile Breakpoint: 768px and below */
+@media (max-width: 768px) {
+  /* Header adjustments */
+  .header {
+    height: 50px;
+  }
+
+  .header-content {
+    padding: 0 var(--space-12);
+  }
+
+  .logo-section h1 {
+    font-size: var(--font-size-lg);
+  }
+
+  .user-info {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Sidebar - Hide on mobile, replace with hamburger */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-standard);
+    z-index: 1001;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Main content - full width on mobile */
+  .main-content {
+    margin-left: 0;
+    margin-top: 50px;
+    padding: var(--space-12) var(--space-8);
+  }
+
+  /* Module header - stack vertically and align button to right on mobile */
+  .module-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-12);
+  }
+
+  .module-header h2 {
+    font-size: var(--font-size-2xl);
+    text-align: center;
+  }
+
+  /* Mobile Add Asset button - align to right */
+  .mobile-add-asset {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .mobile-add-asset .btn {
+    width: auto;
+    min-width: 120px;
+  }
+
+  /* Search and filter section - stack vertically */
+  .search-filter-section {
+    flex-direction: column;
+    gap: var(--space-12);
+    align-items: stretch;
+  }
+
+  .search-filter-section > div:first-child {
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  .search-filter-section .form-control {
+    max-width: 100%;
+    min-width: auto;
+  }
+
+  /* Filter inputs - make them full width */
+  .search-filter-section > div:first-child > div {
+    min-width: 300px !important;
+  }
+
+  /* Sort and view toggle - stack on mobile BUT keep in one row */
+  .search-filter-section > div:last-child {
+    flex-direction: row;
+    margin-left: 0;
+    gap: var(--space-8);
+    justify-content: flex-end;
+  }
+
+  /* Mobile sort and view row - ensure it stays in one row */
+  .mobile-sort-view-row {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+
+  /* Equipment grid - single column on mobile */
+  .equipment-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+
+  /* Stock table - improve mobile experience */
+  .stock-table-container {
+    border-radius: var(--radius-base);
+  }
+
+  .stock-table th {
+    padding: var(--space-8) var(--space-6);
+    font-size: var(--font-size-xs);
+    height: 45px;
+  }
+
+  .stock-table td {
+    padding: var(--space-8) var(--space-6);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Hide less important columns on very small screens */
+  @media (max-width: 480px) {
+    .stock-table th:nth-child(5),
+    .stock-table td:nth-child(5),
+    .stock-table th:nth-child(6),
+    .stock-table td:nth-child(6) {
+      display: none;
+    }
+  }
+
+  /* Dashboard grid - single column */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+
+  .metric-card {
+    padding: var(--space-16);
+  }
+
+  .metric-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .metric-value {
+    font-size: var(--font-size-2xl);
+  }
+
+  /* Operations grid - stack vertically */
+  .operations-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-20);
+  }
+
+  /* Trends grid - single column */
+  .trends-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Report filters - stack vertically */
+  .report-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-12);
+  }
+
+  /* Tabs - make them scrollable horizontally */
+  .stock-tabs,
+  .test-module-tab-bar {
+    overflow-x: auto;
+    gap: var(--space-12);
+    margin-bottom: var(--space-16);
+  }
+
+  .tab-btn,
+  .test-module-tab {
+    flex-shrink: 0;
+    padding: var(--space-10) var(--space-16);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Buttons - full width on mobile where appropriate */
+  .btn--full-width-mobile {
+    width: 100%;
+  }
+
+  /* Maintenance records - adjust spacing */
+  .record-details {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  /* Sort menu - adjust positioning */
+  .absolute {
+    position: absolute;
+  }
+
+  /* Load more button - center on mobile */
+  .mt-6.flex.justify-end {
+    justify-content: center;
+  }
+
+  /* View container padding */
+  .view-container {
+    padding-bottom: var(--space-16);
+  }
+}
+
+/* Tablet Breakpoint: 769px - 1024px */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Adjust sidebar width for tablets */
+  .sidebar {
+    width: 200px;
+  }
+
+  .main-content {
+    margin-left: 200px;
+  }
+
+  /* Equipment grid - 2 columns on tablet */
+  .equipment-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Dashboard grid - 2 columns on tablet */
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Search filters - adjust spacing */
+  .search-filter-section {
+    flex-wrap: wrap;
+  }
+
+  .search-filter-section > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Sort and view toggle - adjust spacing */
+  .search-filter-section > div:last-child {
+    flex-shrink: 0;
+  }
+}
+
+/* Large mobile and small tablets: 481px - 768px */
+@media (min-width: 481px) and (max-width: 768px) {
+  /* Equipment grid - 2 columns on larger mobile */
+  .equipment-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Dashboard grid - 2 columns on larger mobile */
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Utility classes for responsive behavior */
+.mobile-hidden {
+  display: none;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.vishal label {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  .mobile-only-flex {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: none;
+  }
+
+  .mobile-menu-overlay.active {
+    display: block;
+  }
+
+  /* Hamburger menu button */
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--color-white);
+    cursor: pointer;
+    border-radius: var(--radius-base);
+  }
+
+  .mobile-menu-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-btn {
+    display: none;
+  }
+
+  .mobile-menu-overlay {
+    display: none !important;
+  }
 }
