@@ -16,6 +16,7 @@ export default function NewUserPage() {
     const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
     const [availableRoles, setAvailableRoles] = React.useState<string[]>([]);
     const [isSaving, setIsSaving] = React.useState(false);
+    const [formInstance, setFormInstance] = React.useState<any>(null);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // FORM CONFIGURATION (User Structure)
@@ -161,6 +162,17 @@ export default function NewUserPage() {
                     label: "Assign Roles",
                     type: "Section Break",
                 },
+                {
+                    name: "role_profile_name",
+                    label: "Role Profile",
+                    type: "Link",
+                    linkTarget: "Role Profile",
+                },
+                {
+                    name: "cb_roles_right",
+                    label: "",
+                    type: "Column Break",
+                },
                 ...availableRoles.map(role => ({
                     name: `role_${role.replace(/\s+/g, '_')}`,
                     label: role,
@@ -190,6 +202,38 @@ export default function NewUserPage() {
         };
         fetchRoles();
     }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
+
+    // Track Role Profile changes and update role checkboxes
+    const previousProfileRef = React.useRef<string | null>(null);
+
+    React.useEffect(() => {
+        if (!formInstance || !apiKey || !apiSecret || availableRoles.length === 0) return;
+
+        const subscription = formInstance.watch((value: any, { name }: any) => {
+            if (name === "role_profile_name" || name === undefined) {
+                const selectedProfile = value.role_profile_name;
+                if (selectedProfile && selectedProfile !== previousProfileRef.current) {
+                    previousProfileRef.current = selectedProfile;
+                    axios.get(`${API_BASE_URL}/Role Profile/${encodeURIComponent(selectedProfile)}`, {
+                        headers: { Authorization: `token ${apiKey}:${apiSecret}` }
+                    }).then(res => {
+                        const profileRoles = res.data.data.roles || [];
+                        availableRoles.forEach(role => {
+                            const key = `role_${role.replace(/\s+/g, '_')}`;
+                            const hasRole = profileRoles.some((pr: any) => pr.role === role);
+                            formInstance.setValue(key, hasRole ? 1 : 0, { shouldDirty: true });
+                        });
+                    }).catch(err => {
+                        console.error("Failed to fetch role profile roles", err);
+                    });
+                } else if (!selectedProfile && previousProfileRef.current) {
+                    previousProfileRef.current = null;
+                }
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [formInstance, availableRoles, apiKey, apiSecret]);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // SUBMIT HANDLER
@@ -299,6 +343,7 @@ export default function NewUserPage() {
                     onCancel={() => router.back()}
                     submitLabel="Save User"
                     isSaving={isSaving}
+                    onFormInit={setFormInstance}
                 />
             </div>
         </div>
