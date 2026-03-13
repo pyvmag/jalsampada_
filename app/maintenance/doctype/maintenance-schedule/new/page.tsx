@@ -140,6 +140,10 @@ export default function NewMaintenanceSchedulePage() {
                         type: "Link",
                         linkTarget: "Project",
                         defaultValue: getValue("custom_tender_no"),
+                        filters: (getValue) => {
+                            const lis = getValue("custom_lis");
+                            return lis ? { custom_lis_name: lis } : {};
+                        },
                     },
                     {
                         name: "custom_firmcompany_name",
