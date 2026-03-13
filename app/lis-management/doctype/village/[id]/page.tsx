@@ -134,7 +134,7 @@ export default function VillageDetailPage() {
             description: "Enter the official name of the village",
           },
           {
-            name: "lis_wise_village_details",
+            name: "village_lis_wise_details",
             label: "Village LIS Wise Details",
             type: "Table",
             showDownloadUpload: true,
@@ -289,7 +289,7 @@ export default function VillageDetailPage() {
           apiKey={apiKey || ""}
           apiSecret={apiSecret || ""}
           isInitialized={isInitialized}
-          currentUserEmail={village.owner}
+          currentUserEmail={village.owner || ""}
           modifiedStr={village.modified}
           modifiedBy={village.modified_by}
         />
