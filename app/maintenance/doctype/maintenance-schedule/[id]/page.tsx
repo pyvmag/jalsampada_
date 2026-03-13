@@ -171,6 +171,10 @@ export default function MaintenanceScheduleDetailPage() {
             label: "Tender No.",
             type: "Link",
             linkTarget: "Project",
+            filters: (getValue) => {
+              const lis = getValue("custom_lis");
+              return lis ? { custom_lis_name: lis } : {};
+            },
           },
           {
             name: "custom_firmcompany_name",
