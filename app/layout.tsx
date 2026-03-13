@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Jalsampada | Asset Management",
   description: "Water Resource Department ERP System",
   icons: {
-    icon: "/favicon.ico", 
+    icon: "/maharashtra.png", 
   },
 };
 
