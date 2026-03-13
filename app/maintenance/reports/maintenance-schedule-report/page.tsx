@@ -50,7 +50,6 @@ const formatDateTime = (dateString: string | null): string => {
 const columnConfig: ColumnConfig[] = [
   { fieldname: "name", label: "ID", width: "150px" },
   { fieldname: "asset_name", label: "Asset Name", width: "180px" },
-  { fieldname: "maintenance_team", label: "Maintenance Team", width: "220px" },
 ];
 
 export default function MaintenanceScheduleReportPage() {
@@ -162,7 +161,7 @@ export default function MaintenanceScheduleReportPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "maintenance_schedule_report.csv");
+    link.setAttribute("download", "work_schedule_report.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -214,7 +213,7 @@ export default function MaintenanceScheduleReportPage() {
     <div className="module active">
       <div className="module-header">
         <div>
-          <h2>Maintenance Schedule Report</h2>
+          <h2>Work Schedule Report</h2>
           <p>Track pump running hours and operator entries.</p>
         </div>
 

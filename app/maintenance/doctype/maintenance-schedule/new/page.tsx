@@ -12,14 +12,14 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.3.169:2223//api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 /* -------------------------------------------------
- 1. Maintenance Schedule type – mirrors the API
+ 1. Work Schedule type – mirrors the API
  ------------------------------------------------- */
 interface AssetCategoryData {
     name?: string;
-    asset_category_name?: string;
+
     custom_specifications?: Array<{
         specification_type: string;
         details: string;
@@ -38,22 +38,12 @@ const handleFormInit = (methods: any) => {
         if (!Array.isArray(rows)) return;
 
         rows.forEach((row: any, index: number) => {
-            const { start_date, periodicity } = row;
-            if (!start_date || !periodicity) return;
+            const { start_date, period_in_days } = row;
+            if (!start_date || !period_in_days) return;
 
             const start = new Date(start_date);
-
-            // Convert periodicity to days
-            const map: Record<string, number> = {
-                Daily: 1,
-                Weekly: 7,
-                Monthly: 30,
-                Quarterly: 90,
-                Yearly: 365,
-            };
-
-            const days = map[periodicity];
-            if (!days) return;
+            const days = parseInt(period_in_days);
+            if (isNaN(days)) return;
 
             start.setDate(start.getDate() + days);
             const endDate = start.toISOString().split("T")[0];
@@ -73,7 +63,7 @@ const handleFormInit = (methods: any) => {
 export default function NewMaintenanceSchedulePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
+    const { apiKey, apiSecret, isAuthenticated, isInitialized, currentUser, userId } = useAuth();
 
     const doctypeName = "Asset Maintenance";
     const [isSaving, setIsSaving] = React.useState(false);
@@ -140,38 +130,100 @@ export default function NewMaintenanceSchedulePage() {
                         ],
                     },
 
-                    {
-                        name: "asset_name", label: "Asset Name", type: "Link", linkTarget: "Asset",
-                        customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
-                        filters: (getValue) => ({
-                            custom_stage_no: getValue("custom_stage"),
-                            custom_lis_name: getValue("custom_lis")
-                        }),
-                        referenceDoctype: "Asset Maintenance",
-                        doctype: "Asset",
-                        defaultValue: getValue("asset"),
-                    },
+
+
+
+
+
+
+
 
                     {
-                        name: "asset_category", label: "Asset Category", type: "Read Only",
-                        displayDependsOn: "asset_name",
-
-                        fetchFrom: { sourceField: "asset_name", targetDoctype: "Asset", targetField: "asset_category" }
+                        name: "custom_tender_no",
+                        label: "Tender No.",
+                        type: "Link",
+                        linkTarget: "Project",
+                        defaultValue: getValue("custom_tender_no"),
+                        filters: (getValue) => {
+                            const lis = getValue("custom_lis");
+                            return lis ? { custom_lis_name: lis } : {};
+                        },
                     },
-
-                    // { name: "company", label: "Company", type: "Link", linkTarget: "Company", },
                     {
-                        name: "maintenance_team", label: "Maintenance Team", type: "Link",
-                        linkTarget: "Asset Maintenance Team"
+                        name: "custom_firmcompany_name",
+                        label: "Firm/Company Name",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_contractor_company"
+                        },
+                        defaultValue: getValue("custom_firmcompany_name"),
                     },
-
-                    { name: "custom_contact_no", label: "Contact No", type: "Text", },
-
+                    {
+                        name: "custom_contractor_name",
+                        label: "Contractor Name",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_contractor_name"
+                        },
+                        defaultValue: getValue("custom_contractor_name"),
+                    },
+                    {
+                        name: "custom_email_id",
+                        label: "Email ID",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_email_id"
+                        },
+                        defaultValue: getValue("custom_email_id"),
+                    },
+                    {
+                        name: "custom_contact_no",
+                        label: "Contact No.",
+                        type: "Read Only",
+                        fetchFrom: {
+                            sourceField: "custom_tender_no",
+                            targetDoctype: "Project",
+                            targetField: "custom_mobile_no"
+                        },
+                        defaultValue: getValue("custom_contact_no"),
+                    },
                     {
                         name: "asset_maintenance_tasks",
                         label: "Maintenance Tasks",
                         type: "Table",
                         columns: [
+                            {
+                                name: "custom_asset",
+                                label: "Asset",
+                                type: "Link",
+                                linkTarget: "Asset",
+                                inListView: true,
+                                required: true,
+                                customSearchUrl: "http://103.219.3.169:2223/api/method/frappe.desk.search.search_link",
+                                filters: (getValue) => ({
+                                    custom_stage_no: getValue("custom_stage"),
+                                    custom_lis_name: getValue("custom_lis")
+                                }),
+                                referenceDoctype: "Asset Maintenance",
+                                doctype: "Asset",
+                            },
+                            {
+                                name: "asset_name",
+                                label: "Asset Name",
+                                type: "Data",
+                                displayDependsOn: () => false,
+                                fetchFrom: {
+                                    sourceField: "custom_asset",
+                                    targetDoctype: "Asset",
+                                    targetField: "asset_name"
+                                }
+                            },
                             {
                                 name: "maintenance_task",
                                 label: "Maintenance Task",
@@ -203,18 +255,18 @@ export default function NewMaintenanceSchedulePage() {
                                 required: true,
                             },
                             {
-                                name: "periodicity",
-                                label: "Periodicity",
-                                type: "Select",
-                                options: "Daily\nWeekly\nMonthly\nQuarterly\nYearly",
+                                name: "period_in_days",
+                                label: "Period (In Days)",
+                                type: "Int",
                                 inListView: true,
                                 required: true,
                             },
                             {
                                 name: "end_date",
-                                label: "End Date",
+                                label: "Expected End Date",
                                 type: "Date",
                                 readOnly: true,
+                                inListView: true,
                             },
 
                             // Certificate Required toggle
@@ -234,36 +286,14 @@ export default function NewMaintenanceSchedulePage() {
 
 
                             {
-                                name: "assign_to",
-                                label: "Assign To",
-                                type: "Link",
-                                linkTarget: "User",
-                                inListView: true,
-                            },
-                            {
-                                name: "next_due_date",
-                                label: "Next Due Date",
-                                type: "Date",
-                                inListView: true,
-                            },
-                            {
-                                name: "last_completion_date",
-                                label: "Last Completion Date",
-                                type: "Date",
-                                inListView: true,
-                                readOnly: true,
-                            },
-                            {
                                 name: "description",
                                 label: "Description",
                                 type: "Text", // simple text instead of rich text
                                 inListView: false,
                             },
                         ],
+                        defaultValue: getValue("asset_maintenance_tasks") || getValue("maintenance_tasks") || [],
                     }
-
-
-
                 ],
             }
         ];
@@ -279,7 +309,7 @@ export default function NewMaintenanceSchedulePage() {
         }
 
         // Check if we have valid data to submit (either dirty changes or duplicate data)
-        const hasValidData = (duplicateData && data.asset_category_name) || !duplicateData;
+        const hasValidData = true;
 
         if (!hasValidData) {
             toast.info("Please fill out the form.");
@@ -288,31 +318,125 @@ export default function NewMaintenanceSchedulePage() {
 
         setIsSaving(true);
         try {
+            // 1. Prepare Payload
             const payload = { ...data };
 
-            // Remove name if it's the placeholder
-            // if (payload.name === "Will be auto-generated") {
-            //     delete payload.name;
-            // }
+            // 2. Clean Payload (System Fields)
+            const cleanObj = (obj: any): any => {
+                if (Array.isArray(obj)) return obj.map(cleanObj);
+                if (obj !== null && typeof obj === 'object') {
+                    const newObj = { ...obj };
+                    // Fields that should NEVER be sent to Frappe for these doctypes
+                    const blacklistedFields = [
+                        'modified', 'creation', 'owner', 'docstatus', 'idx',
+                        'modified_by', 'parent', 'parentfield', 'parenttype',
+                        '_user_tags', '_comments', '_assign', '_liked_by',
+                        'parent_task',
+                        'id'
+                    ];
+                    blacklistedFields.forEach(f => delete newObj[f]);
 
-            const response = await axios.post(`${API_BASE_URL}/${doctypeName}`, payload, {
+                    // If it's a child table row (Asset Maintenance Task)
+                    if (newObj.maintenance_task || newObj.period_in_days || newObj.start_date) {
+                        newObj.doctype = "Asset Maintenance Task";
+                        newObj.periodicity = "Daily";
+                        delete newObj.name; // Don't send name for child rows in insert
+
+                        // Strict whitelist for child table rows
+                        const allowedForTask = [
+                            'maintenance_task', 'maintenance_status', 'maintenance_type',
+                            'start_date', 'period_in_days', 'end_date', 'next_due_date',
+                            'assign_to', 'assign_to_name', 'last_completion_date',
+                            'description', 'certificate_required', 'certificate_upload',
+                            'periodicity', 'doctype', 'name', 'custom_asset', 'asset_name'
+                        ];
+
+                        // Background requirement: set next_due_date to end_date
+                        if (newObj.end_date) {
+                            newObj.next_due_date = newObj.end_date;
+                        }
+
+                        // 🛡️ SMART ASSIGNMENT RESOLUTION
+                        const safeUser = (userId && userId !== "admin@example.com" && userId !== "null")
+                            ? userId
+                            : "vikas.deshmukh@erpdata.in";
+
+                        newObj.assign_to = safeUser;
+                        newObj.assign_to_name = safeUser;
+
+                        console.log(`DEBUG: [Smart Sync] Task "${newObj.maintenance_task}" assigned to:`, safeUser);
+
+                        if ('id' in newObj) delete newObj.id;
+
+                        if (!("last_completion_date" in newObj)) newObj.last_completion_date = null;
+
+                        for (const key in newObj) {
+                            if (!allowedForTask.includes(key)) {
+                                delete newObj[key];
+                            }
+                        }
+                    }
+
+                    // Recursively clean
+                    for (const key in newObj) {
+                        if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+                            newObj[key] = cleanObj(newObj[key]);
+                        } else if (newObj[key] === "" && key !== 'maintenance_task') {
+                            // Generally remove empty strings for top-level keys to be safe
+                            delete newObj[key];
+                        }
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
+
+            const cleaned = cleanObj(payload);
+
+            // 🔄 BACKGROUND SYNC: Take asset from the first child row for the parent
+            const firstTaskAsset = cleaned.asset_maintenance_tasks?.[0]?.custom_asset;
+            if (firstTaskAsset) {
+                cleaned.custom_asset = firstTaskAsset;
+                cleaned.asset_name = firstTaskAsset;
+            }
+
+            const finalizedPayload: Record<string, any> = {
+                ...cleaned,
+                doctype: "Asset Maintenance", // Explicit main doctype
+                maintenance_team: cleaned.maintenance_team || "Test",
+            };
+
+            // 🔍 DEBUG: Check what we are actually sending
+            console.log("DEBUG: User Info from Auth:", { userId, currentUser });
+            console.log("DEBUG: Finalized Payload for Frappe:", JSON.stringify(finalizedPayload, null, 2));
+            if (finalizedPayload.asset_maintenance_tasks) {
+                console.log("DEBUG: Maintenance Tasks rows:", finalizedPayload.asset_maintenance_tasks);
+            }
+
+            // 2.5 Validation: Ensure the table is not empty if the server is complaining
+            if (!finalizedPayload.asset_maintenance_tasks || finalizedPayload.asset_maintenance_tasks.length === 0) {
+                toast.error("Data missing", { description: "Please add at least one row to the Maintenance Tasks table." });
+                setIsSaving(false);
+                return;
+            }
+
+            // Ensure frontend name field doesn't block insert
+            if (finalizedPayload.name === "Will be auto-generated" || !finalizedPayload.name) delete finalizedPayload.name;
+
+            const frappeClientUrl = `${API_BASE_URL.replace("/api/resource", "/api/method/frappe.client.insert")}`;
+            const response = await axios.post(frappeClientUrl, {
+                doc: finalizedPayload
+            }, {
                 headers: {
                     Authorization: `token ${apiKey}:${apiSecret}`,
                     "Content-Type": "application/json",
                 },
                 withCredentials: true,
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
             });
 
-            const messages = getApiMessages(response, null, "Maintenance Schedule created successfully!", "Failed to create Maintenance Schedule");
+            toast.success("Schedule created successfully!");
 
-            if (messages.success) {
-                toast.success(messages.message, { description: messages.description });
-            }
-
-
-            const docName = response.data.data.name;
+            const docName = response.data?.data?.name || response.data?.message?.name;
             if (docName) {
                 router.push(`/maintenance/doctype/maintenance-schedule/${encodeURIComponent(docName)}`);
             } else {
@@ -320,22 +444,27 @@ export default function NewMaintenanceSchedulePage() {
             }
 
         } catch (err: any) {
-            console.error("Create error:", err);
-
-            // Handle duplicate entry error specifically
-            if (err.response?.data?.exc_type === "DuplicateEntryError") {
-                const errorMessage = err.response?.data?._server_messages ||
-                    "An maintenance schedule with this name already exists. Please use a different name.";
-                toast.error("Duplicate Entry Error", {
-                    description: "Maintenance Schedule with this name already exists. Please change the category name and try again.",
-                    duration: Infinity
-                });
-            } else {
-                const errorMessage = err.response?.data?.message ||
-                    err.response?.data?.error ||
-                    "Failed to create Maintenance Schedule. Check console for details.";
-                toast.error(`Error: ${errorMessage}`, { duration: Infinity });
+            console.error("FULL ERROR OBJECT:", err);
+            // 🔍 EXTRA DEBUG: Try to find the server traceback
+            if (err.response?.data?.exc) {
+                try {
+                    console.error("SERVER TRACEBACK:", JSON.parse(err.response.data.exc));
+                } catch (e) {
+                    console.error("SERVER TRACEBACK (Raw):", err.response.data.exc);
+                }
             }
+            if (err.response?.data?._server_messages) {
+                try {
+                    console.error("SERVER MESSAGES:", JSON.parse(err.response.data._server_messages));
+                } catch (e) {
+                    console.error("SERVER MESSAGES (Raw):", err.response.data._server_messages);
+                }
+            }
+
+            toast.error("Failed to create", {
+                description: err.response?.data?.message || err.message,
+                duration: Infinity
+            });
         } finally {
             setIsSaving(false);
         }
@@ -352,9 +481,9 @@ export default function NewMaintenanceSchedulePage() {
             onFormInit={handleFormInit}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
-            title={`New ${doctypeName}`}
-            description="Create a new maintenance schedule with specifications"
-            submitLabel={isSaving ? "Saving..." : "New Maintenance Schedule"}
+            title="New Work Schedule"
+            description="Create a new work schedule with specifications"
+            submitLabel={isSaving ? "Saving..." : "New Work Schedule"}
             cancelLabel="Cancel"
         />
     );

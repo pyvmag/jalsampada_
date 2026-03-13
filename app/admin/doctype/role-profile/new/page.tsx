@@ -26,7 +26,8 @@ export default function NewRoleProfilePage() {
                 {
                     name: "role_profile",
                     label: "Role Profile Name",
-                    type: "Data",
+                    type: "Link",
+                    linkTarget: "Role",
                     required: true,
                 },
                 {

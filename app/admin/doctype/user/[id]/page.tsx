@@ -29,6 +29,7 @@ export default function UserEditPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [availableRoles, setAvailableRoles] = React.useState<string[]>([]);
+  const [formInstance, setFormInstance] = React.useState<any>(null);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. FORM CONFIGURATION
@@ -168,6 +169,17 @@ export default function UserEditPage() {
           label: "Assign Roles",
           type: "Section Break",
         },
+        {
+          name: "role_profile_name",
+          label: "Role Profile",
+          type: "Link",
+          linkTarget: "Role Profile",
+        },
+        {
+          name: "cb_roles_right",
+          label: "",
+          type: "Column Break",
+        },
         ...availableRoles.map(role => ({
           name: `role_${role.replace(/\s+/g, '_')}`,
           label: role,
@@ -243,6 +255,45 @@ export default function UserEditPage() {
     }
     return vals;
   }, [record]);
+
+  // Track Role Profile changes and update role checkboxes
+  const previousProfileRef = React.useRef<string | null>(null);
+  
+  React.useEffect(() => {
+    if (!formInstance || !apiKey || !apiSecret || availableRoles.length === 0) return;
+
+    // Initialize the ref with the record's profile on mount to avoid triggering on initial load
+    if (record?.role_profile_name && previousProfileRef.current === null) {
+      previousProfileRef.current = record.role_profile_name;
+    }
+
+    const subscription = formInstance.watch((value: any, { name }: any) => {
+        if (name === "role_profile_name" || name === undefined) {
+            const selectedProfile = value.role_profile_name;
+            if (selectedProfile && selectedProfile !== previousProfileRef.current) {
+                previousProfileRef.current = selectedProfile;
+                axios.get(`${API_BASE_URL}/Role Profile/${encodeURIComponent(selectedProfile)}`, {
+                    headers: { Authorization: `token ${apiKey}:${apiSecret}` }
+                }).then(res => {
+                    const profileRoles = res.data.data.roles || [];
+                    availableRoles.forEach(role => {
+                        const key = `role_${role.replace(/\s+/g, '_')}`;
+                        const hasRole = profileRoles.some((pr: any) => pr.role === role);
+                        formInstance.setValue(key, hasRole ? 1 : 0, { shouldDirty: true });
+                    });
+                }).catch(err => {
+                    console.error("Failed to fetch role profile roles", err);
+                });
+            } else if (!selectedProfile && previousProfileRef.current) {
+                // If profile is cleared, we could optionally clear roles, but we'll leave as-is 
+                // or let the user manually uncheck. We just need to update the ref.
+                previousProfileRef.current = null;
+            }
+        }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [formInstance, availableRoles, apiKey, apiSecret, record]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. SUBMIT (PUT)
@@ -358,6 +409,7 @@ export default function UserEditPage() {
           isEdit={true}
           isSaving={isSaving}
           submitLabel="Save Changes"
+          onFormInit={setFormInstance}
         />
       </div>
 

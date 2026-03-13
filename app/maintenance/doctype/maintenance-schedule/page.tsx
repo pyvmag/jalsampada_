@@ -27,11 +27,11 @@ const LOAD_MORE_SIZE = 10;
 interface MaintenanceSchedule {
   name: string;
   asset_name?: string;
-  maintenance_team?: string;
   creation?: string;
   modified?: string;
   custom_lis?: string;
   custom_stage?: string;
+  custom_tender_no?: string;
 }
 
 type ViewMode = "grid" | "list";
@@ -63,7 +63,7 @@ export default function MaintenanceScheduleListPage() {
   const selectedStage = watch("custom_stage");
   const selectedAsset = watch("asset_name"); // Added
 
-  const title = "Maintenance Schedule";
+  const title = "Work Schedule";
 
   /* ── Client-side Filtering ─────────────────────────────── */
   const filteredRecords = React.useMemo(() => {
@@ -117,7 +117,6 @@ export default function MaintenanceScheduleListPage() {
               fields: JSON.stringify([
                 "name",
                 "asset_name",
-                "maintenance_team",
                 "creation",
                 "modified",
                 "custom_lis",
@@ -142,11 +141,11 @@ export default function MaintenanceScheduleListPage() {
         const mapped: MaintenanceSchedule[] = raw.map((r: any) => ({
           name: r.name,
           asset_name: r.asset_name ?? "",
-          maintenance_team: r.maintenance_team ?? "",
           creation: r.creation ?? "",
           modified: r.modified ?? "",
           custom_lis: r.custom_lis,
           custom_stage: r.custom_stage,
+          custom_tender_no: r.custom_tender_no,
         }));
 
         if (isReset) {
@@ -244,9 +243,9 @@ export default function MaintenanceScheduleListPage() {
     record: MaintenanceSchedule
   ): RecordCardField[] => [
       { label: "Asset Name", value: record.asset_name || "-" },
+      { label: "Tender ID", value: record.custom_tender_no || "-" },
       { label: "LIS", value: record.custom_lis || "-" },
       { label: "Stage", value: record.custom_stage || "-" },
-      { label: "Maintenance Team", value: record.maintenance_team || "-" },
       { label: "Created", value: formatTimeAgo(record.creation) },
     ];
 
@@ -264,10 +263,10 @@ export default function MaintenanceScheduleListPage() {
               />
             </th>
             <th>ID</th>
+            <th>Tender ID</th>
             <th>Asset Name</th>
             <th>LIS Name</th>
             <th>Stage</th>
-            <th>Maintenance Team</th>
             <th className="text-right pr-4" style={{ width: "120px" }}>
               <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
                 {loading ? (
@@ -311,10 +310,10 @@ export default function MaintenanceScheduleListPage() {
                     />
                   </td>
                   <td>{r.name}</td>
+                  <td>{r.custom_tender_no || "—"}</td>
                   <td>{r.asset_name}</td>
                   <td>{r.custom_lis || "—"}</td>
                   <td>{r.custom_stage || "—"}</td>
-                  <td>{r.maintenance_team}</td>
                   <td className="text-right pr-4">
                     <TimeAgo date={r.modified} />
                   </td>
@@ -351,7 +350,7 @@ export default function MaintenanceScheduleListPage() {
   );
 
   if (loading && records.length === 0)
-    return <p style={{ padding: "2rem" }}>Loading Maintenance Schedule...</p>;
+    return <p style={{ padding: "2rem" }}>Loading Work Schedule...</p>;
   if (error && records.length === 0)
     return <p style={{ padding: "2rem", color: "red" }}>{error}</p>;
 
@@ -359,8 +358,8 @@ export default function MaintenanceScheduleListPage() {
     <div className="module active">
       <div className="module-header">
         <div>
-          <h2>Maintenance Schedule</h2>
-          <p>Manage Maintenance Schedule</p>
+          <h2>Work Schedule</h2>
+          <p>Manage Work Schedule</p>
         </div>
 
         {selectedIds.size > 0 ? (
@@ -377,7 +376,7 @@ export default function MaintenanceScheduleListPage() {
               router.push("/maintenance/doctype/maintenance-schedule/new")
             }
           >
-            <Plus className="w-4 h-4" /> Add Maintenance Schedule
+            <Plus className="w-4 h-4" /> Add Work Schedule
           </button>
         )}
       </div>

@@ -83,7 +83,7 @@ export default function NewMaintenanceLogPage() {
           // Top identifiers row
           {
             name: "asset_maintenance",
-            label: "Maintenance Schedule",
+            label: "Work Schedule",
             type: "Link",
             linkTarget: "Asset Maintenance",
             // defaultValue: getValue("asset_maintenance"),
@@ -98,11 +98,11 @@ export default function NewMaintenanceLogPage() {
               const lisName = getValue("lis");
               const lisPhase = getValue("lis_phase");
               const stageNo = getValue("stage");
-              
+
               if (lisName) filters["lis"] = lisName;
               if (lisPhase) filters["lis_phase"] = lisPhase;
               if (stageNo) filters["stage"] = stageNo;
-              
+
               return filters;
             },
           },
@@ -121,7 +121,7 @@ export default function NewMaintenanceLogPage() {
             type: "Read Only",
             linkTarget: "Item",
             displayDependsOn: { asset_maintenance: true }
-            ,fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
+            , fetchFrom: { sourceField: "asset_maintenance", targetDoctype: "Asset Maintenance", targetField: "item_code" }
           },
           {
             name: "asset_maintenance",
@@ -142,7 +142,7 @@ export default function NewMaintenanceLogPage() {
             required: true,
             defaultValue: getValue("lis"),
           },
-          
+
           {
             name: "stage",
             label: "Stage",
@@ -206,7 +206,7 @@ export default function NewMaintenanceLogPage() {
             label: "Periodicity",
             type: "Read Only",
             defaultValue: getValue("task"),
-           displayDependsOn: { task: true },
+            displayDependsOn: { task: true },
 
             fetchFrom: { sourceField: "task", targetDoctype: "Asset Maintenance Task", targetField: "periodicity" }
           },

@@ -250,6 +250,21 @@ export function DynamicFormForTable({
                 newFormData = { ...newFormData, amount: amount.toString() };
             }
 
+            // Calculate end_date dynamically based on start_date and period_in_days
+            if (fieldName === 'start_date' || fieldName === 'period_in_days') {
+                const start_date = newFormData.start_date;
+                const period_in_days = parseInt(newFormData.period_in_days);
+                
+                if (start_date && !isNaN(period_in_days)) {
+                    const start = new Date(start_date);
+                    start.setDate(start.getDate() + period_in_days);
+                    newFormData = { ...newFormData, end_date: start.toISOString().split("T")[0] };
+                } else if (!start_date || isNaN(period_in_days)) {
+                     // Optionally clear the end_date if inputs are incomplete
+                     newFormData = { ...newFormData, end_date: "" };
+                }
+            }
+
             // Debounced update to context (only for non-dependent fields)
             if (_depth === 0) {
                 debouncedUpdateContext(newFormData);
@@ -349,7 +364,12 @@ export function DynamicFormForTable({
                 return parentGetValues.getValues(name.replace("parent.", ""));
             }
             // Fallback to local form data
-            return formData[name];
+            const localValue = formData[name];
+            if (localValue !== undefined && localValue !== "") {
+               return localValue;
+            }
+            // Fallback to parent form data
+            return parentGetValues.getValues(name);
         };
         const filtersToPass = buildDynamicFilters(field, getValue);
         const filterKey = `${field.name}-${JSON.stringify(filtersToPass)}`;
@@ -927,7 +947,14 @@ export function DynamicFormForTable({
                 {fields?.map((field) => {
                     // Evaluate visibility
                     const isVisible = field.displayDependsOn
-                        ? evaluateDisplayDependsOn(field.displayDependsOn, (name) => formData[name])
+                        ? evaluateDisplayDependsOn(field.displayDependsOn, (name) => {
+                            if (name.startsWith("parent.")) {
+                                return parentGetValues.getValues(name.replace("parent.", ""));
+                            }
+                            const localValue = formData[name];
+                            if (localValue !== undefined && localValue !== "") return localValue;
+                            return parentGetValues.getValues(name);
+                        })
                         : true;
 
                     if (!isVisible) return null;

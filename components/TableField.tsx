@@ -500,7 +500,14 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
   const someSelected = selectedIndices.size > 0 && selectedIndices.size < fields.length;
 
   const visibleColumns = (field.columns || []).filter(
-    (c) => c.type !== "Column Break" && c.type !== "Section Break"
+    (c) => {
+      if (c.type === "Column Break" || c.type === "Section Break") return false;
+      if (typeof c.displayDependsOn === 'function') {
+        const formValues = formMethods.getValues();
+        return c.displayDependsOn(formValues);
+      }
+      return true;
+    }
   );
 
   return (

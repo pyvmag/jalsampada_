@@ -28,6 +28,8 @@ import {
   ArrowDownWideNarrow,
   Check,
   Loader2,
+  Menu,
+  X,
 } from "lucide-react";
 
 // 🟢 Production-ready configuration
@@ -138,6 +140,7 @@ export default function DoctypePage() {
   } = useSelection(assets, "name");
 
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   // Form for filters
   const { control, watch } = useForm({
@@ -335,6 +338,8 @@ export default function DoctypePage() {
     return fields;
   };
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   const handleCardClick = (id: string) => {
     router.push(`/lis-management/doctype/asset/${encodeURIComponent(id)}`);
   };
@@ -399,101 +404,103 @@ export default function DoctypePage() {
   if (error && assets.length === 0) return <div className="module active" style={{ padding: "2rem" }}>{error}</div>;
 
   return (
-    <div className="module active">
-      <div className="module-header">
-        <div><h2 className="mt-1">Asset</h2></div>
-        {selectedIds.size > 0 ? (
-          <BulkActionBar selectedCount={selectedIds.size} onClear={clearSelection} onDelete={handleBulkDelete} isDeleting={isDeleting} />
-        ) : (
-          <Link href="/lis-management/doctype/asset/new" passHref>
-            <button className="btn btn--primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Asset</button>
-          </Link>
-        )}
-      </div>
-
-      <div className="search-filter-section" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }}>
-          <div style={{ minWidth: "200px" }}>
-            <input type="text" placeholder="Search Asset ID..." className="form-control w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} aria-label="Search Assets" />
-          </div>
-          <div style={{ minWidth: "200px" }}>
-            <Controller control={control} name="custom_lis_name" render={({ field: { value } }) => (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <LinkField control={control} field={{ name: "custom_lis_name", label: "", type: "Link", linkTarget: "Lift Irrigation Scheme", placeholder: "Select LIS", required: false, defaultValue: value }} error={null} className="[&>label]:hidden vishal" />
-              </div>
-            )} />
-          </div>
-         
-          <div style={{ minWidth: "200px" }}>
-            <Controller control={control} name="custom_stage_no" render={({ field: { value } }) => (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <LinkField 
-                  control={control} 
-                  field={{ 
-                    name: "custom_stage_no", 
-                    label: "", 
-                    type: "Link", 
-                    linkTarget: "Stage No", 
-                    placeholder: "Select Stage", 
-                    required: false, 
-                    defaultValue: value 
-                  }} 
-                  error={null} 
-                  className="[&>label]:hidden vishal"
-                  filters={selectedLis ? { lis_name: selectedLis } : {}}
-                />
-              </div>
-            )} />
-          </div>
-          <div style={{ minWidth: "200px" }}>
-            <Controller control={control} name="asset_category" render={({ field: { value } }) => (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <LinkField control={control} field={{ name: "asset_category", label: "", type: "Link", linkTarget: "Asset Category", placeholder: "Select Category", required: false, defaultValue: value }} error={null} className="[&>label]:hidden vishal"  />
-              </div>
-            )} />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", marginLeft: "auto" }}>
-          <div className="relative" ref={sortMenuRef}>
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
-              <button className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors" onClick={() => setSortConfig((prev) => ({ ...prev, direction: prev.direction === "asc" ? "desc" : "asc" }))}>
-                {sortConfig.direction === "asc" ? <ArrowDownWideNarrow className="w-4 h-4 text-gray-600 dark:text-gray-300" /> : <ArrowUpNarrowWide className="w-4 h-4 text-gray-600 dark:text-gray-300" />}
-              </button>
-              <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors" onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}>
-                {currentSortLabel} <ChevronDown className="w-3 h-3 opacity-70" />
-              </button>
-            </div>
-            {isSortMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
-                <div className="py-1">
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sort By</div>
-                  {SORT_OPTIONS.map((option) => (
-                    <button key={option.key} className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${sortConfig.key === option.key ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium" : "text-gray-700 dark:text-gray-200"}`} onClick={() => { setSortConfig((prev) => ({ ...prev, key: option.key })); setIsSortMenuOpen(false); }}>
-                      {option.label} {sortConfig.key === option.key && <Check className="w-4 h-4 text-blue-600" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <div className="module active">
+        <div className="module-header">
+          <div><h2 className="mt-1">Asset</h2></div>
+          <div className="mobile-add-asset">
+            {selectedIds.size > 0 ? (
+              <BulkActionBar selectedCount={selectedIds.size} onClear={clearSelection} onDelete={handleBulkDelete} isDeleting={isDeleting} />
+            ) : (
+              <Link href="/lis-management/doctype/asset/new" passHref>
+                <button className="btn btn--primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Asset</button>
+              </Link>
             )}
           </div>
-          <button className="btn btn--outline btn--sm flex items-center justify-center" onClick={() => setView((v) => (v === "grid" ? "list" : "grid"))}>
-            {view === "grid" ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-          </button>
         </div>
-      </div>
 
-      <div className="view-container" style={{ marginTop: "0.5rem", paddingBottom: "2rem" }}>
-        {view === "grid" ? renderGridView() : renderListView()}
-        {hasMore && assets.length > 0 && (
-          <div className="mt-6 flex justify-end">
-            <button onClick={handleLoadMore} disabled={isLoadingMore} className="btn btn--secondary flex items-center gap-2 px-6 py-2" style={{ minWidth: "140px" }}>
-              {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}
+        <div className="search-filter-section" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1" }} className="search-filters-container">
+            <div style={{ minWidth: "200px" }} className="search-input-container">
+              <input type="text" placeholder="Search Asset ID..." className="form-control w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} aria-label="Search Assets" />
+            </div>
+            <div style={{ minWidth: "200px" }} className="filter-input-container">
+              <Controller control={control} name="custom_lis_name" render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <LinkField control={control} field={{ name: "custom_lis_name", label: "", type: "Link", linkTarget: "Lift Irrigation Scheme", placeholder: "Select LIS", required: false, defaultValue: value }} error={null} className="vishal" />
+                </div>
+              )} />
+            </div>
+           
+            <div style={{ minWidth: "200px" }} className="filter-input-container">
+              <Controller control={control} name="custom_stage_no" render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <LinkField 
+                    control={control} 
+                    field={{ 
+                      name: "custom_stage_no", 
+                      label: "", 
+                      type: "Link", 
+                      linkTarget: "Stage No", 
+                      placeholder: "Select Stage", 
+                      required: false, 
+                      defaultValue: value 
+                    }} 
+                    error={null} 
+                    className="vishal"
+                    filters={selectedLis ? { lis_name: selectedLis } : {}}
+                  />
+                </div>
+              )} />
+            </div>
+            <div style={{ minWidth: "200px" }} className="filter-input-container">
+              <Controller control={control} name="asset_category" render={({ field: { value } }) => (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <LinkField control={control} field={{ name: "asset_category", label: "", type: "Link", linkTarget: "Asset Category", placeholder: "Select Category", required: false, defaultValue: value }} error={null} className="vishal" />
+                </div>
+              )} />
+            </div>
+          </div>
+
+          <div className="mobile-sort-view-row" style={{ display: "flex", gap: "12px", alignItems: "center", marginLeft: "auto" }}>
+            <div className="relative" ref={sortMenuRef}>
+              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
+                <button className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors" onClick={() => setSortConfig((prev) => ({ ...prev, direction: prev.direction === "asc" ? "desc" : "asc" }))}>
+                  {sortConfig.direction === "asc" ? <ArrowDownWideNarrow className="w-4 h-4 text-gray-600 dark:text-gray-300" /> : <ArrowUpNarrowWide className="w-4 h-4 text-gray-600 dark:text-gray-300" />}
+                </button>
+                <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-colors" onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}>
+                  {currentSortLabel} <ChevronDown className="w-3 h-3 opacity-70" />
+                </button>
+              </div>
+              {isSortMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sort By</div>
+                    {SORT_OPTIONS.map((option) => (
+                      <button key={option.key} className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${sortConfig.key === option.key ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium" : "text-gray-700 dark:text-gray-200"}`} onClick={() => { setSortConfig((prev) => ({ ...prev, key: option.key })); setIsSortMenuOpen(false); }}>
+                        {option.label} {sortConfig.key === option.key && <Check className="w-4 h-4 text-blue-600" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button className="btn btn--outline btn--sm flex items-center justify-center" onClick={() => setView((v) => (v === "grid" ? "list" : "grid"))}>
+              {view === "grid" ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
             </button>
           </div>
-        )}
+        </div>
+
+        <div className="view-container" style={{ marginTop: "0.5rem", paddingBottom: "2rem" }}>
+          {view === "grid" ? renderGridView() : renderListView()}
+          {hasMore && assets.length > 0 && (
+            <div className="mt-6 flex justify-end md:justify-end mobile-justify-center">
+              <button onClick={handleLoadMore} disabled={isLoadingMore} className="btn btn--secondary flex items-center gap-2 px-6 py-2" style={{ minWidth: "140px" }}>
+                {isLoadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : "Load More"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
   );
 }

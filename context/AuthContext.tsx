@@ -8,10 +8,11 @@ interface AuthContextType {
   apiSecret: string | null;
   posProfile: string | null;
   currentUser: string | null;
+  userId: string | null;
   setPosProfile: (profile: string) => void;
   login: (apiKey: string, apiSecret: string) => void;
   logout: () => void;
-  getCurrentUser: (apiKey: string | null, apiSecret: string | null) => Promise<string | null>;
+  getCurrentUser: (apiKey: string | null, apiSecret: string | null) => Promise<{ username: string, full_name: string | null } | null>;
   isInitialized: boolean;
   csrfToken: string | null;
 }
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [apiSecret, setApiSecret] = useState<string | null>(null);
   const [posProfile, setPosProfileState] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const router = useRouter();
@@ -42,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const storedApiSecret = localStorage.getItem("apiSecret");
     const storedPosProfile = localStorage.getItem("posProfile");
     const storedUser = localStorage.getItem("currentUser");
+    const storedUserId = localStorage.getItem("userId");
     const storedCsrfToken = localStorage.getItem("csrfToken");
 
     if (storedApiKey && storedApiSecret) {
@@ -65,11 +68,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsInitialized(true);
 
     // Auto-fetch current user if authenticated but user not known
-    if (storedApiKey && storedApiSecret && !storedUser) {
-      getCurrentUser(storedApiKey, storedApiSecret).then((user) => {
-        if (user) {
-          setCurrentUser(user);
-          localStorage.setItem("currentUser", user);
+    if (storedApiKey && storedApiSecret && (!storedUser || !storedUserId)) {
+      getCurrentUser(storedApiKey, storedApiSecret).then((data) => {
+        if (data) {
+          setCurrentUser(data.full_name || data.username);
+          setUserId(data.username);
+          localStorage.setItem("currentUser", data.full_name || data.username);
+          localStorage.setItem("userId", data.username);
         }
       });
     }
@@ -83,10 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("apiSecret", apiSecret);
 
     // Fetch current user after login
-    getCurrentUser(apiKey, apiSecret).then((user) => {
-      if (user) {
-        setCurrentUser(user);
-        localStorage.setItem("currentUser", user);
+    getCurrentUser(apiKey, apiSecret).then((data) => {
+      if (data) {
+        setCurrentUser(data.full_name || data.username);
+        setUserId(data.username);
+        localStorage.setItem("currentUser", data.full_name || data.username);
+        localStorage.setItem("userId", data.username);
       }
     });
   };
@@ -96,17 +103,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setApiSecret(null);
     setPosProfileState(null);
     setCurrentUser(null);
+    setUserId(null);
     setIsAuthenticated(false);
     localStorage.removeItem("apiKey");
     localStorage.removeItem("apiSecret");
     localStorage.removeItem("posProfile");
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("userId");
     localStorage.removeItem("csrfToken");
     setCsrfToken(null);
     router.push("/login");
   };
 
-  const getCurrentUser = async (currentApiKey: string | null, currentApiSecret: string | null): Promise<string | null> => {
+  const getCurrentUser = async (currentApiKey: string | null, currentApiSecret: string | null): Promise<{ username: string, full_name: string | null } | null> => {
     if (!currentApiKey || !currentApiSecret) {
       return null;
     }
@@ -154,15 +163,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (userDetailResponse.ok) {
           const userDetailData = await userDetailResponse.json();
-          // Return full_name if available, otherwise fall back to username
-          return userDetailData.data?.full_name || username;
+          return {
+            username: username,
+            full_name: userDetailData.data?.full_name || null
+          };
         }
       } catch (error) {
         console.warn("Could not fetch user full name, using username:", error);
       }
 
-      // Fallback to username if full name fetch fails
-      return username;
+      return {
+        username: username,
+        full_name: null
+      };
     } catch (error) {
       console.error("Error fetching current user:", error);
       return null;
@@ -175,6 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     apiSecret,
     posProfile,
     currentUser,
+    userId,
     setPosProfile,
     login,
     logout,

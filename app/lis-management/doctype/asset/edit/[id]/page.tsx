@@ -96,6 +96,8 @@ interface AssetData {
     custom_description?: string;
     custom_obsolete?: 0 | 1;
     available_for_use_date?: string;
+    go_live_date?: string;
+    running_hours?: string;
 
     finance_books?: Array<{
         finance_book?: string;
@@ -776,9 +778,10 @@ export default function RecordDetailPage() {
                         type: "Select",
                         options: [{ label: "Working", value: "Working" }, { label: "Under Repair", value: "Under Repair", }],
                     },
-                    { name: "custom_previous_hours", label: "Previous Running Hours", type: "Float" },
-                    { name: "custom_hours_before_system", label: "Hours Before System", type: "Float" },
-                    { name: "custom_cumulative_hours", label: "Cumulative Hours", type: "Float" },
+                    { name: "go_live_date", label: "Go Live Date", type: "Date" },
+                    { name: "custom_hours_before_system", label: "Hours Before System", type: "DurationHHMM" },
+                    { name: "custom_running_hours", label: "Running Hours", type: "Read Only", isDuration: true },
+                    { name: "custom_cumulative_hours", label: "Cumulative Hours", type: "Read Only", isDuration: true },
                     { name: "maintenance_required", label: "Maintenance Required", type: "Check" },
                     { name: "section_specifications", label: "Specification of Asset", type: "Section Break" },
                     {
@@ -857,8 +860,7 @@ export default function RecordDetailPage() {
                 "gross_purchase_amount", "additional_asset_cost", "total_asset_cost",
                 "asset_quantity", "opening_accumulated_depreciation",
                 "opening_number_of_booked_depreciations", "value_after_depreciation",
-                "custom_previous_hours", "insured_value", "custom_hours_before_system",
-                "custom_cumulative_hours", "custom_current_hours"
+                "insured_value"
             ];
             numericFields.forEach((f) => {
                 finalPayload[f] = Number(finalPayload[f]) || 0;
