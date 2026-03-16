@@ -13,9 +13,24 @@ interface AuthContextType {
   login: (apiKey: string, apiSecret: string) => void;
   logout: () => void;
   getCurrentUser: (apiKey: string | null, apiSecret: string | null) => Promise<{ username: string, full_name: string | null } | null>;
+  fetchPermissions: (apiKey: string | null, apiSecret: string | null) => Promise<void>;
+  hasPermission: (doctype: string, permissionType?: keyof PermissionSet) => boolean;
+  userPermissions: Record<string, PermissionSet> | null;
+  isAdmin: boolean;
   isInitialized: boolean;
   csrfToken: string | null;
 }
+
+interface PermissionSet {
+  read: boolean;
+  write: boolean;
+  create: boolean;
+  delete: boolean;
+  submit: boolean;
+  cancel: boolean;
+  amend: boolean;
+}
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -28,8 +43,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [posProfile, setPosProfileState] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Record<string, PermissionSet> | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
+
   const router = useRouter();
 
   // Helper to set posProfile with persistence
@@ -67,18 +85,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setIsInitialized(true);
 
-    // Auto-fetch current user if authenticated but user not known
-    if (storedApiKey && storedApiSecret && (!storedUser || !storedUserId)) {
-      getCurrentUser(storedApiKey, storedApiSecret).then((data) => {
-        if (data) {
-          setCurrentUser(data.full_name || data.username);
-          setUserId(data.username);
-          localStorage.setItem("currentUser", data.full_name || data.username);
-          localStorage.setItem("userId", data.username);
-        }
-      });
+    // Auto-fetch current user and permissions if authenticated but info not known
+    if (storedApiKey && storedApiSecret) {
+      if (!storedUser || !storedUserId) {
+        getCurrentUser(storedApiKey, storedApiSecret).then((data) => {
+          if (data) {
+            setCurrentUser(data.full_name || data.username);
+            setUserId(data.username);
+            localStorage.setItem("currentUser", data.full_name || data.username);
+            localStorage.setItem("userId", data.username);
+          }
+        });
+      }
+      fetchPermissions(storedApiKey, storedApiSecret);
     }
   }, []);
+
 
   const login = (apiKey: string, apiSecret: string) => {
     setApiKey(apiKey);
@@ -87,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("apiKey", apiKey);
     localStorage.setItem("apiSecret", apiSecret);
 
-    // Fetch current user after login
+    // Fetch current user and permissions after login
     getCurrentUser(apiKey, apiSecret).then((data) => {
       if (data) {
         setCurrentUser(data.full_name || data.username);
@@ -96,7 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem("userId", data.username);
       }
     });
+    fetchPermissions(apiKey, apiSecret);
   };
+
 
   const logout = () => {
     setApiKey(null);
@@ -104,7 +128,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setPosProfileState(null);
     setCurrentUser(null);
     setUserId(null);
+    setUserPermissions(null);
+    setIsAdmin(false);
     setIsAuthenticated(false);
+
     localStorage.removeItem("apiKey");
     localStorage.removeItem("apiSecret");
     localStorage.removeItem("posProfile");
@@ -123,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       // First get the username
       const userResponse = await fetch(
-        "http://103.219.1.138:4412//api/method/frappe.auth.get_logged_user",
+        "http://103.219.1.138:4412/api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers: {
@@ -182,6 +209,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fetchPermissions = React.useCallback(async (currentApiKey: string | null, currentApiSecret: string | null) => {
+    if (!currentApiKey || !currentApiSecret) return;
+
+    try {
+      const response = await fetch(
+        "http://103.219.1.138:4412/api/method/quantlis_management.custom_api.get_user_permissions",
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `token ${currentApiKey}:${currentApiSecret}`,
+          },
+          credentials: "include",
+        }
+      );
+
+
+      if (response.ok) {
+        const result = await response.json();
+        setUserPermissions(result.message.permissions);
+        setIsAdmin(result.message.is_admin);
+      }
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    }
+  }, []);
+
+  const hasPermission = React.useCallback((doctype: string, permissionType: keyof PermissionSet = "read"): boolean => {
+    if (isAdmin) return true;
+    if (!userPermissions) return false;
+    const docPerms = userPermissions[doctype];
+    if (!docPerms) return false;
+    return !!docPerms[permissionType];
+  }, [isAdmin, userPermissions]);
+
+
+
   const contextValue: AuthContextType = {
     isAuthenticated,
     apiKey,
@@ -193,9 +257,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     login,
     logout,
     getCurrentUser,
+    fetchPermissions,
+    hasPermission,
+    userPermissions,
+    isAdmin,
     isInitialized,
     csrfToken,
   };
+
 
   return (
     <AuthContext.Provider value={contextValue}>

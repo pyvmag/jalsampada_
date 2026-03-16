@@ -42,11 +42,93 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { isInitialized, isAuthenticated, currentUser, logout } = useAuth();
+  const { 
+    isInitialized, 
+    isAuthenticated, 
+    currentUser, 
+    logout, 
+    hasPermission, 
+    isAdmin, 
+    userPermissions 
+  } = useAuth();
 
-  // Debug: Log currentUser changes
+  const sidebarItems = React.useMemo(() => {
+    const items = [
+      { href: "/", icon: "fa-tachometer-alt", label: "Dashboard" },
+      { 
+        href: "/lis-management", 
+        icon: "fa-cogs", 
+        label: "Asset", 
+        doctypes: ["Asset", "Asset Category", "Asset Interchange", "District", "Equipement Capacity", "Equipement Model", "Equipment Make", "Lift Irrigation Scheme", "Location", "Rating", "Stage No", "Taluka", "Village"] 
+      },
+      { 
+        href: "/tender", 
+        icon: "fa-gavel", 
+        label: "Tender", 
+        doctypes: ["Contractor", "Draft Tender Paper", "Expenditure", "Fund Head", "Prapan Suchi", "Project", "Work Subtype", "Work Type"] 
+      },
+      { 
+        href: "/operations", 
+        icon: "fa-chart-line", 
+        label: "Operations", 
+        doctypes: ["LIS Incident Record"] 
+      },
+      { 
+        href: "/maintenance", 
+        icon: "fa-tools", 
+        label: "Maintenance", 
+        doctypes: ["Device Type", "Maintenance Checklist", "Maintenance Log", "Maintenance Schedule", "Parameter Category", "Parameter Checklist", "Parameter Type"] 
+      },
+      { 
+        href: "/attendance", 
+        icon: "fa-user-check", 
+        label: "Attendance", 
+        doctypes: ["Attendance Sheet", "Designation", "Employee"] 
+      },
+      { 
+        href: "/tp_reports", 
+        icon: "fa-file-alt", 
+        label: "Reports", 
+        doctypes: ["Report"] 
+      },
+      { 
+        href: "/admin", 
+        icon: "fa-user-cog", 
+        label: "Admin", 
+        doctypes: ["User", "Role", "Role Profile"],
+        adminOnly: true
+      }
+    ];
+
+    // Filter items based on permissions
+    return items.filter(item => {
+      // Always show Dashboard
+      if (item.href === "/") return true;
+      
+      // Admin sees everything
+      if (isAdmin) return true;
+      
+      // If the item requires Admin strictly, hide it for non-admin users
+      if (item.adminOnly) return false;
+      
+      // Check if user has permission for ANY of the specified doctypes in the module
+      if (item.doctypes && item.doctypes.length > 0) {
+        return item.doctypes.some(dt => hasPermission(dt, "read"));
+      }
+
+      return true;
+    });
+  }, [hasPermission, isAdmin]);
+
+
+  // Debug: Log currentUser and permissions
   React.useEffect(() => {
-  }, [currentUser]);
+    console.log("Current User:", currentUser);
+    console.log("Is Admin:", isAdmin);
+    console.log("User Permissions Map:", userPermissions);
+    console.log("Calculated Sidebar Items:", sidebarItems.map(i => i.label));
+  }, [currentUser, isAdmin, userPermissions, sidebarItems]);
+
 
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const isLoginPage = pathname === "/login";
@@ -133,17 +215,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       />
       <nav className="sidebar">
         <div className="nav-items">
-          {[
-            { href: "/", icon: "fa-tachometer-alt", label: "Dashboard" },
-            { href: "/lis-management", icon: "fa-cogs", label: "Asset" },
-            { href: "/tender", icon: "fa-gavel", label: "Tender" },
-            { href: "/operations", icon: "fa-chart-line", label: "Operations" },
-            { href: "/maintenance", icon: "fa-tools", label: "Maintenance" },
-            { href: "/attendance", icon: "fa-user-check", label: "Attendance" },
-            { href: "/tp_reports", icon: "fa-file-alt", label: "Reports" },
-            { href: "/admin", icon: "fa-user-cog", label: "Admin" }
-
-          ].map((item) => (
+          {sidebarItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

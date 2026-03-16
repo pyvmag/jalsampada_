@@ -149,7 +149,7 @@ export interface FormField {
   className?: string;
   readOnly?: boolean;
   readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
-  toggleVariant?: "default" | "inverted" | "danger";
+  toggleVariant?: "default" | "inverted" | "danger" | "success";
 
   // Validation
   asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
