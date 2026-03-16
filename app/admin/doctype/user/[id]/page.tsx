@@ -10,7 +10,9 @@ import {
   TabbedLayout,
 } from "@/components/DynamicFormComponent";
 import { getApiMessages } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import DocumentActivity from "@/components/DocumentActivity";
+import { UserPermissionsManager } from "@/components/UserPermissionsManager";
 
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
@@ -38,11 +40,7 @@ export default function UserEditPage() {
     {
       name: "Basic Details",
       fields: [
-        {
-          name: "sb_personal_info",
-          label: "Personal Information",
-          type: "Section Break",
-        },
+        
         {
           name: "first_name",
           label: "First Name",
@@ -84,11 +82,7 @@ export default function UserEditPage() {
     {
       name: "Contact & Profile",
       fields: [
-        {
-          name: "sb_contact",
-          label: "Contact Information",
-          type: "Section Break",
-        },
+       
         {
           name: "mobile_no",
           label: "Mobile Number",
@@ -119,11 +113,7 @@ export default function UserEditPage() {
     {
       name: "Settings & Preferences",
       fields: [
-        {
-          name: "sb_settings",
-          label: "System Preferences",
-          type: "Section Break",
-        },
+
         {
           name: "language",
           label: "Language",
@@ -147,6 +137,7 @@ export default function UserEditPage() {
           name: "enabled",
           label: "Enabled",
           type: "Check",
+          toggleVariant: "success",
         },
         {
           name: "sb_password",
@@ -165,15 +156,35 @@ export default function UserEditPage() {
       name: "Roles",
       fields: [
         {
-          name: "sb_roles",
-          label: "Assign Roles",
-          type: "Section Break",
-        },
-        {
           name: "role_profile_name",
           label: "Role Profile",
           type: "Link",
           linkTarget: "Role Profile",
+        },
+        {
+          name: "role_profiles",
+          label: "Role Profiles",
+          type: "Table MultiSelect",
+          linkTarget: "Role Profile",
+        },
+        {
+          name: "roles_actions",
+          label: "",
+          type: "Custom",
+          customElement: (
+            <div className="flex gap-2 mb-4">
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                availableRoles.forEach(role => {
+                  formInstance?.setValue(`role_${role.replace(/\s+/g, '_')}`, 1, { shouldDirty: true });
+                });
+              }}>Select All</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                availableRoles.forEach(role => {
+                  formInstance?.setValue(`role_${role.replace(/\s+/g, '_')}`, 0, { shouldDirty: true });
+                });
+              }}>Unselect All</Button>
+            </div>
+          )
         },
         {
           name: "cb_roles_right",
@@ -184,7 +195,25 @@ export default function UserEditPage() {
           name: `role_${role.replace(/\s+/g, '_')}`,
           label: role,
           type: "Check" as const,
+          toggleVariant: "success" as const,
         })),
+      ],
+    },
+    {
+      name: "Permissions",
+      fields: [
+        {
+          name: "permissions_manager",
+          label: "",
+          type: "Custom",
+          customElement: (
+            <UserPermissionsManager
+              userEmail={docname}
+              apiKey={apiKey || ""}
+              apiSecret={apiSecret || ""}
+            />
+          ),
+        },
       ],
     },
   ];
@@ -257,37 +286,92 @@ export default function UserEditPage() {
   }, [record]);
 
   // Track Role Profile changes and update role checkboxes
-  const previousProfileRef = React.useRef<string | null>(null);
+  const previousProfilesRef = React.useRef<string[] | null>(null);
+  const initialRolesRef = React.useRef<Record<string, number> | null>(null);
   
   React.useEffect(() => {
     if (!formInstance || !apiKey || !apiSecret || availableRoles.length === 0) return;
 
-    // Initialize the ref with the record's profile on mount to avoid triggering on initial load
-    if (record?.role_profile_name && previousProfileRef.current === null) {
-      previousProfileRef.current = record.role_profile_name;
+    if (record && !initialRolesRef.current) {
+      const init: Record<string, number> = {};
+      availableRoles.forEach(role => {
+          const key = `role_${role.replace(/\s+/g, '_')}`;
+          init[role] = formInstance.getValues(key) ? 1 : 0;
+      });
+      initialRolesRef.current = init;
+    }
+
+    if (record && previousProfilesRef.current === null) {
+      // Initialize with both old and new role profile structures if available
+      const initProfiles: string[] = [];
+      if (record.role_profile_name) initProfiles.push(record.role_profile_name);
+      if (record.role_profiles) {
+        record.role_profiles.forEach((p: any) => {
+          if (p.role_profile && !initProfiles.includes(p.role_profile)) {
+            initProfiles.push(p.role_profile);
+          }
+        });
+      }
+      previousProfilesRef.current = initProfiles;
     }
 
     const subscription = formInstance.watch((value: any, { name }: any) => {
-        if (name === "role_profile_name" || name === undefined) {
-            const selectedProfile = value.role_profile_name;
-            if (selectedProfile && selectedProfile !== previousProfileRef.current) {
-                previousProfileRef.current = selectedProfile;
-                axios.get(`${API_BASE_URL}/Role Profile/${encodeURIComponent(selectedProfile)}`, {
-                    headers: { Authorization: `token ${apiKey}:${apiSecret}` }
-                }).then(res => {
-                    const profileRoles = res.data.data.roles || [];
+        if (name === "role_profiles" || name === "role_profile_name" || name === undefined) {
+            
+            const selectedProfiles = new Set<string>();
+            
+            if (value.role_profile_name) {
+                selectedProfiles.add(value.role_profile_name);
+            }
+            
+            if (value.role_profiles && Array.isArray(value.role_profiles)) {
+                value.role_profiles.forEach((p: any) => {
+                    const pName = typeof p === 'string' ? p : p.role_profile;
+                    if (pName) selectedProfiles.add(pName);
+                });
+            }
+            
+            const currentProfiles = Array.from(selectedProfiles);
+            const prevProfiles = previousProfilesRef.current || [];
+            
+            // Check if profiles changed
+            const changed = currentProfiles.length !== prevProfiles.length || 
+                           currentProfiles.some(p => !prevProfiles.includes(p));
+            
+            if (changed) {
+                previousProfilesRef.current = currentProfiles;
+                
+                if (currentProfiles.length > 0) {
+                    Promise.all(currentProfiles.map(p => 
+                        axios.get(`${API_BASE_URL}/Role Profile/${encodeURIComponent(p)}`, {
+                            headers: { Authorization: `token ${apiKey}:${apiSecret}` }
+                        }).catch(() => null)
+                    )).then(responses => {
+                        const allProfileRoles = new Set<string>();
+                        responses.forEach(res => {
+                            if (res && res.data && res.data.data) {
+                                const profileRoles = res.data.data.roles || [];
+                                profileRoles.forEach((pr: any) => allProfileRoles.add(pr.role));
+                            }
+                        });
+                        
+                        availableRoles.forEach(role => {
+                            const key = `role_${role.replace(/\s+/g, '_')}`;
+                            if (allProfileRoles.has(role)) {
+                                formInstance.setValue(key, 1, { shouldDirty: true });
+                            } else {
+                                formInstance.setValue(key, initialRolesRef.current?.[role] || 0, { shouldDirty: true });
+                            }
+                        });
+                    }).catch(err => {
+                        console.error("Failed to fetch role profile roles", err);
+                    });
+                } else {
                     availableRoles.forEach(role => {
                         const key = `role_${role.replace(/\s+/g, '_')}`;
-                        const hasRole = profileRoles.some((pr: any) => pr.role === role);
-                        formInstance.setValue(key, hasRole ? 1 : 0, { shouldDirty: true });
+                        formInstance.setValue(key, initialRolesRef.current?.[role] || 0, { shouldDirty: true });
                     });
-                }).catch(err => {
-                    console.error("Failed to fetch role profile roles", err);
-                });
-            } else if (!selectedProfile && previousProfileRef.current) {
-                // If profile is cleared, we could optionally clear roles, but we'll leave as-is 
-                // or let the user manually uncheck. We just need to update the ref.
-                previousProfileRef.current = null;
+                }
             }
         }
     });

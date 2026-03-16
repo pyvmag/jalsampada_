@@ -85,6 +85,7 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                 if (typeof item === 'string') return item;
                 if (item?.stage) return item.stage;
                 if (item?.asset) return item.asset;
+                if (item?.role_profile) return item.role_profile;
                 if (item?.name) return item.name;
                 return JSON.stringify(item);
             });
@@ -163,6 +164,9 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                     const getDisplayValue = React.useCallback((item: any): string => {
                         if (typeof item === 'string') return item;
                         if (item?.stage) return item.stage;
+                        if (item?.asset) return item.asset;
+                        if (item?.role_profile) return item.role_profile;
+                        if (item?.name) return item.name;
                         return JSON.stringify(item);
                     }, []);
 
@@ -198,17 +202,25 @@ export function TableMultiSelect({ control, field, error, className, filters = {
                             newSelectedValues = selectedValues.filter(v => getDisplayValue(v) !== option.label);
                         } else {
                             // Add to selection as proper object
-                            const newStageObject = {
-                                stage: option.label,
+                            const newStageObject: any = {
                                 name: "", // Will be filled by Frappe
                                 idx: selectedValues.length + 1
                             };
+
+                            if (field.name === "role_profiles") {
+                                newStageObject.role_profile = option.label;
+                            } else if (field.name === "assets") {
+                                newStageObject.asset = option.label;
+                            } else {
+                                newStageObject.stage = option.label;
+                            }
+
                             newSelectedValues = [...selectedValues, newStageObject];
                         }
 
                         onChange(newSelectedValues);
                         setSearchTerm(""); // Clear search after selection
-                    }, [selectedValues, onChange, isOptionSelected]);
+                    }, [selectedValues, onChange, isOptionSelected, field.name, getDisplayValue]);
 
                     const handleInputFocus = () => {
                         setIsOpen(true);

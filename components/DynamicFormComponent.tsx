@@ -299,10 +299,7 @@ export interface FormField {
   readOnly?: boolean;
 
   readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
-
-  toggleVariant?: "default" | "inverted" | "danger";
-
-
+  toggleVariant?: "default" | "inverted" | "danger" | "success";
 
   // Validation
 
