@@ -16,6 +16,7 @@ interface AuthContextType {
   fetchPermissions: (apiKey: string | null, apiSecret: string | null) => Promise<void>;
   hasPermission: (doctype: string, permissionType?: keyof PermissionSet) => boolean;
   userPermissions: Record<string, PermissionSet> | null;
+  documentPermissions: Record<string, string[]> | null;
   isAdmin: boolean;
   isInitialized: boolean;
   csrfToken: string | null;
@@ -44,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<Record<string, PermissionSet> | null>(null);
+  const [documentPermissions, setDocumentPermissions] = useState<Record<string, string[]> | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
@@ -94,8 +96,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             setUserId(data.username);
             localStorage.setItem("currentUser", data.full_name || data.username);
             localStorage.setItem("userId", data.username);
+            fetchDocumentPermissions(storedApiKey, storedApiSecret, data.username);
           }
         });
+      } else if (storedUserId) {
+        fetchDocumentPermissions(storedApiKey, storedApiSecret, storedUserId);
       }
       fetchPermissions(storedApiKey, storedApiSecret);
     }
@@ -116,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setUserId(data.username);
         localStorage.setItem("currentUser", data.full_name || data.username);
         localStorage.setItem("userId", data.username);
+        fetchDocumentPermissions(apiKey, apiSecret, data.username);
       }
     });
     fetchPermissions(apiKey, apiSecret);
@@ -129,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentUser(null);
     setUserId(null);
     setUserPermissions(null);
+    setDocumentPermissions(null);
     setIsAdmin(false);
     setIsAuthenticated(false);
 
@@ -236,6 +243,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  const fetchDocumentPermissions = React.useCallback(async (currentApiKey: string | null, currentApiSecret: string | null, currentUserId: string | null) => {
+    if (!currentApiKey || !currentApiSecret || !currentUserId) return;
+    try {
+      const response = await fetch(
+        `http://103.219.1.138:4412/api/resource/User Permission?filters={"user":"${encodeURIComponent(currentUserId)}"}&fields=["allow","for_value"]&limit_page_length=2000`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `token ${currentApiKey}:${currentApiSecret}`,
+          },
+          credentials: "include",
+        }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        const grouped: Record<string, string[]> = {};
+        if (result.data) {
+          result.data.forEach((p: any) => {
+            if (!grouped[p.allow]) grouped[p.allow] = [];
+            grouped[p.allow].push(p.for_value);
+          });
+        }
+        setDocumentPermissions(grouped);
+      }
+    } catch (error) {
+      console.error("Error fetching document permissions:", error);
+    }
+  }, []);
+
   const hasPermission = React.useCallback((doctype: string, permissionType: keyof PermissionSet = "read"): boolean => {
     if (isAdmin) return true;
     if (!userPermissions) return false;
@@ -260,6 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchPermissions,
     hasPermission,
     userPermissions,
+    documentPermissions,
     isAdmin,
     isInitialized,
     csrfToken,
