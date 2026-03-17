@@ -129,7 +129,11 @@ export default function NewVillagePage() {
       }
 
       toast.success("Village created successfully!");
-      router.push("/lis-management/doctype/wrd-village");
+      if (responseData.data && responseData.data.name) {
+        router.push(`/lis-management/doctype/village/${responseData.data.name}`);
+      } else {
+        router.push("/lis-management/doctype/village");
+      }
     } catch (err: any) {
       console.error("Save error:", err);
       toast.error(err.message || "Error saving record", { duration: Infinity });

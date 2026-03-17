@@ -546,8 +546,7 @@ export default function NewTenderPage() {
           // Don't exclude contractor fields even if they are Read Only
           // because they need to be saved with the tender record
           if (field.type === "Read Only" && ![
-            "custom_contractor_name",
-            "custom_contractor_company",
+            "custom_contractor_company", // This is not read only
             "custom_mobile_no",
             "custom_supplier_address",
             "custom_email_id",

@@ -8,7 +8,7 @@ interface ToggleButtonProps {
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
-  variant?: "default" | "inverted" | "danger";
+  variant?: "default" | "inverted" | "danger" | "success";
   invertColors?: boolean;
 }
 
@@ -57,6 +57,8 @@ export const ToggleButton: React.FC<ToggleButtonProps> = ({
   let bgColorClass = "";
   if (variant === "danger") {
     bgColorClass = isChecked ? "bg-red-600 hover:bg-red-700" : "bg-gray-300 hover:bg-gray-400";
+  } else if (variant === "success") {
+    bgColorClass = isChecked ? "bg-green-500 hover:bg-green-600" : "bg-gray-300 hover:bg-gray-400";
   } else if (invertColors || variant === "inverted") {
     bgColorClass = isChecked ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600";
   } else {

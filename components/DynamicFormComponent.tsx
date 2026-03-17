@@ -20,8 +20,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +27,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-
-
 import { TableField } from "./TableField";
 import { LinkField } from "./LinkField";
 import { TableMultiSelect } from "./TableMultiSelect";
@@ -39,9 +35,7 @@ import { PumpStatusToggle } from "./PumpStatusToggle";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getApiMessages } from "@/lib/utils";
 import { DurationHHMMField } from "./DurationHHMMField";
-
 const DEFAULT_API_BASE_URL = "http://103.219.3.169:2223/api/resource";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Types (Unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +74,6 @@ export type FieldType =
   | "Attach Image"
   | "DurationHHMM"
   | "Custom";
-
 export interface FormField {
   name: string;
   label: string;
@@ -149,25 +142,21 @@ export interface FormField {
   className?: string;
   readOnly?: boolean;
   readOnlyDependsOn?: string | Record<string, any> | ((values: Record<string, any>) => boolean);
-  toggleVariant?: "default" | "inverted" | "danger";
-
+  toggleVariant?: "default" | "inverted" | "danger" | "success";
   // Validation
   asyncValidation?: (value: any, allValues: any) => Promise<{ isValid: boolean; message?: string }>;
   isDuration?: boolean;
 }
-
 export interface TabbedLayout {
   name: string;
   fields: FormField[];
 }
-
 export interface DeleteConfig {
   doctypeName: string;
   docName: string;
   redirectUrl?: string;
   baseUrl?: string;
 }
-
 export interface DynamicFormProps {
   tabs: TabbedLayout[];
   onSubmit: (data: Record<string, any>, isDirty: boolean) => Promise<{ status?: string; statusCode?: number } | void>;
@@ -189,7 +178,6 @@ export interface DynamicFormProps {
   isSaving?: boolean;
   isEdit?: boolean;
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers (Unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +191,6 @@ async function fetchFieldValue(
   try {
     const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
     const url = `${API_BASE_URL}/${targetDoctype}/${sourceValue}`;
-
     const resp = await axios.get(url, {
       params: {
         fields: JSON.stringify([targetField]),
@@ -214,14 +201,12 @@ async function fetchFieldValue(
       },
       withCredentials: true,
     });
-
     return resp.data.data?.[targetField] || null;
   } catch (e: any) {
     console.error(`Failed to fetch ${targetField} from ${targetDoctype}:`, e);
     return null;
   }
 }
-
 async function fetchMultipleFieldValues(
   sourceValue: string,
   targetDoctype: string,
@@ -232,7 +217,6 @@ async function fetchMultipleFieldValues(
   try {
     const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
     const url = `${API_BASE_URL}/${targetDoctype}/${sourceValue}`;
-
     const resp = await axios.get(url, {
       params: {
         fields: JSON.stringify(targetFields),
@@ -243,12 +227,10 @@ async function fetchMultipleFieldValues(
       },
       withCredentials: true,
     });
-
     const result: Record<string, any> = {};
     targetFields.forEach(field => {
       result[field] = resp.data.data?.[field] || null;
     });
-
     return result;
   } catch (e: any) {
     console.error(`Failed to fetch multiple fields from ${targetDoctype}:`, e);
@@ -259,13 +241,11 @@ async function fetchMultipleFieldValues(
     return result;
   }
 }
-
 function evaluateDisplayDependsOn(
   condition: string | Record<string, any> | ((values: Record<string, any>) => boolean),
   values: Record<string, any>
 ) {
   if (!condition) return true;
-
   if (typeof condition === "function") {
     try {
       return condition(values);
@@ -274,7 +254,6 @@ function evaluateDisplayDependsOn(
       return true; // fallback to visible if error
     }
   }
-
   if (typeof condition === "string") {
     try {
       // Replace all identifiers with values['identifier']
@@ -292,11 +271,9 @@ function evaluateDisplayDependsOn(
       return true; // fallback to visible if error
     }
   }
-
   if (typeof condition === "object") {
     for (const key in condition) {
       const expected = condition[key];
-
       if (expected === true) {
         // Show field if value is truthy
         if (!values[key]) return false;
@@ -310,10 +287,8 @@ function evaluateDisplayDependsOn(
     }
     return true;
   }
-
   return true;
 }
-
 function buildDynamicFilters(
   field: FormField,
   getValue: (name: string) => any
@@ -331,8 +306,7 @@ function buildDynamicFilters(
   }
   return filters;
 }
-
-function buildDefaultValues(fields: FormField[]) {
+function buildDefaultValues(fields: FormField[], documentPermissions?: Record<string, string[]> | null) {
   const dv: Record<string, any> = {};
   for (const f of fields) {
     if (f.defaultValue !== undefined) {
@@ -366,14 +340,16 @@ function buildDefaultValues(fields: FormField[]) {
           "Read Only",
         ].includes(f.type)
       ) {
-        dv[f.name] = "";
+        if (f.type === "Link" && f.linkTarget && documentPermissions && documentPermissions[f.linkTarget] && documentPermissions[f.linkTarget].length === 1) {
+          dv[f.name] = documentPermissions[f.linkTarget][0];
+        } else {
+          dv[f.name] = "";
+        }
       }
-
       if (["Date", "DateTime", "Time"].includes(f.type)) {
         dv[f.name] = null;
       }
     }
-
     // Apply precision formatting to Currency and Float fields during initialization
     if ((f.type === "Currency" || f.type === "Float") && f.precision && dv[f.name]) {
       const value = parseFloat(dv[f.name]);
@@ -382,7 +358,6 @@ function buildDefaultValues(fields: FormField[]) {
       }
     }
   }
-
   if (typeof window !== "undefined") {
     const dupData = sessionStorage.getItem("duplicate_record_data");
     if (dupData) {
@@ -397,7 +372,6 @@ function buildDefaultValues(fields: FormField[]) {
   }
   return dv;
 }
-
 export function rulesFor(
   field: FormField
 ): RegisterOptions<Record<string, any>, string> {
@@ -413,14 +387,12 @@ export function rulesFor(
       value: field.max,
       message: `${field.label} must be <= ${field.max}`,
     };
-
   if (field.type === "Percent") {
     if (rules.min === undefined)
       rules.min = { value: 0, message: "Percent must be between 0 and 100" };
     if (rules.max === undefined)
       rules.max = { value: 100, message: "Percent must be between 0 and 100" };
   }
-
   if (field.pattern) {
     const pattern =
       typeof field.pattern === "string"
@@ -431,10 +403,8 @@ export function rulesFor(
       message: field.patternMessage || `${field.label} format is invalid`,
     };
   }
-
   return rules;
 }
-
 function sanitizeForDuplication(data: any): any {
   if (Array.isArray(data)) {
     return data.map((item) => sanitizeForDuplication(item));
@@ -463,7 +433,6 @@ function sanitizeForDuplication(data: any): any {
   }
   return data;
 }
-
 export function FieldHelp({ text }: { text?: string }) {
   if (!text) return null;
   return (
@@ -478,7 +447,6 @@ export function FieldHelp({ text }: { text?: string }) {
     </div>
   );
 }
-
 export function FieldError({ error }: { error?: any }) {
   if (!error) return null;
   return (
@@ -487,7 +455,6 @@ export function FieldError({ error }: { error?: any }) {
     </div>
   );
 }
-
 const formatSlug = (slug: string) => {
   if (!slug) return "";
   return slug
@@ -495,21 +462,17 @@ const formatSlug = (slug: string) => {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 };
-
 const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField, type?: string, isReadOnlyMode: boolean }) => {
   const { register, control, formState: { errors }, watch } = useFormContext();
   const allValues = watch();
-
   const getErrorClass = (fieldName: string) => {
     return errors[fieldName]
       ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500 !ring-1 !ring-red-500"
       : "";
   };
-
   const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
   const isDisabled = isReadOnlyMode || isFieldReadOnly;
   const rules = rulesFor(field);
-
   const commonProps: any = {
     id: field.name,
     className: cn("form-control", getErrorClass(field.name)),
@@ -519,16 +482,13 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
     ...(field.max !== undefined ? { max: field.max } : {}),
     disabled: isDisabled,
   };
-
   const valueAsNumber = ["Int", "Float", "Currency", "Percent"].includes(field.type);
-
   // Currency/Float with precision
   if ((field.type === "Currency" || field.type === "Float") && field.precision) {
     // commonProps.step = field.precision > 0 ? (0).toFixed(field.precision).substring(1) : "1";
     // Fix: Ensure step handles precision correctly but doesn't break input
     const stepVal = field.precision > 0 ? Math.pow(10, -field.precision).toFixed(field.precision) : "1";
     commonProps.step = stepVal;
-
     return (
       <Controller
         name={field.name}
@@ -539,7 +499,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
             <label htmlFor={field.name} className="form-label">
               {field.label}{field.required ? " *" : ""}
             </label>
-
             <input
               type={type}
               value={controllerField.value ?? ""}
@@ -554,7 +513,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
               }}
               {...commonProps}
             />
-
             <FieldError
               error={(errors as FieldErrors<Record<string, any>>)[field.name]}
             />
@@ -564,21 +522,17 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
       />
     );
   }
-
   // Async Validation logic
   const [validationStatus, setValidationStatus] = React.useState<"idle" | "loading" | "valid" | "invalid">("idle");
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
-
   React.useEffect(() => {
     if (!field.asyncValidation || !allValues) return;
-
     const currentValue = allValues[field.name];
     if (!currentValue) {
       setValidationStatus("idle");
       setValidationMessage(null);
       return;
     }
-
     const timeoutId = setTimeout(async () => {
       setValidationStatus("loading");
       try {
@@ -596,13 +550,10 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
         setValidationStatus("idle");
       }
     }, 500);
-
     return () => clearTimeout(timeoutId);
   }, [allValues?.[field.name], field.asyncValidation]);
-
   const [showPassword, setShowPassword] = React.useState(false);
   const inputType = type === "password" ? (showPassword ? "text" : "password") : type;
-
   return (
     <div className="form-group relative">
       <label htmlFor={field.name} className="form-label">
@@ -625,7 +576,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
             type === "password" ? "pr-10" : ""
           )}
         />
-
         {type === "password" && (
           <button
             type="button"
@@ -635,7 +585,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
-
         {field.asyncValidation && type !== "password" && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
             {validationStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
@@ -644,7 +593,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
           </div>
         )}
       </div>
-
       {validationStatus === "valid" && validationMessage && (
         <div className="text-green-600 text-xs mt-1 flex items-center gap-1">
           <CheckCircle2 size={12} /> {validationMessage}
@@ -655,7 +603,6 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
           <AlertCircle size={12} /> {validationMessage}
         </div>
       )}
-
       <FieldError
         error={(errors as FieldErrors<Record<string, any>>)[field.name]}
       />
@@ -663,23 +610,19 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
     </div>
   );
 };
-
 const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type: "date" | "datetime-local" | "time", isReadOnlyMode: boolean }) => {
   const { control, formState: { errors }, register } = useFormContext();
-
   const getErrorClass = (fieldName: string) => {
     return errors[fieldName]
       ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500 !ring-1 !ring-red-500"
       : "";
   };
-
   if (type === "time") {
     const { field: controllerField } = useController({
       name: field.name,
       control,
       rules: rulesFor(field),
     });
-
     React.useEffect(() => {
       if (!controllerField.value) {
         const now = new Date();
@@ -687,7 +630,6 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
         controllerField.onChange(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
       }
     }, []);
-
     return (
       <div className="form-group">
         <label htmlFor={field.name} className="form-label">
@@ -707,28 +649,24 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
       </div>
     );
   }
-
   const rules = field.type === "DateTime" ? rulesFor(field) : rulesFor(field);
   const { field: controllerField, fieldState: { error } } = useController({
     name: field.name,
     control,
     rules,
   });
-
   // Auto-set current date ONLY if allowed
   // Note: moved inside render but useEffect dependency array ensures it runs only once/when prop changes
   React.useEffect(() => {
     if (!controllerField.value && !field.disableAutoToday) {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
-
       const yyyy = now.getFullYear();
       const MM = pad(now.getMonth() + 1);
       const dd = pad(now.getDate());
       const hh = pad(now.getHours());
       const mm = pad(now.getMinutes());
       const ss = pad(now.getSeconds());
-
       controllerField.onChange(
         type === "datetime-local"
           ? `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`
@@ -736,7 +674,6 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
       );
     }
   }, [field.disableAutoToday]);
-
   let selectedDate: Date | null = null;
   if (controllerField.value) {
     const parsedDate = new Date(controllerField.value);
@@ -749,18 +686,15 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
       selectedDate = defaultDate;
     }
   }
-
   if (!selectedDate && !field.disableAutoToday) {
     selectedDate = new Date();
   }
-
   return (
     <div className="form-group">
       <label htmlFor={field.name} className="form-label">
         {field.label}
         {field.required ? " *" : ""}
       </label>
-
       <div className={error ? "input-error-wrapper" : ""}>
         <DatePicker
           selected={selectedDate ?? null}
@@ -769,12 +703,10 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
               controllerField.onChange("");
               return;
             }
-
             const pad = (n: number) => (n < 10 ? "0" + n : n);
             const yyyy = date.getFullYear();
             const MM = pad(date.getMonth() + 1);
             const dd = pad(date.getDate());
-
             if (type === "datetime-local") {
               const hh = pad(date.getHours());
               const mm = pad(date.getMinutes());
@@ -799,7 +731,6 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
           disabled={isReadOnlyMode}
         />
       </div>
-
       {error && (
         <span className="text-red-500 font-medium text-sm mt-1">
           {error.message}
@@ -809,7 +740,6 @@ const DateLikeField = ({ field, type, isReadOnlyMode }: { field: FormField, type
     </div>
   );
 };
-
 export function DynamicForm({
   tabs,
   onSubmit,
@@ -831,39 +761,33 @@ export function DynamicForm({
   isSaving = false,
   isEdit = false
 }: DynamicFormProps) {
-  const { apiKey, apiSecret } = useAuth();
-
+  const { apiKey, apiSecret, documentPermissions } = useAuth();
   const isReadOnlyMode = isSubmittable && docstatus > 0;
-
   // ── HOOKS ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = React.useState(0);
   const formRef = React.useRef<HTMLFormElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const [currentStatus, setCurrentStatus] = React.useState(initialStatus);
-
   // 🟢 Navigation State
   const [prevRecord, setPrevRecord] = React.useState<string | null>(null);
   const [nextRecord, setNextRecord] = React.useState<string | null>(null);
   const [loadingNeighbors, setLoadingNeighbors] = React.useState(true);
-
   // ── ALL FIELDS (for defaultValues) ───────────────────────────────────────
   const allFields = React.useMemo(() => tabs.flatMap((t) => t.fields), [tabs]);
   const defaultValues = React.useMemo(
     () => {
-      const computedDefaults = buildDefaultValues(allFields);
+      const computedDefaults = buildDefaultValues(allFields, documentPermissions);
       return { ...computedDefaults, ...(externalDefaultValues || {}) };
     },
-    [allFields, externalDefaultValues]
+    [allFields, externalDefaultValues, documentPermissions]
   );
-
   // ── RHF SETUP ─────────────────────────────────────────────────────────────
   const methods = useForm<Record<string, any>>({
     defaultValues,
     mode: "onBlur",
     reValidateMode: "onSubmit",
   });
-
   const {
     register,
     handleSubmit,
@@ -873,56 +797,45 @@ export function DynamicForm({
     watch,
     reset,
   } = methods;
-
   const allValues = useWatch({ control });
-
   React.useEffect(() => {
     if (onFormInit) {
       onFormInit(methods);
     }
   }, [methods, onFormInit]);
-
   // Find this useEffect in DynamicFormComponent.tsx (around line 348)
   React.useEffect(() => {
     // 🟢 CHANGE: Add { keepValues: true } to prevent clearing form when defaultValues update
     reset(defaultValues, { keepValues: true });
   }, [defaultValues, reset]);
-
   const fileInputRefs = React.useRef<Record<string, HTMLInputElement | null>>(
     {}
   );
   const activeTabFields = tabs[activeTab]?.fields || [];
-
   const reg = React.useCallback(
     (name: string, options?: any) => register(name, options),
     [register]
   );
-
   // 🟢 EFFICIENT NEIGHBOR FETCHING (Using Creation Date Logic)
   React.useEffect(() => {
     const fetchNeighbors = async () => {
       const segments = pathname.split("/").filter(Boolean);
       const doctypeIndex = segments.indexOf("doctype");
-
       // Stop if not a standard edit path
       if (doctypeIndex === -1 || segments.length <= doctypeIndex + 2) {
         setLoadingNeighbors(false);
         return;
       }
-
       const doctypeSlug = segments[doctypeIndex + 1];
       let currentDocName = segments[segments.length - 1];
       currentDocName = decodeURIComponent(currentDocName);
-
       if (currentDocName === "new") {
         setLoadingNeighbors(false);
         return;
       }
-
       setLoadingNeighbors(true);
       // Use the passed doctype prop if available, otherwise infer from URL
       const targetDoctype = doctype || formatSlug(doctypeSlug);
-
       try {
         // 1. Get current document creation time
         const currentDocRes = await axios.get(`${DEFAULT_API_BASE_URL}/${targetDoctype}/${currentDocName}`, {
@@ -930,17 +843,14 @@ export function DynamicForm({
           headers: { Authorization: `token ${apiKey}:${apiSecret}` },
           withCredentials: true,
         });
-
         const currentCreation = currentDocRes.data.data?.creation;
         if (!currentCreation) {
           setLoadingNeighbors(false);
           return;
         }
-
         // 2. Fetch Neighbors relative to current Creation Date
         // Previous (Newer): Creation > Current (limit 1, Order Ascending)
         // Next (Older): Creation < Current (limit 1, Order Descending)
-
         const [prevRes, nextRes] = await Promise.all([
           axios.get(`${DEFAULT_API_BASE_URL}/${targetDoctype}`, {
             params: {
@@ -963,31 +873,26 @@ export function DynamicForm({
             withCredentials: true,
           })
         ]);
-
         setPrevRecord(prevRes.data.data?.[0]?.name || null);
         setNextRecord(nextRes.data.data?.[0]?.name || null);
-
       } catch (err) {
         console.error("Navigation fetch failed:", err);
       } finally {
         setLoadingNeighbors(false);
       }
     };
-
     if (apiKey && apiSecret) {
       fetchNeighbors();
     } else {
       setLoadingNeighbors(false);
     }
   }, [pathname, apiKey, apiSecret]);
-
   // Navigation Redirect
   const navigateToRecord = (recordName: string) => {
     const segments = pathname.split("/");
     segments[segments.length - 1] = encodeURIComponent(recordName);
     router.push(segments.join("/"));
   };
-
   const onFormSubmit = async (data: Record<string, any>) => {
     try {
       const result = await onSubmit(data, isDirty);
@@ -1007,7 +912,6 @@ export function DynamicForm({
       console.error('Save error:', error);
     }
   };
-
   const handleSubmitDocument = async () => {
     try {
       const result = await onSubmitDocument?.();
@@ -1018,7 +922,6 @@ export function DynamicForm({
       console.error('Submit error:', error);
     }
   };
-
   const handleCancelDocument = async () => {
     try {
       const result = await onCancelDocument?.();
@@ -1029,27 +932,22 @@ export function DynamicForm({
       console.error('Cancel error:', error);
     }
   };
-
   const getErrorClass = (fieldName: string) => {
     return errors[fieldName]
       ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500 !ring-1 !ring-red-500"
       : "";
   };
-
   const handleDuplicate = React.useCallback(() => {
     const currentData = methods.getValues();
     const cleanData = sanitizeForDuplication(currentData);
     sessionStorage.setItem("duplicate_record_data", JSON.stringify(cleanData));
     toast.info("Duplicating record...");
-
     const parts = pathname.split("/");
     const lastPart = parts[parts.length - 1];
-
     if (lastPart === "new") {
       toast.warning("Already on a new record.");
       return;
     }
-
     parts.pop();
     if (parts[parts.length - 1] === "edit") {
       parts.pop();
@@ -1057,7 +955,6 @@ export function DynamicForm({
     const newPath = `${parts.join("/")}/new`;
     router.push(newPath);
   }, [methods, pathname, router]);
-
   const handleDeleteAction = async () => {
     if (onDelete) {
       if (window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
@@ -1065,30 +962,23 @@ export function DynamicForm({
       }
       return;
     }
-
     if (deleteConfig) {
       if (!apiKey || !apiSecret) {
         toast.error("Authentication required to delete.", { duration: Infinity });
         return;
       }
-
       const { doctypeName, docName, redirectUrl, baseUrl } = deleteConfig;
-
       if (window.confirm(`Are you sure you want to delete this ${doctypeName}? This action cannot be undone.`)) {
         try {
           const url = `${baseUrl || DEFAULT_API_BASE_URL}/${doctypeName}/${docName}`;
-
           const response = await axios.delete(url, {
             headers: { Authorization: `token ${apiKey}:${apiSecret}` },
             withCredentials: true,
           });
-
           const messages = getApiMessages(response, null, `${doctypeName} deleted successfully`, "Failed to delete record");
-
           if (messages.success) {
             toast.success(messages.message, { description: messages.description });
           }
-
           if (redirectUrl) {
             router.push(redirectUrl);
           } else {
@@ -1102,9 +992,7 @@ export function DynamicForm({
       }
     }
   };
-
   const showDeleteOption = !!onDelete || !!deleteConfig;
-
   React.useEffect(() => {
     if (isDirty) {
       setCurrentStatus("Not Saved");
@@ -1114,7 +1002,6 @@ export function DynamicForm({
       setCurrentStatus(initialStatus);
     }
   }, [isDirty, initialStatus]);
-
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Prevent save / duplicate when typing in inputs, textareas, etc.
@@ -1124,11 +1011,9 @@ export function DynamicForm({
         activeElement?.tagName === "TEXTAREA" ||
         activeElement?.tagName === "SELECT" ||
         (activeElement as HTMLElement)?.isContentEditable;
-
       if (isReadOnlyMode) {
         return;
       }
-
       if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();
         const submitButton = formRef.current?.querySelector(
@@ -1138,7 +1023,6 @@ export function DynamicForm({
           submitButton.click();
         }
       }
-
       // Shift + D → Duplicate (only when NOT focused in any input field)
       if (
         event.shiftKey &&
@@ -1147,7 +1031,6 @@ export function DynamicForm({
         event.preventDefault();
         handleDuplicate();
       }
-
       // Keyboard Navigation
       if ((event.ctrlKey || event.metaKey) && event.key === "ArrowLeft" && prevRecord) {
         event.preventDefault();
@@ -1158,21 +1041,17 @@ export function DynamicForm({
         navigateToRecord(nextRecord);
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleDuplicate, prevRecord, nextRecord, isReadOnlyMode]);
-
   // ── FETCH FROM FUNCTIONALITY ─────────────────────────────────────────────
   React.useEffect(() => {
     if (!apiKey || !apiSecret) return;
-
     const fieldsWithFetchFrom = tabs
       .flatMap((tab) => tab.fields)
       .filter((field) => field.fetchFrom);
-
     const sourceFieldMap = new Map<string, FormField[]>();
     fieldsWithFetchFrom.forEach((field) => {
       if (field.fetchFrom) {
@@ -1183,32 +1062,24 @@ export function DynamicForm({
         sourceFieldMap.get(sourceField)?.push(field);
       }
     });
-
     const previousValues = new Map<string, any>();
-
     const handleFetchForSource = async (sourceFieldName: string, force: boolean = false) => {
       const sourceValue = watch(sourceFieldName);
       const previousValue = previousValues.get(sourceFieldName);
-
       if (sourceValue !== previousValue || force) {
         previousValues.set(sourceFieldName, sourceValue);
-
         const dependentFields = sourceFieldMap.get(sourceFieldName) || [];
-
         if (sourceValue) {
           // Group fields by target doctype to optimize API calls
           const fieldsByDoctype = new Map<string, FormField[]>();
-
           dependentFields.forEach((field) => {
             if (!field.fetchFrom) return;
-
             const targetDoctype = field.fetchFrom.targetDoctype;
             if (!fieldsByDoctype.has(targetDoctype)) {
               fieldsByDoctype.set(targetDoctype, []);
             }
             fieldsByDoctype.get(targetDoctype)?.push(field);
           });
-
           // Fetch data for each doctype in a single API call
           for (const [targetDoctype, fields] of fieldsByDoctype) {
             try {
@@ -1220,11 +1091,9 @@ export function DynamicForm({
                 apiKey,
                 apiSecret
               );
-
               // Set values for each field
               fields.forEach((field) => {
                 if (!field.fetchFrom) return;
-
                 let fetchedValue = fetchedValues[field.fetchFrom.targetField];
                 if (Array.isArray(fetchedValue)) {
                   fetchedValue = sanitizeForDuplication(fetchedValue);
@@ -1251,49 +1120,37 @@ export function DynamicForm({
         }
       }
     };
-
     const sourceFields = Array.from(sourceFieldMap.keys());
     sourceFields.forEach((sourceField) => {
       previousValues.set(sourceField, watch(sourceField));
     });
-
     sourceFields.forEach(f => handleFetchForSource(f, true));
-
     const subscription = watch((value, { name, type }) => {
       if (name && sourceFieldMap.has(name)) {
         setTimeout(() => handleFetchForSource(name), 100);
       }
     });
-
     return () => {
       subscription.unsubscribe();
     };
   }, [tabs, watch, setValue, apiKey, apiSecret]);
-
   const renderHeaderContent = () => {
     const segments = pathname.split("/").filter(Boolean);
     const doctypeIndex = segments.indexOf("doctype");
-
     if (doctypeIndex === -1 || doctypeIndex === 0) {
       return <h2 style={{ margin: 0 }}>{title}</h2>;
     }
-
     const moduleSlug = segments[doctypeIndex - 1];
     const doctypeSlug = segments[doctypeIndex + 1];
-
     const moduleName = formatSlug(moduleSlug);
-
     // 🟢 Rename "maintenance-schedule" to "Work Schedule" in breadcrumbs
     const DOCTYPE_TITLE_MAP: Record<string, string> = {
       "maintenance-schedule": "Work Schedule",
       "maintenance-schedule-report": "Work Schedule Report",
     };
-
     const doctypeName = DOCTYPE_TITLE_MAP[doctypeSlug] || formatSlug(doctypeSlug);
-
     const moduleUrl = `/${segments.slice(0, doctypeIndex).join("/")}`;
     const listUrl = `/${segments.slice(0, doctypeIndex + 2).join("/")}`;
-
     return (
       <div className="flex flex-wrap items-center gap-2 text-xl font-bold">
         <Link
@@ -1316,14 +1173,10 @@ export function DynamicForm({
       </div>
     );
   };
-
-
-
   const renderTextarea = (field: FormField, rows = 4) => {
     const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
     const isDisabled = isReadOnlyMode || isFieldReadOnly;
     const rules = rulesFor(field);
-
     return (
       <div className="form-group">
         <label htmlFor={field.name} className="form-label">
@@ -1345,10 +1198,8 @@ export function DynamicForm({
       </div>
     );
   };
-
   const renderSelect = (field: FormField) => {
     const rules = rulesFor(field);
-
     const options =
       typeof field.options === "string"
         ? field.options.split("\n").map((o) => ({
@@ -1356,14 +1207,12 @@ export function DynamicForm({
           value: o,
         }))
         : field.options;
-
     return (
       <div className="form-group">
         <label htmlFor={field.name} className="form-label">
           {field.label}
           {field.required ? " *" : ""}
         </label>
-
         <select
           id={field.name}
           className={cn("form-control", getErrorClass(field.name))}
@@ -1377,7 +1226,6 @@ export function DynamicForm({
             </option>
           ))}
         </select>
-
         <FieldError
           error={(errors as FieldErrors<Record<string, any>>)[field.name]}
         />
@@ -1385,11 +1233,9 @@ export function DynamicForm({
       </div>
     );
   };
-
   const renderCheckbox = (field: FormField) => {
     const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
     const isDisabled = isReadOnlyMode || isFieldReadOnly;
-
     return (
       <Controller
         name={field.name}
@@ -1420,7 +1266,6 @@ export function DynamicForm({
       />
     );
   };
-
   const renderRadio = (field: FormField) => {
     const options = field.options as { label: string; value: string; className?: string }[] || [];
     return (
@@ -1460,7 +1305,6 @@ export function DynamicForm({
       />
     );
   };
-
   const renderPumpStatus = (field: FormField) => {
     return (
       <Controller
@@ -1492,7 +1336,6 @@ export function DynamicForm({
       />
     );
   };
-
   const renderColor = (field: FormField) => {
     const rules = rulesFor(field);
     return (
@@ -1515,9 +1358,6 @@ export function DynamicForm({
       </div>
     );
   };
-
-
-
   const renderDuration = (field: FormField) => {
     const base = field.name;
     return (
@@ -1571,13 +1411,11 @@ export function DynamicForm({
       </div>
     );
   };
-
   const renderRating = (field: FormField) => {
     const name = field.name;
     const current = watch(name) ?? 0;
     const set = (val: number) =>
       setValue(name, val, { shouldValidate: true, shouldDirty: true });
-
     return (
       <div className="form-group">
         <label className="form-label">
@@ -1611,7 +1449,6 @@ export function DynamicForm({
       </div>
     );
   };
-
   const renderReadOnly = (field: FormField) => {
     const val = watch(field.name);
     let displayValue: any = field.readOnlyValue ?? val ?? "";
@@ -1626,7 +1463,6 @@ export function DynamicForm({
         displayValue = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
       }
     }
-
     // Format as duration if isDuration is true
     if (field.isDuration && (typeof val === "number" || !isNaN(Number(val)))) {
       const num = Number(val);
@@ -1635,7 +1471,6 @@ export function DynamicForm({
       const pad = (n: number) => String(n).padStart(2, "0");
       displayValue = `${hours}:${pad(mins)}`;
     }
-
     return (
       <div className="form-group">
         <label className="form-label">{field.label}</label>
@@ -1649,7 +1484,6 @@ export function DynamicForm({
       </div>
     );
   };
-
   const renderButton = (field: FormField) => (
     <div className="form-group">
       <button
@@ -1662,7 +1496,6 @@ export function DynamicForm({
       <FieldHelp text={field.description} />
     </div>
   );
-
   const renderAttachment = (field: FormField) => {
     return (
       <Controller
@@ -1671,11 +1504,9 @@ export function DynamicForm({
         rules={rulesFor(field)}
         render={({ field: { onChange, value }, fieldState: { error } }) => {
           const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
           // Determine display name and preview URL
           let displayName = "";
           let previewUrl = "";
-
           if (value instanceof File) {
             displayName = value.name;
             previewUrl = URL.createObjectURL(value);
@@ -1683,14 +1514,12 @@ export function DynamicForm({
             displayName = value.split("/").pop() || value;
             previewUrl = value.startsWith("http") ? value : `http://103.219.3.169:2223${value}`;
           }
-
           return (
             <div className="form-group flex flex-col gap-2">
               <label className="form-label font-medium">
                 {field.label}
                 {field.required ? " *" : ""}
               </label>
-
               {/* Hidden file input */}
               <input
                 type="file"
@@ -1704,7 +1533,6 @@ export function DynamicForm({
                 }}
                 disabled={isReadOnlyMode}
               />
-
               {/* Upload Button */}
               {!value && (
                 <Button
@@ -1718,7 +1546,6 @@ export function DynamicForm({
                   Upload File
                 </Button>
               )}
-
               {/* File Selected View */}
               {value && (
                 <div
@@ -1730,7 +1557,6 @@ export function DynamicForm({
                   <span className="text-sm flex-1 truncate" title={displayName}>
                     {displayName}
                   </span>
-
                   {/* Preview */}
                   <Button
                     type="button"
@@ -1745,7 +1571,6 @@ export function DynamicForm({
                   >
                     <Eye size={16} />
                   </Button>
-
                   {/* Replace */}
                   {!isReadOnlyMode && (
                     <Button
@@ -1757,7 +1582,6 @@ export function DynamicForm({
                       Replace
                     </Button>
                   )}
-
                   {/* Remove */}
                   {!isReadOnlyMode && (
                     <Button
@@ -1772,7 +1596,6 @@ export function DynamicForm({
                   )}
                 </div>
               )}
-
               <FieldError error={error} />
               <FieldHelp text={field.description} />
             </div>
@@ -1781,13 +1604,10 @@ export function DynamicForm({
       />
     );
   };
-
   const renderLink = (field: FormField) => {
     const getValue = (name: string) => watch(name);
     const filtersToPass = buildDynamicFilters(field, getValue);
-
     const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
-
     return (
       <LinkField
         key={field.name}
@@ -1800,7 +1620,6 @@ export function DynamicForm({
       />
     );
   };
-
   const renderTable = (field: FormField) => {
     return (
       <TableField
@@ -1813,13 +1632,10 @@ export function DynamicForm({
       />
     );
   };
-
   const renderTableMultiSelect = (field: FormField) => {
     const getValue = (name: string) => watch(name);
     const filtersToPass = buildDynamicFilters(field, getValue);
-
     const isFieldReadOnly = !!field.readOnly || (field.readOnlyDependsOn ? evaluateDisplayDependsOn(field.readOnlyDependsOn, allValues || {}) : false);
-
     return (
       <TableMultiSelect
         key={field.name}
@@ -1832,16 +1648,12 @@ export function DynamicForm({
       />
     );
   };
-
-
   const renderField = (field: FormField, idx: number) => {
     // Check if field should be hidden
     const isHidden = field.displayDependsOn
       ? !evaluateDisplayDependsOn(field.displayDependsOn, allValues || {})
       : false;
-
     if (isHidden) return null; // Do not render hidden fields
-
     // Field content remains same
     const fieldContent = () => {
       switch (field.type) {
@@ -1924,10 +1736,8 @@ export function DynamicForm({
           return null;
       }
     };
-
     return fieldContent();
   };
-
   const hasThreeColLayout = activeTabFields.some(
     (field) => field.layoutCols === 3
   );
@@ -1939,7 +1749,13 @@ export function DynamicForm({
         onSubmit={handleSubmit(onFormSubmit)}
         style={{ overflow: "visible" }}
       >
-        <div className="card" style={{ padding: 16, overflow: "visible" }}>
+        <div className="card" style={{ 
+          padding: "12px 16px", 
+          overflow: "visible",
+          maxWidth: "100vw",
+          margin: "0 auto",
+          width: "100%"
+        }}>
           {/* Header */}
           <div
             style={{
@@ -1952,10 +1768,8 @@ export function DynamicForm({
             {/* Title Section */}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-
                 {/* Render Breadcrumbs */}
                 {renderHeaderContent()}
-
                 <span
                   className={`status-badge text-xs whitespace-nowrap ${currentStatus === "Not Saved" ? "status-badge-danger" : "status-badge-draft"
                     }`}
@@ -1983,13 +1797,11 @@ export function DynamicForm({
                 </p>
               ) : null}
             </div>
-
             {/* Actions Section */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Show different buttons based on docstatus and isSubmittable */}
               {isSubmittable && docstatus === 0 && (
                 <>
-
                   <button
                     type="button"
                     className="btn btn--primary"
@@ -2018,7 +1830,6 @@ export function DynamicForm({
                   <span className="btn btn--danger">Cancelled</span>
                 </>
               )}
-
               {/* Show Save button only for non-submittable documents (Running) */}
               {!isSubmittable && docstatus === 0 && isDirty && (
                 <button
@@ -2036,7 +1847,6 @@ export function DynamicForm({
                   )}
                 </button>
               )}
-
               {/* Previous/Next Buttons */}
               <div className="flex items-center gap-1">
                 <Button
@@ -2050,7 +1860,6 @@ export function DynamicForm({
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-
                 <Button
                   type="button"
                   variant="outline"
@@ -2063,7 +1872,6 @@ export function DynamicForm({
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-
               {/* Print Button */}
               <Button
                 type="button"
@@ -2074,7 +1882,6 @@ export function DynamicForm({
               >
                 <Printer className="h-4 w-4" />
               </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -2092,7 +1899,6 @@ export function DynamicForm({
                       ⇧D
                     </span>
                   </DropdownMenuItem>
-
                   {/* Delete Action in Dropdown */}
                   {showDeleteOption && (
                     <>
@@ -2110,92 +1916,92 @@ export function DynamicForm({
               </DropdownMenu>
             </div>
           </div>
-
           {/* Tab navigation */}
           <div
             className="form-tabs"
             style={{
               display: "flex",
-              gap: "4px",
+              gap: "2px",
               borderBottom: "1px solid var(--color-border)",
               marginBottom: "16px",
+              overflowX: "auto",
+              scrollbarWidth: "thin",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {tabs.map((tab, i) => (
               <button
                 key={tab.name}
                 type="button"
-                className={`btn btn--tab ${i === activeTab ? "btn--tab-active" : ""
+                className={`btn btn--tab flex-shrink-0 text-sm px-3 py-2 ${i === activeTab ? "btn--tab-active" : ""
                   }`}
                 onClick={(e) => {
                   e.preventDefault();
                   setActiveTab(i);
+                }}
+                style={{
+                  minWidth: "fit-content",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {tab.name}
               </button>
             ))}
           </div>
-
           {/* Dynamic grid */}
-
           <div
-            className={`grid grid-cols-1 ${hasThreeColLayout ? "md:grid-cols-3" : "md:grid-cols-4"
-              } gap-x-6 gap-y-4`}
+            className={`grid grid-cols-1 ${hasThreeColLayout ? "sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              } gap-x-4 gap-y-4 max-w-full overflow-x-hidden`}
           >
             {activeTabFields.map((field, idx) => {
               const isHidden = field.displayDependsOn
                 ? !evaluateDisplayDependsOn(field.displayDependsOn, allValues || {})
                 : false;
-
               if (isHidden) return null;
-
               const isWideField = field.type === "Table" ||
                 field.type === "Table MultiSelect" ||
                 field.type === "Section Break" ||
                 field.type === "Custom";
-
-              // Determine column span based on field type
-              let colSpanClass = "md:col-span-1"; // Default: 1 column (1/4 width)
-
+              // Determine column span based on field type and screen size
+              let colSpanClass = "col-span-1"; // Default: 1 column
               if (hasThreeColLayout) {
                 if (isWideField) {
-                  colSpanClass = "md:col-span-3";
+                  colSpanClass = "lg:col-span-2 xl:col-span-3";
                 } else {
-                  colSpanClass = "md:col-span-1"; // always equal width
+                  colSpanClass = "col-span-1"; // always equal width
                 }
               } else {
                 if (isWideField) {
-                  colSpanClass = "md:col-span-4";
+                  colSpanClass = "md:col-span-2 lg:col-span-3 xl:col-span-4";
                 } else if (field.fieldColumns === 2) {
-                  colSpanClass = "md:col-span-2";
+                  colSpanClass = "md:col-span-2 lg:col-span-2 xl:col-span-2";
                 } else if (field.fieldColumns === 3) {
-                  colSpanClass = "md:col-span-3";
+                  colSpanClass = "md:col-span-2 lg:col-span-3 xl:col-span-3";
                 } else if (field.fieldColumns === 4) {
-                  colSpanClass = "md:col-span-4";
+                  colSpanClass = "md:col-span-2 lg:col-span-3 xl:col-span-4";
                 }
               }
-
               return (
                 <div
                   key={`${field.name}-${idx}`}
                   className={colSpanClass}
-                  style={{ overflow: "visible" }}
+                  style={{ 
+                    overflow: "visible",
+                    minWidth: 0, // Allow flex items to shrink
+                    wordBreak: "break-word"
+                  }}
                 >
                   {renderField(field, idx)}
                 </div>
               );
             })}
           </div>
-
-
           {/* Footer */}
-
           {/* Footer */}
           <hr
             style={{ borderColor: "var(--color-border)", margin: "16px 0" }}
           />
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
             {/* Show different buttons based on docstatus and isSubmittable */}
             {isSubmittable && docstatus === 0 && (
               <>
@@ -2224,7 +2030,6 @@ export function DynamicForm({
                 )}
               </button>
             )}
-
             {isSubmittable && docstatus === 1 && (
               <>
                 {/* Submitted: Show Cancel button */}
@@ -2237,14 +2042,12 @@ export function DynamicForm({
                 </button>
               </>
             )}
-
             {isSubmittable && docstatus === 2 && (
               <>
                 {/* Cancelled: No actions allowed */}
                 <span className="text-sm text-gray-500 italic">Document is cancelled and cannot be modified</span>
               </>
             )}
-
             {/* Show regular cancel button for navigation */}
             {onCancel && (!isSubmittable || docstatus !== 2) && (
               <button
@@ -2261,5 +2064,4 @@ export function DynamicForm({
     </FormProvider>
   );
 }
-
 export default DynamicForm;
