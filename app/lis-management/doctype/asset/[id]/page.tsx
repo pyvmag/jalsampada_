@@ -301,16 +301,16 @@ export default function AssetDetailPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:flex sm:justify-end gap-2 flex-shrink-0 mt-2 sm:mt-0 w-full">
-            <Link href={`/lis-management/doctype/asset/edit/${docname}`}>
-              <button className="btn-header-primary-asset bg-green-600 hover:bg-green-700 text-sm w-full">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 flex-shrink-0 mt-2 sm:mt-0 w-full sm:w-auto">
+            <Link href={`/lis-management/doctype/asset/edit/${docname}`} className="w-full sm:w-auto inline-block">
+              <button className="btn-header-primary-asset bg-green-600 hover:bg-green-700 text-sm w-full h-10 flex items-center justify-center gap-2 px-4">
                 <Pencil size={16} /> Edit
               </button>
             </Link>
-            <button onClick={handleDownloadReport} className="btn-header-secondary-asset text-sm w-full">
+            <button onClick={handleDownloadReport} className="btn-header-secondary-asset text-sm w-full sm:w-auto h-10 flex items-center justify-center gap-2 px-4">
               <Download size={16} /> Report
             </button>
-            <button onClick={handleQRClick} className="btn-header-secondary-asset text-sm w-full">
+            <button onClick={handleQRClick} className="btn-header-secondary-asset text-sm w-full sm:w-auto h-10 flex items-center justify-center gap-2 px-4">
               <QrCode size={16} /> QR
             </button>
           </div>
