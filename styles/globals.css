@@ -1837,23 +1837,12 @@ th span[class*="dark:text-gray-200"] {
   margin-bottom: -1px;
   color: var(--color-text-muted, #6b7280);
   border-radius: 4px !important;
-  padding: 8px 12px;
-  font-size: 14px;
-  white-space: nowrap;
-  min-width: fit-content;
-  flex-shrink: 0;
-}
-
-.btn--tab:hover {
-  background-color: var(--color-secondary);
-  color: var(--color-text);
 }
 
 .btn--tab-active {
   border-bottom-color: var(--color-primary, #007bff);
   color: var(--color-text-primary, #111);
   font-weight: 600;
-  background-color: var(--color-secondary);
 }
 
 /* ---------------------------------- */
