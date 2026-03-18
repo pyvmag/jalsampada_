@@ -3,16 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Trash, Plus, Loader2 } from "lucide-react";
-
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+  Trash,
+  Plus,
+  Loader2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,23 +18,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { LinkInput } from "@/components/LinkInput";
+
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
-// Mock Data for Selectors
-const MOCK_DOCTYPES = [
-  "Asset", "Location", "User", "Tender", "Contractor", "Expenditure"
+const PERMISSION_COLS = [
+  ["select", "create", "cancel", "email", "export"],
+  ["read", "delete", "amend", "report", "share"],
+  ["write", "submit", "print", "import"]
 ];
-const MOCK_ROLES = [
-  "System Manager", "Administrator", "Tender Tester", "Guest", "Auditor"
-];
-
-const DOC_LEVEL_ACTIONS = ["select", "read", "write", "create", "delete"];
-const LIFECYCLE_ACTIONS = ["submit", "cancel", "amend"];
-const DATA_EXPORT_ACTIONS = ["report", "export", "import", "share", "print", "email"];
 
 export interface CustomDocPerm {
   name?: string;
@@ -45,17 +39,17 @@ export interface CustomDocPerm {
   role: string;
   permlevel: number;
   if_owner: 0 | 1;
-  
+
   select: 0 | 1;
   read: 0 | 1;
   write: 0 | 1;
   create: 0 | 1;
   delete: 0 | 1;
-  
+
   submit: 0 | 1;
   cancel: 0 | 1;
   amend: 0 | 1;
-  
+
   report: 0 | 1;
   export: 0 | 1;
   import: 0 | 1;
@@ -66,14 +60,14 @@ export interface CustomDocPerm {
 
 export default function RolePermissionManager() {
   const { apiKey, apiSecret } = useAuth();
-  
+
   const [selectedDocType, setSelectedDocType] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
-  
+
   const [permissions, setPermissions] = useState<CustomDocPerm[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isAddMode, setIsAddMode] = useState<boolean>(false);
-  
+
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPermLevel, setNewPermLevel] = useState<string>("0");
@@ -84,16 +78,18 @@ export default function RolePermissionManager() {
   };
 
   const fetchPermissions = async (doctype: string, role: string) => {
-    if (!doctype || !role) return;
+    if (!doctype && !role) {
+      setPermissions([]);
+      return;
+    }
     setLoading(true);
     try {
-      // Encode filters properly
-      const filters = JSON.stringify([
-        ["parent", "=", doctype],
-        ["role", "=", role],
-      ]);
-      const url = `${API_BASE_URL}/Custom DocPerm?filters=${encodeURIComponent(filters)}&fields=["*"]`;
+      const filters: any[] = [];
+      if (doctype) filters.push(["parent", "=", doctype]);
+      if (role) filters.push(["role", "=", role]);
       
+      const url = `${API_BASE_URL}/Custom DocPerm?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["*"]`;
+
       const resp = await fetch(url, {
         method: "GET",
         headers: authHeaders,
@@ -102,9 +98,12 @@ export default function RolePermissionManager() {
       if (!resp.ok) {
         throw new Error("Failed to fetch permissions");
       }
-      
+
       const data = await resp.json();
-      setPermissions(data.data || []);
+      const sortedPermissions = (data.data || []).sort(
+        (a: CustomDocPerm, b: CustomDocPerm) => a.permlevel - b.permlevel
+      );
+      setPermissions(sortedPermissions);
     } catch (err: any) {
       toast.error(err.message || "Error fetching rules");
     } finally {
@@ -113,11 +112,11 @@ export default function RolePermissionManager() {
   };
 
   useEffect(() => {
-    if (selectedDocType && selectedRole) {
-      fetchPermissions(selectedDocType, selectedRole);
-    } else {
-      setPermissions([]);
-    }
+    // Fetch if either one exists, or all if none exists (though you probably want some limit if none)
+    // Actually, Frappe's Role Permission manager requires at least one of them to be selected to not overload the system, 
+    // but the user wants to see all Asset rules if ONLY asset is selected.
+    fetchPermissions(selectedDocType, selectedRole);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDocType, selectedRole]);
 
   const handleUpdate = async (name: string, field: keyof CustomDocPerm, newValue: 0 | 1) => {
@@ -136,8 +135,7 @@ export default function RolePermissionManager() {
       if (!resp.ok) {
         throw new Error("Failed to update rule");
       }
-      
-      toast.success(`Permission updated for ${field}`);
+
     } catch (err: any) {
       toast.error(err.message || "Error updating rule");
       // Revert optimistic update
@@ -157,7 +155,7 @@ export default function RolePermissionManager() {
       if (!resp.ok) {
         throw new Error("Failed to delete rule");
       }
-      
+
       toast.success("Rule deleted successfully");
       setPermissions((prev) => prev.filter((p) => p.name !== name));
     } catch (err: any) {
@@ -171,7 +169,13 @@ export default function RolePermissionManager() {
       toast.error("Valid Permission Level is required");
       return;
     }
-    
+
+    // Check if level already exists locally to prevent duplicates
+    if (permissions.some((p) => p.permlevel === level)) {
+      toast.error(`A rule with level ${level} already exists!`);
+      return;
+    }
+
     setIsAddMode(true);
     try {
       const payload = {
@@ -190,10 +194,11 @@ export default function RolePermissionManager() {
       if (!resp.ok) {
         throw new Error(data.exception || "Failed to create rule");
       }
-      
+
       toast.success("Rule created successfully");
       setIsDialogOpen(false);
-      
+      setNewPermLevel("0");
+
       // Refresh list to pull the complete newly formed record
       fetchPermissions(selectedDocType, selectedRole);
     } catch (err: any) {
@@ -203,185 +208,192 @@ export default function RolePermissionManager() {
     }
   };
 
-  const renderCheckboxGroup = (title: string, actions: string[], permRecord: CustomDocPerm) => {
-    return (
-      <div className="flex flex-col gap-2">
-        <h4 className="font-semibold text-sm text-gray-700">{title}</h4>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {actions.map((action) => {
-            const isChecked = permRecord[action as keyof CustomDocPerm] === 1;
-            return (
-              <div key={action} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${permRecord.name}-${action}`}
-                  checked={isChecked}
-                  onCheckedChange={(checked) => 
-                    handleUpdate(permRecord.name!, action as keyof CustomDocPerm, checked ? 1 : 0)
-                  }
-                />
-                <label
-                  htmlFor={`${permRecord.name}-${action}`}
-                  className="text-sm font-medium leading-none capitalize cursor-pointer"
-                >
-                  {action.replace("_", " ")}
-                </label>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 bg-gray-50 min-h-screen">
-      <div className="flex flex-col md:flex-row items-center justify-between pb-4 border-b">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Role Permission Manager</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Manage granular access control rules by Document Type and Role.
-          </p>
-        </div>
-        {selectedDocType && selectedRole && (
-          <Button onClick={() => setIsDialogOpen(true)} className="mt-4 md:mt-0 flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add New Rule
-          </Button>
-        )}
-      </div>
-
-      {/* Selectors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <div className="space-y-2">
-          <Label>Document Type</Label>
-          <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Document Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {MOCK_DOCTYPES.map((doc) => (
-                <SelectItem key={doc} value={doc}>
-                  {doc}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Role</Label>
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Role" />
-            </SelectTrigger>
-            <SelectContent>
-              {MOCK_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {role}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-6 bg-[#FAFAFA] min-h-screen text-foreground">
+      {/* Header Area (Frappe Style Page Header) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-gray-200 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+          Role Permissions Manager
+        </h1>
+        <div className="flex items-center gap-2">
+          {(selectedDocType && selectedRole) ? (
+            <Button
+              onClick={() => setIsDialogOpen(true)}
+              className="flex items-center gap-2 shadow-sm whitespace-nowrap bg-zinc-900 hover:bg-zinc-800 text-white h-8 px-3 text-xs font-medium"
+            >
+              <Plus className="h-3 w-3" />
+              Add A New Rule
+            </Button>
+          ) : (
+             <Button
+              disabled
+              className="flex items-center gap-2 shadow-sm whitespace-nowrap bg-zinc-900/50 text-white h-8 px-3 text-xs font-medium opacity-70"
+              title="Select both a Document Type and Role to add a rule"
+            >
+              <Plus className="h-3 w-3" />
+              Add A New Rule
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Permissions Matrix Layout */}
-      <div>
+      {/* Selectors Area */}
+      <div className="flex flex-wrap items-center gap-4 py-2 pb-1">
+        <div className="w-[280px]">
+          <LinkInput
+            value={selectedDocType}
+            onChange={setSelectedDocType}
+            linkTarget="DocType"
+            placeholder="Select Document Type..."
+          />
+        </div>
+        <div className="w-[280px]">
+          <LinkInput
+            value={selectedRole}
+            onChange={setSelectedRole}
+            linkTarget="Role"
+            placeholder="Select Role..."
+          />
+        </div>
+      </div>
+
+      {/* Permissions Content Area Using Table Layout */}
+      <div className="animate-in fade-in duration-500 rounded-md overflow-hidden border border-gray-100 bg-white shadow-sm mt-4">
+        {/* Table Header */}
+        <div className="grid grid-cols-[200px_200px_80px_1fr] bg-[#3683f6] text-white px-4 py-2.5 text-[13px] font-semibold border-b">
+          <div>Document Type</div>
+          <div>Role</div>
+          <div>Level</div>
+          <div>Permissions</div>
+        </div>
+
+        {/* Table Body */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : !selectedDocType || !selectedRole ? (
-          <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
-            Please select both a Document Type and a Role to view or manage permissions.
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <p className="text-sm">Loading permissions...</p>
           </div>
         ) : permissions.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
-            No permissions found for <strong>{selectedDocType}</strong> and <strong>{selectedRole}</strong>.
+          <div className="py-16 text-center text-muted-foreground/70 bg-white text-sm">
+            {(!selectedDocType && !selectedRole) 
+              ? "Select a Document Type or Role above to view permissions." 
+              : "No permissions found for the selected criteria. Add a new rule to begin."}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="divide-y divide-gray-100">
             {permissions.map((perm) => (
-              <Card key={perm.name} className="shadow-sm border-t-4 border-t-primary">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardTitle className="text-lg">Permission Level: {perm.permlevel}</CardTitle>
-                    <CardDescription>
-                      Rule ID: {perm.name}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1.5 rounded-md">
-                      <Checkbox
-                        id={`${perm.name}-if_owner`}
-                        checked={perm.if_owner === 1}
-                        onCheckedChange={(checked) =>
-                          handleUpdate(perm.name!, "if_owner", checked ? 1 : 0)
-                        }
-                      />
-                      <label
-                        htmlFor={`${perm.name}-if_owner`}
-                        className="text-sm font-medium leading-none cursor-pointer"
-                      >
-                        If Owner
-                      </label>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => perm.name && handleDelete(perm.name)}
-                      title="Delete this level"
+              <div key={perm.name} className="grid grid-cols-[200px_200px_80px_1fr] px-4 py-5 text-[13px] text-gray-800 hover:bg-gray-50/40 transition-colors">
+                
+                {/* Document Type Column */}
+                <div className="pt-0.5 font-medium text-gray-700">{perm.parent}</div>
+
+                {/* Role Column */}
+                <div className="flex flex-col gap-3 pt-0.5">
+                  <span className="font-medium text-gray-700">{perm.role}</span>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${perm.name}-if_owner`}
+                      checked={perm.if_owner === 1}
+                      onCheckedChange={(checked) =>
+                        handleUpdate(perm.name!, "if_owner", checked ? 1 : 0)
+                      }
+                      className="rounded hover:border-gray-400 border-gray-300 h-3.5 w-3.5 data-[state=checked]:bg-zinc-800 data-[state=checked]:border-zinc-800"
+                    />
+                    <label
+                      htmlFor={`${perm.name}-if_owner`}
+                      className="text-[12px] leading-none cursor-pointer text-gray-500 font-medium hover:text-gray-800"
                     >
-                      <Trash className="h-4 w-4" />
-                    </Button>
+                      Only If Creator
+                    </label>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
-                    {renderCheckboxGroup("Document Level", DOC_LEVEL_ACTIONS, perm)}
-                    {renderCheckboxGroup("Lifecycle Actions", LIFECYCLE_ACTIONS, perm)}
-                    {renderCheckboxGroup("Data & Sharing", DATA_EXPORT_ACTIONS, perm)}
+                </div>
+
+                {/* Level Column */}
+                <div className="pt-0.5 font-medium text-gray-700">{perm.permlevel}</div>
+
+                {/* Permissions Grid Column */}
+                <div className="flex items-start justify-between">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-4 w-full max-w-4xl">
+                    {PERMISSION_COLS.map((colGroup, colIndex) => (
+                      <div key={colIndex} className="flex flex-col gap-3.5">
+                        {colGroup.map((action) => {
+                          const isChecked = perm[action as keyof CustomDocPerm] === 1;
+                          return (
+                            <div key={action} className="flex items-center space-x-2.5">
+                              <Checkbox
+                                id={`${perm.name}-${action}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) =>
+                                  handleUpdate(perm.name!, action as keyof CustomDocPerm, checked ? 1 : 0)
+                                }
+                                className={cn("rounded border-gray-300 h-3.5 w-3.5", 
+                                  isChecked ? "bg-zinc-800 border-zinc-800 text-white" : "hover:border-gray-400"
+                                )}
+                              />
+                              <label
+                                htmlFor={`${perm.name}-${action}`}
+                                className={cn("text-[13px] leading-none capitalize cursor-pointer",
+                                  isChecked ? "text-gray-900 font-medium" : "text-gray-500 hover:text-gray-800"
+                                )}
+                              >
+                                {action}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                  
+                  {/* Delete Button far right */}
+                  <Button
+                    variant="destructive"
+                    className="ml-4 h-7 w-7 p-0 bg-red-500/90 hover:bg-red-600 rounded shrink-0 opacity-80 hover:opacity-100"
+                    onClick={() => perm.name && handleDelete(perm.name)}
+                    title="Delete Rule"
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Add New Rule Dialog */}
+      {/* Add New Level Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Permission Rule</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-500">
-              Creating a new rule for <strong>{selectedDocType}</strong> assigned to <strong>{selectedRole}</strong>.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="permlevel">Permission Level</Label>
-              <Input
-                id="permlevel"
-                type="number"
-                min="0"
-                value={newPermLevel}
-                onChange={(e) => setNewPermLevel(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Level 0 is standard access. Higher numbers represent advanced workflow stages.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateNew} disabled={isAddMode}>
-              {isAddMode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Rule
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+         <DialogContent className="sm:max-w-sm">
+           <DialogHeader>
+             <DialogTitle className="text-lg">Add A New Rule</DialogTitle>
+             <DialogDescription className="text-sm">
+               For {selectedDocType} • {selectedRole}
+             </DialogDescription>
+           </DialogHeader>
+           <div className="py-2">
+             <Label htmlFor="permlevel" className="font-semibold text-gray-700 block mb-2">
+               Permission Level
+             </Label>
+             <Input
+               id="permlevel"
+               type="number"
+               min="0"
+               className="h-10 text-base"
+               value={newPermLevel}
+               onChange={(e) => setNewPermLevel(e.target.value)}
+             />
+           </div>
+           <DialogFooter>
+             <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-gray-600 hover:text-gray-900">
+               Cancel
+             </Button>
+             <Button onClick={handleCreateNew} disabled={isAddMode} className="bg-zinc-900 hover:bg-zinc-800 text-white">
+               {isAddMode ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+               Save
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
     </div>
   );
 }

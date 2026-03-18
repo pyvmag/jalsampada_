@@ -28,7 +28,9 @@ interface LinkInputProps {
     getValues?: (name: string) => any;
 }
 
-export function LinkInput({ value, onChange, placeholder, linkTarget, className, filters = {}, disabled = false, searchField, customSearchUrl, customSearchParams, referenceDoctype, doctype, getValues }: LinkInputProps) {
+const DEFAULT_FILTERS = {};
+
+export function LinkInput({ value, onChange, placeholder, linkTarget, className, filters = DEFAULT_FILTERS, disabled = false, searchField, customSearchUrl, customSearchParams, referenceDoctype, doctype, getValues }: LinkInputProps) {
     const { apiKey, apiSecret, isAuthenticated } = useAuth();
 
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -43,8 +45,23 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
 
     const searchKey = searchField || "name";
 
-    // Memoized filters to prevent unnecessary re-renders
-    const filtersString = React.useMemo(() => JSON.stringify(filters), [filters]);
+    // Refs for tracking latest state to avoid stale closures in setTimeout
+    const latestValueRef = React.useRef(value);
+    const latestSearchTermRef = React.useRef(searchTerm);
+    
+    React.useEffect(() => {
+        latestValueRef.current = value;
+    }, [value]);
+    
+    React.useEffect(() => {
+        latestSearchTermRef.current = searchTerm;
+    }, [searchTerm]);
+
+    // Internal stable filters object if none passed
+    const safeFilters = filters || {};
+
+    // Memoized filters string to prevent unnecessary re-renders
+    const filtersString = React.useMemo(() => JSON.stringify(safeFilters), [safeFilters]);
 
     // API Search Logic
     const performSearch = React.useCallback(async (term: string) => {
@@ -55,9 +72,9 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
             // Use custom search URL if provided
             if (customSearchUrl) {
                 // Resolve dynamic filters
-                const dynamicFilters = typeof filters === 'function' && getValues
-                    ? filters(getValues)
-                    : (typeof filters === 'object' ? filters : {});
+                const dynamicFilters = typeof safeFilters === 'function' && getValues
+                    ? safeFilters(getValues)
+                    : (typeof safeFilters === 'object' ? safeFilters : {});
 
                 // Merge filters: prioritize array format from customSearchParams
                 let mergedFilters = customSearchParams?.filters;
@@ -102,7 +119,7 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
                 })));
             } else {
                 // Default search logic
-                const activeFilters = typeof filters === 'function' && getValues ? filters(getValues) : filters;
+                const activeFilters = typeof safeFilters === 'function' && getValues ? safeFilters(getValues) : safeFilters;
 
                 // Helper to build filter array from active filters
                 const buildFilterArray = (baseFilters: any[] = []) => {
@@ -219,7 +236,7 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated, apiKey, apiSecret, linkTarget, customSearchUrl, customSearchParams, referenceDoctype, doctype, searchKey, filters, getValues, filtersString]);
+    }, [isAuthenticated, apiKey, apiSecret, linkTarget, customSearchUrl, customSearchParams, referenceDoctype, doctype, searchKey, safeFilters, getValues, filtersString]);
 
     // Optimized debounced search with useCallback
     const debouncedSearch = React.useCallback((term: string) => {
@@ -289,11 +306,11 @@ export function LinkInput({ value, onChange, placeholder, linkTarget, className,
     const handleBlur = React.useCallback(() => {
         setTimeout(() => {
             setIsFocused(false);
-            if (searchTerm !== value) {
-                setSearchTerm(value || ""); // Restore original
+            if (latestSearchTermRef.current !== latestValueRef.current) {
+                setSearchTerm(latestValueRef.current || ""); // Restore original with latest value
             }
         }, 200);
-    }, [value, searchTerm]);
+    }, []);
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (disabled) return;
