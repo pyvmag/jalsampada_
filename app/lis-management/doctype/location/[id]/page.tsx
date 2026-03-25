@@ -23,6 +23,7 @@ interface LocationData {
   is_group: number;
   latitude?: number;
   longitude?: number;
+  location?: string;
   modified: string;
   owner?: string;
   modified_by?: string;
@@ -132,6 +133,11 @@ export default function LocationDetailPage() {
             label: "Longitude",
             type: "Float",
           },
+          {
+            name: "location",
+            label: "Location",
+            type: "Geolocation",
+          },
         ] as FormField[]),
       }
     ];
@@ -150,6 +156,8 @@ export default function LocationDetailPage() {
         ...data,
         is_container: data.is_container ? 1 : 0,
         is_group: data.is_group ? 1 : 0,
+        latitude: data.latitude ? Number(data.latitude) : null,
+        longitude: data.longitude ? Number(data.longitude) : null,
       };
 
       if (!locationObj) throw new Error("Location data not loaded");
