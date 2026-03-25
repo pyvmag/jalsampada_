@@ -35,6 +35,7 @@ import { PumpStatusToggle } from "./PumpStatusToggle";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getApiMessages } from "@/lib/utils";
 import { DurationHHMMField } from "./DurationHHMMField";
+import { GeolocationField } from "./GeolocationField"
 const DEFAULT_API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 // ─────────────────────────────────────────────────────────────────────────────
 // Types (Unchanged)
@@ -73,6 +74,7 @@ export type FieldType =
   | "Attach"
   | "Attach Image"
   | "DurationHHMM"
+  | "Geolocation"
   | "Custom";
 export interface FormField {
   name: string;
@@ -477,7 +479,7 @@ const InputField = ({ field, type = "text", isReadOnlyMode }: { field: FormField
     id: field.name,
     className: cn("form-control", getErrorClass(field.name)),
     placeholder: field.placeholder,
-    ...(field.step ? { step: field.step } : {}),
+    ...(field.step ? { step: field.step } : (["Float", "Currency"].includes(field.type) ? { step: "any" } : {})),
     ...(field.min !== undefined ? { min: field.min } : {}),
     ...(field.max !== undefined ? { max: field.max } : {}),
     disabled: isDisabled,
@@ -1124,7 +1126,7 @@ export function DynamicForm({
     sourceFields.forEach((sourceField) => {
       previousValues.set(sourceField, watch(sourceField));
     });
-    sourceFields.forEach(f => handleFetchForSource(f, true));
+    // sourceFields.forEach(f => handleFetchForSource(f, true));
     const subscription = watch((value, { name, type }) => {
       if (name && sourceFieldMap.has(name)) {
         setTimeout(() => handleFetchForSource(name), 100);
@@ -1660,6 +1662,8 @@ export function DynamicForm({
         case "Data":
         case "Text":
           return <InputField field={field} type="text" isReadOnlyMode={isReadOnlyMode} />;
+        case "Geolocation":
+          return <GeolocationField field={field} disabled={isReadOnlyMode} />
         case "Small Text":
           return renderTextarea(field, field.rows ?? 3);
         case "Long Text":
@@ -1961,7 +1965,8 @@ export function DynamicForm({
               const isWideField = field.type === "Table" ||
                 field.type === "Table MultiSelect" ||
                 field.type === "Section Break" ||
-                field.type === "Custom";
+                field.type === "Custom" ||
+                field.type === "Geolocation";
               // Determine column span based on field type and screen size
               let colSpanClass = "col-span-1"; // Default: 1 column
               if (hasThreeColLayout) {
