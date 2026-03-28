@@ -198,6 +198,18 @@ export default function TenderLevelReport() {
       };
     }
 
+    // Special handling for notes field to strip HTML tags
+    if (fieldName === "notes") {
+      return (value) => {
+        if (!value) return "-";
+        const getText = (html: string) => {
+          return new DOMParser().parseFromString(html, "text/html").body.textContent;
+        };
+        const textContent = getText(value) || "";
+        return textContent || "-";
+      };
+    }
+
     switch (fieldType) {
       case "Date":
         return (val) => formatDate(val);
