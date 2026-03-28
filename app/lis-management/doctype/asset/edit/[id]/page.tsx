@@ -790,7 +790,7 @@ export default function RecordDetailPage() {
                         type: "Table",
                         columns: [
                             { name: "specification_type", label: "Specification Type", type: "Link", linkTarget: "Specifications" },
-                            { name: "details", label: "Details", type: "Read Only" },
+                            { name: "details", label: "Details", type: "Data" },
                         ],
 
                         fetchFrom: {

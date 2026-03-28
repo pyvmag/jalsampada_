@@ -46,7 +46,7 @@ const formatCurrency = (amount: number | string | null) => {
         style: 'currency',
         currency: 'INR',
         maximumFractionDigits: 2
-    }).format(Number(amount) * 100000);
+    }).format(Number(amount));
 };
 
 // Default column widths for fields without API width

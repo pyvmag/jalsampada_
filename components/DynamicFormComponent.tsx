@@ -1124,7 +1124,7 @@ export function DynamicForm({
     sourceFields.forEach((sourceField) => {
       previousValues.set(sourceField, watch(sourceField));
     });
-    sourceFields.forEach(f => handleFetchForSource(f, true));
+    // sourceFields.forEach(f => handleFetchForSource(f, true));
     const subscription = watch((value, { name, type }) => {
       if (name && sourceFieldMap.has(name)) {
         setTimeout(() => handleFetchForSource(name), 100);
