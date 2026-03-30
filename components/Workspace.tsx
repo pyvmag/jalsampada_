@@ -161,20 +161,34 @@ export function Workspace({
 
     if (layout === "operations") {
       return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
-          {/* Left Column: Masters, Reports, Stock Transactions, and Others */}
-          <div className="space-y-10">
-            {masterGroups.map((group, idx) => renderGroup(group, idx))}
-            {reportGroups.map((group, idx) => renderGroup(group, idx + 20))}
-            {stockTransactionGroups.map((group, idx) => renderGroup(group, idx + 30))}
-            {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
+        <div className="space-y-10">
+          {/* Top Section: Masters, Reports vs Transaction */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+            <div className="space-y-10">
+              {masterGroups.map((group, idx) => renderGroup(group, idx))}
+              {reportGroups.map((group, idx) => renderGroup(group, idx + 20))}
+            </div>
+            <div className="space-y-10">
+              {operationLogsGroups.map((group, idx) => renderGroup(group, idx + 10))}
+            </div>
           </div>
 
-          {/* Right Column: Transaction (Operations Logs) and Stock Reports */}
-          <div className="space-y-10">
-            {operationLogsGroups.map((group, idx) => renderGroup(group, idx + 10))}
-            {stockReportGroups.map((group, idx) => renderGroup(group, idx + 40))}
+          {/* Stock Section: Aligned in a dedicated row */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+            <div>
+              {stockTransactionGroups.map((group, idx) => renderGroup(group, idx + 30))}
+            </div>
+            <div>
+              {stockReportGroups.map((group, idx) => renderGroup(group, idx + 40))}
+            </div>
           </div>
+
+          {/* Other Groups */}
+          {otherGroups.length > 0 && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+              {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
+            </div>
+          )}
         </div>
       );
     }
