@@ -71,7 +71,7 @@ const operationsDoctypeGroups: DoctypeGroup[] = [
     doctypes: masterDoctypes
   },
   {
-    title: "Operation Logs",
+    title: "Transaction",
     doctypes: operationLogsDoctypes
   },
   {
