@@ -43,18 +43,17 @@ const reportDoctypes: Doctype[] = [
 
 const doctypeGroups: DoctypeGroup[] = [
   {
-    title: "Transactions",
-    doctypes: transactionDoctypes
+    title: "Masters",
+    doctypes: masterDoctypes
   },
   {
-    title: "Master",
-    doctypes: masterDoctypes
+    title: "Transactions",
+    doctypes: transactionDoctypes
   },
   {
     title: "Reports",
     doctypes: reportDoctypes
   },
-
 ];
 
 export default function AssetsWorkspacePage() {
@@ -64,6 +63,7 @@ export default function AssetsWorkspacePage() {
       description="Manage Lift Irrigation Scheme assets and transactions"
       doctypeGroups={doctypeGroups}
       basePath="/lis-management/"
+      layout="asset"
     />
   );
 }
