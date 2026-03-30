@@ -23,7 +23,7 @@ interface WorkspaceProps {
   description?: string;
   doctypeGroups: DoctypeGroup[];
   basePath: string;
-  layout?: "default" | "asset" | "tender";
+  layout?: "default" | "asset" | "tender" | "maintenance" | "operations";
 }
 
 export function Workspace({
@@ -38,16 +38,31 @@ export function Workspace({
     g.title.toLowerCase().includes("master")
   );
   const transactionGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("transaction")
+    g.title.toLowerCase() === "transactions" || g.title.toLowerCase() === "transaction"
   );
   const reportGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("report")
+    g.title.toLowerCase() === "reports" || g.title.toLowerCase() === "report"
   );
+  
+  // Specific categories for Operations
+  const operationLogsGroups = doctypeGroups.filter((g) =>
+    g.title.toLowerCase().includes("operation logs")
+  );
+  const stockTransactionGroups = doctypeGroups.filter((g) =>
+    g.title.toLowerCase().includes("stock transaction")
+  );
+  const stockReportGroups = doctypeGroups.filter((g) =>
+    g.title.toLowerCase().includes("stock reports")
+  );
+
   const otherGroups = doctypeGroups.filter(
     (g) =>
       !masterGroups.includes(g) &&
       !transactionGroups.includes(g) &&
-      !reportGroups.includes(g)
+      !reportGroups.includes(g) &&
+      !operationLogsGroups.includes(g) &&
+      !stockTransactionGroups.includes(g) &&
+      !stockReportGroups.includes(g)
   );
 
   const renderGroup = (group: DoctypeGroup, index: number) => {
@@ -135,6 +150,21 @@ export function Workspace({
       );
     }
 
+    if (layout === "maintenance") {
+      return (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-stretch">
+          <div className="space-y-10">
+            {transactionGroups.map((group, idx) => renderGroup(group, idx))}
+            {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
+          </div>
+          <div className="space-y-10">
+            {masterGroups.map((group, idx) => renderGroup(group, idx + 100))}
+            {reportGroups.map((group, idx) => renderGroup(group, idx + 150))}
+          </div>
+        </div>
+      );
+    }
+
     if (layout === "tender") {
       return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-stretch">
@@ -145,6 +175,26 @@ export function Workspace({
           </div>
           <div className="space-y-10">
             {reportGroups.map((group, idx) => renderGroup(group, idx + 150))}
+          </div>
+        </div>
+      );
+    }
+
+    if (layout === "operations") {
+      return (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+          {/* Left Column: Masters, Reports, Stock Transactions, and Others */}
+          <div className="space-y-10">
+            {masterGroups.map((group, idx) => renderGroup(group, idx))}
+            {reportGroups.map((group, idx) => renderGroup(group, idx + 20))}
+            {stockTransactionGroups.map((group, idx) => renderGroup(group, idx + 30))}
+            {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
+          </div>
+
+          {/* Right Column: Operation Logs and Stock Reports */}
+          <div className="space-y-10">
+            {operationLogsGroups.map((group, idx) => renderGroup(group, idx + 10))}
+            {stockReportGroups.map((group, idx) => renderGroup(group, idx + 40))}
           </div>
         </div>
       );
@@ -173,4 +223,4 @@ export function Workspace({
       {renderLayoutContent()}
     </div>
   );
-}
+}

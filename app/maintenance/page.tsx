@@ -24,7 +24,7 @@ const reportsDoctypes: Doctype[] = [
 
 const maintenanceDoctypeGroups: DoctypeGroup[] = [
   {
-    title: "Master",
+    title: "Masters",
     doctypes: maintenanceDoctypes
   },
   {
@@ -46,6 +46,7 @@ export default function MaintenancePage() {
       // buttonText="Create New"
       doctypeGroups={maintenanceDoctypeGroups}
       basePath="/maintenance/doctype"
+      layout="maintenance"
     />
   );
 }
