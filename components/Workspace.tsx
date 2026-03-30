@@ -33,26 +33,34 @@ export function Workspace({
   basePath,
   layout = "default",
 }: WorkspaceProps) {
+  // Normalize titles for robust matching
+  const getLowerTitle = (g: DoctypeGroup) => g.title.toLowerCase();
+
   // Categorize groups for logic-based layout
   const masterGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("master")
-  );
-  const transactionGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase() === "transactions" || g.title.toLowerCase() === "transaction"
-  );
-  const reportGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase() === "reports" || g.title.toLowerCase() === "report"
+    getLowerTitle(g).includes("master")
   );
   
-  // Specific categories for Operations
+  // Specific group for Operations - user renamed "Operation Logs" to "Transaction"
+  // We want to target the specific card that is NOT stock transaction
   const operationLogsGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("operation logs")
+    getLowerTitle(g) === "transaction" || getLowerTitle(g) === "operation logs"
   );
+
+  const transactionGroups = doctypeGroups.filter((g) =>
+    (getLowerTitle(g) === "transactions" || getLowerTitle(g) === "transaction") &&
+    !operationLogsGroups.includes(g)
+  );
+
+  const reportGroups = doctypeGroups.filter((g) =>
+    getLowerTitle(g) === "reports" || getLowerTitle(g) === "report"
+  );
+  
   const stockTransactionGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("stock transaction")
+    getLowerTitle(g).includes("stock transaction")
   );
   const stockReportGroups = doctypeGroups.filter((g) =>
-    g.title.toLowerCase().includes("stock reports")
+    getLowerTitle(g).includes("stock reports")
   );
 
   const otherGroups = doctypeGroups.filter(
@@ -135,7 +143,8 @@ export function Workspace({
   };
 
   const renderLayoutContent = () => {
-    if (layout === "asset") {
+    // Asset, Maintenance, and Tender now share the same layout: Masters on left, Trans/Reports on right
+    if (layout === "asset" || layout === "maintenance" || layout === "tender") {
       return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-stretch">
           <div className="space-y-10">
@@ -144,36 +153,6 @@ export function Workspace({
           </div>
           <div className="space-y-10">
             {transactionGroups.map((group, idx) => renderGroup(group, idx + 100))}
-            {reportGroups.map((group, idx) => renderGroup(group, idx + 150))}
-          </div>
-        </div>
-      );
-    }
-
-    if (layout === "maintenance") {
-      return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-stretch">
-          <div className="space-y-10">
-            {transactionGroups.map((group, idx) => renderGroup(group, idx))}
-            {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
-          </div>
-          <div className="space-y-10">
-            {masterGroups.map((group, idx) => renderGroup(group, idx + 100))}
-            {reportGroups.map((group, idx) => renderGroup(group, idx + 150))}
-          </div>
-        </div>
-      );
-    }
-
-    if (layout === "tender") {
-      return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-stretch">
-          <div className="space-y-10">
-            {masterGroups.map((group, idx) => renderGroup(group, idx))}
-            {transactionGroups.map((group, idx) => renderGroup(group, idx + 50))}
-            {otherGroups.map((group, idx) => renderGroup(group, idx + 100))}
-          </div>
-          <div className="space-y-10">
             {reportGroups.map((group, idx) => renderGroup(group, idx + 150))}
           </div>
         </div>
@@ -191,7 +170,7 @@ export function Workspace({
             {otherGroups.map((group, idx) => renderGroup(group, idx + 50))}
           </div>
 
-          {/* Right Column: Operation Logs and Stock Reports */}
+          {/* Right Column: Transaction (Operations Logs) and Stock Reports */}
           <div className="space-y-10">
             {operationLogsGroups.map((group, idx) => renderGroup(group, idx + 10))}
             {stockReportGroups.map((group, idx) => renderGroup(group, idx + 40))}
