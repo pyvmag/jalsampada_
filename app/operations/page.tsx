@@ -67,11 +67,11 @@ const stockReportsDoctypes: Doctype[] = [
 
 const operationsDoctypeGroups: DoctypeGroup[] = [
   {
-    title: "Master",
+    title: "Masters",
     doctypes: masterDoctypes
   },
   {
-    title: "Operation Logs",
+    title: "Transaction",
     doctypes: operationLogsDoctypes
   },
   {
@@ -99,6 +99,7 @@ export default function OperationsWorkspacePage() {
       // buttonText="Add Workspace"
       doctypeGroups={operationsDoctypeGroups}
       basePath="/operations/doctype"
+      layout="operations"
     />
   );
 }

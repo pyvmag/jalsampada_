@@ -377,7 +377,7 @@ export default function RecordDetailPage() {
             label: "Specify (if Other)",
             type: "Small Text",
             defaultValue: getVal("specify"),
-            displayDependsOn: "values.pump_stop_reason == 'Other'",
+            displayDependsOn: "pump_stop_reason == 'Other'",
           },
 
           { name: "sec_assets", label: "Asset Selection", type: "Section Break" },

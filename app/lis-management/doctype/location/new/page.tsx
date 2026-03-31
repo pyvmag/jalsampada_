@@ -59,6 +59,11 @@ export default function NewLocationPage() {
           label: "Longitude",
           type: "Float",
         },
+        {
+          name: "location",
+          label: "Location",
+          type: "Geolocation",
+        },
       ] as FormField[],
     }
   ];
@@ -71,6 +76,8 @@ export default function NewLocationPage() {
         doctype: DOCTYPE,
         is_container: data.is_container ? 1 : 0,
         is_group: data.is_group ? 1 : 0,
+        latitude: data.latitude ? Number(data.latitude) : null,
+        longitude: data.longitude ? Number(data.longitude) : null,
       };
 
       const resp = await fetch(`${API_BASE_URL}/${DOCTYPE}`, {

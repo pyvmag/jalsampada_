@@ -44,12 +44,12 @@ const reportsGroup: DoctypeGroup = {
 
 const tenderDoctypeGroups: DoctypeGroup[] = [
   {
-    title: "Transactions",
-    doctypes: transactionDoctypes
+    title: "Masters",
+    doctypes: masterDoctypes
   },
   {
-    title: "Master",
-    doctypes: masterDoctypes
+    title: "Transactions",
+    doctypes: transactionDoctypes
   },
   reportsGroup,
 ];
@@ -63,6 +63,7 @@ export default function TenderPage() {
       doctypeGroups={tenderDoctypeGroups}
       // This ensures clicks go to /tender/doctype/[name]
       basePath="/tender/doctype"
+      layout="tender"
     />
   );
 }

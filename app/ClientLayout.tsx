@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Toaster, toast } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/ModeToggle";
+import { Modal } from "@/components/Modal";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import {
   DropdownMenu,
@@ -131,7 +132,54 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
 
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [isDocOpen, setIsDocOpen] = React.useState(false);
+  const [showDocTooltip, setShowDocTooltip] = React.useState(false);
   const isLoginPage = pathname === "/login";
+
+  // Initial login tooltip
+  React.useEffect(() => {
+    // Check if user has seen doc tooltip before
+    const hasSeen = localStorage.getItem('hasSeenDocTooltip');
+    if (!hasSeen && !isLoginPage) {
+      // Show tooltip after a small delay to grab attention
+      const timer = setTimeout(() => setShowDocTooltip(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoginPage]);
+
+  // Idle timeout tooltip (5 minutes)
+  React.useEffect(() => {
+    if (isLoginPage) return;
+
+    let idleTimer: NodeJS.Timeout;
+
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      // Only set idle timer if the tooltip isn't already showing
+      if (!showDocTooltip) {
+        // 5 minutes = 300,000 milliseconds
+        idleTimer = setTimeout(() => setShowDocTooltip(true), 600000);
+      }
+    };
+
+    // Set initial timer
+    resetIdleTimer();
+
+    // Event listeners to detect user activity
+    const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, resetIdleTimer));
+
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach(event => document.removeEventListener(event, resetIdleTimer));
+    };
+  }, [isLoginPage, showDocTooltip]);
+
+  const dismissDocTooltip = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setShowDocTooltip(false);
+    localStorage.setItem('hasSeenDocTooltip', 'true');
+  };
 
   // automatically collapse sidebar on narrow viewports
   React.useEffect(() => {
@@ -201,9 +249,68 @@ function AppContent({ children }: { children: React.ReactNode }) {
             <h1>JALSAMPADA</h1>
           </div>
 
-          <div className="user-info">
-            <span>Welcome. {currentUser || "Guest"}</span>
-            <ModeToggle />
+          <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Click-blocking Overlay for Tooltip (No Blur) */}
+            {showDocTooltip && (
+              <div 
+                className="fixed inset-0 z-[60] bg-black/20 dark:bg-black/40 transition-all duration-300" 
+              />
+            )}
+            
+            <span className={showDocTooltip ? "z-[70] relative" : ""}>Welcome. {currentUser || "Guest"}</span>
+            
+            {/* Button and Tooltip Container - elevated z-index when tooltip is shown */}
+            <div className={`relative flex items-center ${showDocTooltip ? 'z-[70] pointer-events-auto' : ''}`}>
+              {showDocTooltip && (
+                <div className="absolute top-12 right-0 w-64 p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg z-50 transition-all duration-300">
+                  {/* Tooltip Arrow */}
+                  <div className="absolute -top-1.5 right-5 w-3 h-3 bg-slate-50 dark:bg-slate-800 border-l border-t border-slate-200 dark:border-slate-700 rotate-45 rounded-sm"></div>
+                  
+                  {/* Tooltip Content */}
+                  <div className="flex flex-col gap-2 relative z-10">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                        <i className="fas fa-file-alt text-blue-600 dark:text-blue-400 text-xs"></i>
+                      </div>
+                      <p className="font-semibold text-sm">Documentation</p>
+                    </div>
+                    
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Need assistance? Explore the documentation for detailed guides and helpful resources.
+                    </p>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex justify-end items-center gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                      <button 
+                        onClick={dismissDocTooltip} 
+                        className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-2 py-1.5 rounded transition-colors"
+                      >
+                        Skip
+                      </button>
+                      <button 
+                        onClick={dismissDocTooltip} 
+                        className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 transition-all shadow-sm active:scale-95"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <button 
+                className={`bg-primary text-primary-foreground px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:shadow-md transition-all active:scale-95 ${showDocTooltip ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+                onClick={() => {
+                  setIsDocOpen(true);
+                  if (showDocTooltip) dismissDocTooltip();
+                }}
+              >
+                DOC
+              </button>
+            </div>
+            
+            <div className={showDocTooltip ? "z-[70] relative bg-background rounded-full pointer-events-auto shadow-sm" : ""}>
+              <ModeToggle />
+            </div>
           </div>
         </div>
       </header>
@@ -294,6 +401,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
           }
         }}
       />
+
+      {/* DOC Preview Modal */}
+      <Modal
+        isOpen={isDocOpen}
+        onClose={() => setIsDocOpen(false)}
+        title="Document Preview"
+        size="xl"
+      >
+        <div className="w-full h-[75vh]">
+          {/* 
+            You can drop your PDF into the `public` folder and name it `doc.pdf` 
+            or change this `src` to point to the correct file name. 
+          */}
+          <iframe 
+            src="/doc.pdf" 
+            className="w-full h-full border-0 rounded-md bg-gray-100 dark:bg-gray-800"
+            title="Document Preview"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

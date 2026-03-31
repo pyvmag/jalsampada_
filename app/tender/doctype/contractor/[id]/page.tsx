@@ -120,6 +120,7 @@ export default function ContractorDetailsPage({
             name: "custom_contractor_company",
             label: "Firm/Company Name",
             type: "Data",
+            required: true,
           },
           {
             name: "contractor_name",

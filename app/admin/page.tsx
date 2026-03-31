@@ -8,7 +8,8 @@ import {
 
   User,
   Shield,
-  Contact
+  Contact,
+  ShieldAlert
 } from "lucide-react";
 
 const adminDoctypeGroups: DoctypeGroup[] = [
@@ -18,6 +19,13 @@ const adminDoctypeGroups: DoctypeGroup[] = [
       { name: "user", title: "User", icon: User },
       { name: "role", title: "Role", icon: Shield },
       { name: "role-profile", title: "Role Profile", icon: Contact },
+    ]
+  },
+  {
+    title: "Tools",
+    basePath: "/admin",
+    doctypes: [
+      { name: "role-permission-manager", title: "Role Permission Manager", icon: ShieldAlert },
     ]
   }
 ];
