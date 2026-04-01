@@ -95,8 +95,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         href: "/admin", 
         icon: "fa-user-cog", 
         label: "Admin", 
-        doctypes: ["User", "Role", "Role Profile"],
-        adminOnly: true
+        doctypes: ["User", "Role", "Role Profile"]
       }
     ];
 
@@ -108,8 +107,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       // Admin sees everything
       if (isAdmin) return true;
       
-      // If the item requires Admin strictly, hide it for non-admin users
-      if (item.adminOnly) return false;
+
       
       // Check if user has permission for ANY of the specified doctypes in the module
       if (item.doctypes && item.doctypes.length > 0) {
