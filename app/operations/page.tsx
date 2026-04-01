@@ -30,11 +30,11 @@ const masterDoctypes: Doctype[] = [
 
 const operationLogsDoctypes: Doctype[] = [
   // Operation Logs
-  { name: "logbook", title: "Log Book", icon: Book },
-  { name: "logsheet", title: "Log Sheet", icon: FileText },
-  { name: "gate-operation-logbook", title: "Gate Operation Logbook", icon: ClipboardList },
-  { name: "repair-work-requirement", title: "Repair Work Requirement", icon: Wrench },
-  { name: "lis-incident-record", title: "LIS Incident Record", icon: AlertTriangle },
+  { name: "logbook", title: "Log Book", doctype: "Logbook", icon: Book },
+  { name: "logsheet", title: "Log Sheet", doctype: "Log Sheet", icon: FileText },
+  { name: "gate-operation-logbook", title: "Gate Operation Logbook", doctype: "Gate Operation Logbook", icon: ClipboardList },
+  { name: "repair-work-requirement", title: "Repair Work Requirement", doctype: "Repair Work Requirement", icon: Wrench },
+  { name: "lis-incident-record", title: "LIS Incident Record", doctype: "Issue", icon: AlertTriangle },
 ];
 
 

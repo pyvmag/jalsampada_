@@ -72,7 +72,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         href: "/operations", 
         icon: "fa-chart-line", 
         label: "Operations", 
-        doctypes: ["Gate", "Gate Operation Logbook", "Item", "LIS Incident Record", "Logbook", "Log Sheet", "Repair Work Requirement", "Spare Indent", "Stock Entry", "Stock Reconciliation", "Temperature", "Warehouse"] 
+        doctypes: ["Gate", "Gate Operation Logbook", "Item", "LIS Incident Record", "Logbook", "Log Sheet", "Repair Work Requirement", "Spare Indent", "Stock Entry", "Stock Reconciliation", "Temperature", "Warehouse", "Issue"] 
       },
       { 
         href: "/maintenance", 
