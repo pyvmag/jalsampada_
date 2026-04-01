@@ -271,9 +271,35 @@ export default function LogsheetReportPage() {
     return String(value);
   };
 
+  // --- PRINT LAYOUT LOGIC ---
+  const groupedData = useMemo(() => {
+    const groups: Record<string, typeof filteredData> = {};
+    if (!filteredData || filteredData.length === 0) return groups;
+    filteredData.forEach(row => {
+      const pNo = row.pump_no || "Unknown Pump";
+      if (!groups[pNo]) {
+        groups[pNo] = [];
+      }
+      groups[pNo].push(row);
+    });
+    return groups;
+  }, [filteredData]);
+
+  const tempFields = useMemo(() => {
+    // The standard static fields are index 0 to 14. 
+    // python API appends temperature fields dynamically after pressure_guage.
+    if (apiFields && apiFields.length > 15) {
+      return apiFields.slice(15);
+    }
+    return [];
+  }, [apiFields]);
+
+  const printLisName = filteredData.length > 0 ? filteredData[0].lis : filters.lis || "Unknown LIS";
+
   return (
-    <div className="module active">
-      <div className="module-header">
+    <>
+      <div className="module active print:hidden">
+        <div className="module-header">
         <div>
           <h2>Logsheet Report</h2>
           <p>Track logsheet entries and data.</p>
@@ -290,6 +316,9 @@ export default function LogsheetReportPage() {
           <div className="export-buttons flex gap-2 ml-2">
             <button className="btn btn--outline" onClick={handleExportCSV}>
               <i className="fas fa-file-csv"></i> CSV
+            </button>
+            <button className="btn btn--outline" onClick={() => window.print()} disabled={filteredData.length === 0 || loading}>
+              <i className="fas fa-print"></i> Print
             </button>
           </div>
         </div>
@@ -423,5 +452,110 @@ export default function LogsheetReportPage() {
         </div>
       </div>
     </div>
+
+    {/* --- PRINT ONLY LAYOUT --- */}
+    <div className="print-only-layout w-full bg-white text-black mt-4">
+      <style>{`
+        .print-only-layout { display: none; }
+        @media print {
+          .print-only-layout { display: block !important; }
+          @page { margin: 10mm; size: landscape; }
+          html, body { height: auto !important; overflow: visible !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0 !important; margin: 0 !important; background: white !important; }
+          .module.active, .header, .sidebar, .footer, .mobile-overlay { display: none !important; }
+          .app-container, .main-content {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+          }
+        }
+      `}</style>
+      
+      <div className="text-center mb-6 font-bold">
+        <h2 className="text-xl inline-block border-b border-black pb-1 mb-1">Logsheet</h2>
+        <h3 className="text-lg">{printLisName}</h3>
+      </div>
+
+      {Object.entries(groupedData).map(([pumpNo, rows], groupIdx) => (
+        <div key={pumpNo} className="mb-12" style={{ pageBreakInside: 'avoid' }}>
+          <div className="font-bold mb-2 text-sm text-left pl-1">
+            <span className="inline-block w-20">Pump No.</span>
+            <span>{pumpNo}</span>
+          </div>
+          <table className="w-full border-collapse border border-black text-xs text-center" style={{ tableLayout: 'auto' }}>
+            <thead>
+              {/* Row 1 Headers */}
+              <tr>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" rowSpan={2}>Date</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" rowSpan={2}>Time</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" colSpan={3}>Voltage</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" colSpan={3}>Current</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" rowSpan={2}>Pressure<br/>guage<br/>reading</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" colSpan={Math.max(tempFields.length, 1)}>Temprature in C</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle" rowSpan={2}>Water<br/>Level</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle w-24" rowSpan={2}>Remark</th>
+                <th className="border border-black p-1 font-bold bg-gray-50 align-middle w-24" rowSpan={2}>Sign of<br/>operator</th>
+              </tr>
+              {/* Row 2 Sub-headers */}
+              <tr>
+                <th className="border border-black p-1 font-bold bg-gray-50">RY</th>
+                <th className="border border-black p-1 font-bold bg-gray-50">YB</th>
+                <th className="border border-black p-1 font-bold bg-gray-50">BR</th>
+                <th className="border border-black p-1 font-bold bg-gray-50">R</th>
+                <th className="border border-black p-1 font-bold bg-gray-50">Y</th>
+                <th className="border border-black p-1 font-bold bg-gray-50">B</th>
+                {tempFields.length > 0 ? (
+                  tempFields.map((f, i) => (
+                    <th key={f.fieldname} className="border border-black p-1 font-bold bg-gray-50">{f.label}</th>
+                  ))
+                ) : (
+                  <th className="border border-black p-1 font-bold bg-gray-50">-</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => {
+                const formatPrintDate = (val: string) => {
+                  if (!val) return "";
+                  const d = new Date(val);
+                  if (isNaN(d.getTime())) return val;
+                  const pad = (n: number) => n.toString().padStart(2, '0');
+                  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+                };
+                return (
+                  <tr key={idx}>
+                    <td className="border border-black p-1 whitespace-nowrap">{formatPrintDate(row.date)}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.time || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.ry || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.yb || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.br || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.r || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.y || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.b || ""}</td>
+                    <td className="border border-black p-1 whitespace-nowrap">{row.pressure_guage || ""}</td>
+                    {tempFields.length > 0 ? (
+                      tempFields.map((f, i) => (
+                        <td key={f.fieldname} className="border border-black p-1 whitespace-nowrap">{row[f.fieldname] || ""}</td>
+                      ))
+                    ) : (
+                      <td className="border border-black p-1 whitespace-nowrap"></td>
+                    )}
+                    <td className="border border-black p-1 whitespace-nowrap">{row.water_level || ""}</td>
+                    {/* Explicitly empty Remark and Sign */}
+                    <td className="border border-black p-1"></td>
+                    <td className="border border-black p-1"></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  </>
   );
 }
