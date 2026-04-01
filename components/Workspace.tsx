@@ -44,8 +44,11 @@ export function Workspace({
         ...group,
         doctypes: group.doctypes.filter((doc) => {
           // Some items like reports might not be in the permission system
-          // or might have different names. For standard DocTypes, we check read permission.
-          if (doc.name.startsWith("reports/")) return true;
+          // or might have different names. We identify them by group title or doc name.
+          const isReportGroup = group.title.toLowerCase().includes("report");
+          const isReportDoc = doc.name.toLowerCase().includes("report");
+          
+          if (isReportGroup || isReportDoc) return true;
           
           // 1. Check explicit doctype name if provided
           if (doc.doctype && hasPermission(doc.doctype, "read")) return true;

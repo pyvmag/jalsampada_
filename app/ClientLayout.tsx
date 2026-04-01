@@ -89,8 +89,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       { 
         href: "/tp_reports", 
         icon: "fa-file-alt", 
-        label: "Reports", 
-        doctypes: ["Report"] 
+        label: "Reports"
       },
       { 
         href: "/admin", 
