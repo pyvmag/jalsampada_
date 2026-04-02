@@ -23,7 +23,7 @@ const masterDoctypes: Doctype[] = [
 const transactionDoctypes: Doctype[] = [
   // Tender-related
   { name: "prapan-suchi", title: "Prapan Suchi", icon: FileText },
-  { name: "tender", title: "Tender", icon: FileText },
+  { name: "tender", title: "Tender", doctype: "Project", icon: FileText },
   { name: "draft-tender-paper", title: "Draft Tender Paper", icon: FileText },
 
   // Financial / Expenditure
