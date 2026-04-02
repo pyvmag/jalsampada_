@@ -44,7 +44,10 @@ export default function Home() {
 
         // 1. Fetch Logbook Ledger Report (For Metrics, Top Operators, and Activity Feed)
         const logbookParams = new URLSearchParams({ report_name: "Logbook Ledger", filters: "{}" });
-        const reqLogbook = axios.get(`${API_BASE_URL}/api/method/frappe.desk.query_report.run?${logbookParams.toString()}`, { headers, withCredentials: true });
+        const reqLogbook = axios.get(`${API_BASE_URL}/api/method/frappe.desk.query_report.run?${logbookParams.toString()}`, { headers, withCredentials: true }).catch(err => {
+          console.error("Logbook Report Fetch Error", err);
+          return { data: { message: { result: [] } } };
+        });
 
         // 2. Fetch Active Incidents (Note: the backend Frappe Doctype is 'Issue')
         const incidentFilters = JSON.stringify([["status", "in", ["Open", "Replied", "On Hold"]]]);

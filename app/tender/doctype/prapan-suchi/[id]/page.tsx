@@ -25,6 +25,7 @@ interface PrapanSuchi {
   amount?: number;
   stage?: Array<{
     stage?: string;
+    idx?: number;
   }>;
   work_name?: string;
   description?: string;
@@ -46,13 +47,28 @@ export default function PrapanSuchiDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  // 🟢 Track which button to show (SAME AS ASSET DOCTYPE)
+  const [activeButton, setActiveButton] = React.useState<"SAVE" | "SUBMIT" | "CANCEL" | null>(null);
+  const [formDirty, setFormDirty] = React.useState(false);
   const [formMethods, setFormMethods] = React.useState<UseFormReturn<any> | null>(null);
+  const isProgrammaticUpdate = React.useRef(false);
+  const [formVersion, setFormVersion] = React.useState(0);
 
   // 🟢 STATUS BADGE helper function
   const getCurrentStatus = () => {
     if (!record) return "";
     if (record.docstatus === 2) return "Cancelled";
     if (record.docstatus === 1) return "Submitted";
+
+    // Draft (docstatus === 0)
+    if (record.docstatus === 0) {
+      if (formDirty) {
+        return "Not Saved";
+      }
+      return "Draft";
+    }
+
     return "Draft";
   };
 
@@ -90,7 +106,15 @@ export default function PrapanSuchiDetailPage() {
 
       if (messages.success) {
         toast.success(messages.message);
-        setRecord(resp.data.data);
+        const updatedData = resp.data.data as PrapanSuchi;
+        setRecord(updatedData);
+
+        // Update button to CANCEL after submission
+        setActiveButton("CANCEL");
+        setFormDirty(false);
+
+        // Force form remount with new docstatus
+        setFormVersion((v) => v + 1);
       } else {
         toast.error(messages.message);
       }
@@ -135,6 +159,7 @@ export default function PrapanSuchiDetailPage() {
       if (messages.success) {
         toast.success(messages.message);
         setRecord(resp.data.data);
+        setActiveButton(null); // Remove cancel button after cancellation
       } else {
         toast.error(messages.message);
       }
@@ -146,6 +171,26 @@ export default function PrapanSuchiDetailPage() {
       setIsSaving(false);
     }
   };
+
+  // 🟢 Watch for form changes (SAME AS ASSET DOCTYPE)
+  React.useEffect(() => {
+    if (!formMethods) return;
+
+    const subscription = formMethods.watch((value: any, { name }: { name?: string }) => {
+      // Watch for form changes to mark as dirty
+      if (name && !isProgrammaticUpdate.current) {
+        setFormDirty(true);
+        // When form becomes dirty, show SAVE button
+        if (record?.docstatus === 0) {
+          setActiveButton("SAVE");
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [formMethods, record]);
 
   // Watch for lis_name changes
   React.useEffect(() => {
@@ -176,7 +221,9 @@ export default function PrapanSuchiDetailPage() {
             idx: idx + 1
           }));
 
+          isProgrammaticUpdate.current = true;
           setValue("stage", formattedStages, { shouldDirty: true });
+          setTimeout(() => { isProgrammaticUpdate.current = false; }, 100);
 
         } catch (error: any) {
           console.error("Failed to fetch stages:", error);
@@ -220,7 +267,17 @@ export default function PrapanSuchiDetailPage() {
           }
         );
 
-        setRecord(resp.data.data as PrapanSuchi);
+        const data = resp.data.data as PrapanSuchi;
+        setRecord(data);
+
+        // Initialize button state based on document status (SAME AS ASSET DOCTYPE)
+        if (data.docstatus === 0) {
+          setActiveButton("SUBMIT");
+        } else if (data.docstatus === 1) {
+          setActiveButton("CANCEL");
+        }
+
+        setFormDirty(false);
       } catch (err: any) {
         const messages = getApiMessages(
           null,
@@ -242,6 +299,131 @@ export default function PrapanSuchiDetailPage() {
 
     fetchDoc();
   }, [docname, apiKey, apiSecret, isAuthenticated, isInitialized]);
+
+  // SAVE (UPDATE) DOCUMENT
+  const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
+    if (!isDirty && !formDirty) {
+      toast.info("No changes to save.");
+      return;
+    }
+
+    if (!record) {
+      toast.error("Record not loaded. Cannot save.", { duration: Infinity });
+      return;
+    }
+
+    setIsSaving(true);
+    isProgrammaticUpdate.current = true;
+    try {
+      const payload: Record<string, any> = JSON.parse(JSON.stringify(data));
+
+      const numericFields = ["amount"];
+      numericFields.forEach((f) => {
+        if (f in payload) {
+          payload[f] = Number(payload[f]) || 0;
+        }
+      });
+
+      // Process stage field
+      if (payload.stage && Array.isArray(payload.stage)) {
+        payload.stage = payload.stage.map((item, index) => {
+          if (typeof item === 'string') {
+            return {
+              doctype: "Stage No",
+              stage: item,
+              idx: index + 1
+            };
+          }
+          if (typeof item === 'object' && item !== null) {
+            return {
+              ...item,
+              doctype: "Stage No",
+              idx: item.idx || (index + 1)
+            };
+          }
+          return {
+            doctype: "Stage No",
+            stage: String(item),
+            idx: index + 1
+          };
+        });
+      }
+
+      payload.modified = record.modified;
+      payload.docstatus = record.docstatus;
+
+      const resp = await axios.put(
+        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
+        payload,
+        {
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        }
+      );
+
+      const messages = getApiMessages(resp, null, "Changes saved!", "Failed to save");
+
+      if (messages.success) {
+        toast.success(messages.message, { description: messages.description });
+      }
+
+      if (resp.data && resp.data.data) {
+        const updatedData = resp.data.data as PrapanSuchi;
+        setRecord(updatedData);
+        setFormDirty(false);
+
+        // Update button state after save
+        if (updatedData.docstatus === 0) {
+          setActiveButton("SUBMIT");
+        }
+
+        // Force form remount
+        setFormVersion((v) => v + 1);
+      }
+
+    } catch (err: any) {
+      console.error("Save error:", err);
+      const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
+      toast.error(messages.message, { description: messages.description, duration: Infinity });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        isProgrammaticUpdate.current = false;
+      }, 100);
+    }
+  };
+
+  // Determine submit label based on active button (SAME AS ASSET DOCTYPE)
+  const getSubmitLabel = () => {
+    if (isSaving) {
+      switch (activeButton) {
+        case "SAVE":
+          return "Saving...";
+        case "SUBMIT":
+          return "Submitting...";
+        case "CANCEL":
+          return "Cancelling...";
+        default:
+          return "Processing...";
+      }
+    }
+
+    switch (activeButton) {
+      case "SAVE":
+        return "Save";
+      case "SUBMIT":
+        return "Submit";
+      case "CANCEL":
+        return "Cancel";
+      default:
+        return undefined;
+    }
+  };
 
   // BUILD TABS
   const formTabs: TabbedLayout[] = React.useMemo(() => {
@@ -309,112 +491,6 @@ export default function PrapanSuchiDetailPage() {
     ];
   }, [record]);
 
-  // SAVE (UPDATE) DOCUMENT
-  const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-    if (!isDirty) {
-      toast.info("No changes to save.");
-      return;
-    }
-
-    if (!record) {
-      toast.error("Record not loaded. Cannot save.", { duration: Infinity });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload: Record<string, any> = JSON.parse(JSON.stringify(data));
-
-      const allFields = formTabs.flatMap((tab) => tab.fields);
-      const nonDataFields = new Set<string>();
-      allFields.forEach((field) => {
-        if (
-          field.type === "Section Break" ||
-          field.type === "Column Break" ||
-          field.type === "Button" ||
-          field.type === "Read Only"
-        ) {
-          nonDataFields.add(field.name);
-        }
-      });
-
-      const finalPayload: Record<string, any> = {};
-      for (const key in payload) {
-        if (!nonDataFields.has(key)) {
-          finalPayload[key] = payload[key];
-        }
-      }
-
-      finalPayload.modified = record.modified;
-      finalPayload.docstatus = record.docstatus;
-
-      const numericFields = ["amount"];
-      numericFields.forEach((f) => {
-        if (f in finalPayload) {
-          finalPayload[f] = Number(finalPayload[f]) || 0;
-        }
-      });
-
-      // Process stage field
-      if (finalPayload.stage && Array.isArray(finalPayload.stage)) {
-        finalPayload.stage = finalPayload.stage.map((item, index) => {
-          if (typeof item === 'string') {
-            return {
-              doctype: "Stage Multiselect",
-              stage: item,
-              idx: index + 1
-            };
-          }
-          if (typeof item === 'object' && item !== null) {
-            return {
-              ...item,
-              doctype: "Stage Multiselect",
-              idx: item.idx || (index + 1)
-            };
-          }
-          return {
-            doctype: "Stage Multiselect",
-            stage: String(item),
-            idx: index + 1
-          };
-        });
-      }
-
-      console.log("Sending this PAYLOAD to Frappe:", finalPayload);
-
-      const resp = await axios.put(
-        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
-        finalPayload,
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-        }
-      );
-
-      const messages = getApiMessages(resp, null, "Changes saved!", "Failed to save");
-
-      if (messages.success) {
-        toast.success(messages.message, { description: messages.description });
-      }
-
-      if (resp.data && resp.data.data) {
-        setRecord(resp.data.data as PrapanSuchi);
-      }
-
-    } catch (err: any) {
-      console.error("Save error:", err);
-      const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
-      toast.error(messages.message, { description: messages.description, duration: Infinity });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // UI STATES
   if (loading) {
     return (
@@ -443,19 +519,22 @@ export default function PrapanSuchiDetailPage() {
     );
   }
 
+  const formKey = `${record.name}-${record.docstatus}-${formVersion}`;
+
   // RENDER FORM
   return (
     <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
       <DynamicForm
+        key={formKey}
         tabs={formTabs}
-        onSubmit={handleSubmit}
-        onSubmitDocument={record.docstatus === 0 ? handleSubmitDocument : undefined}
-        onCancelDocument={record.docstatus === 1 ? handleCancelDocument : undefined}
+        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
+        onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
+        onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
         onCancel={() => router.back()}
         title={`${doctypeName}: ${record.name}`}
-        description={`Update details for record ID: ${docname}`}
-        submitLabel={isSaving ? "Saving..." : "Save"}
-        isSubmittable={true}
+        description={`Status: ${record?.docstatus === 1 ? 'Submitted' : record?.docstatus === 2 ? 'Cancelled' : 'Draft'}`}
+        submitLabel={getSubmitLabel()}
+        isSubmittable={activeButton === "SUBMIT" || record.docstatus === 1}
         docstatus={record.docstatus}
         initialStatus={getCurrentStatus()}
         deleteConfig={{

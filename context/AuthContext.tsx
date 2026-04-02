@@ -267,6 +267,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           });
         }
         setDocumentPermissions(grouped);
+      } else if (response.status === 403) {
+        console.warn("User does not have permission to read 'User Permission' doctype. Document-level restrictions will be skipped.");
+        setDocumentPermissions({});
       }
     } catch (error) {
       console.error("Error fetching document permissions:", error);

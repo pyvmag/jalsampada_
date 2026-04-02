@@ -72,7 +72,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         href: "/operations", 
         icon: "fa-chart-line", 
         label: "Operations", 
-        doctypes: ["Gate", "Gate Operation Logbook", "Item", "LIS Incident Record", "Logbook", "Log Sheet", "Repair Work Requirement", "Spare Indent", "Stock Entry", "Stock Reconciliation", "Temperature", "Warehouse"] 
+        doctypes: ["Gate", "Gate Operation Logbook", "Item", "LIS Incident Record", "Logbook", "Log Sheet", "Repair Work Requirement", "Spare Indent", "Stock Entry", "Stock Reconciliation", "Temperature", "Warehouse", "Issue"] 
       },
       { 
         href: "/maintenance", 
@@ -89,15 +89,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
       { 
         href: "/tp_reports", 
         icon: "fa-file-alt", 
-        label: "Reports", 
-        doctypes: ["Report"] 
+        label: "Reports"
       },
       { 
         href: "/admin", 
         icon: "fa-user-cog", 
         label: "Admin", 
-        doctypes: ["User", "Role", "Role Profile"],
-        adminOnly: true
+        doctypes: ["User", "Role", "Role Profile"]
       }
     ];
 
@@ -109,8 +107,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       // Admin sees everything
       if (isAdmin) return true;
       
-      // If the item requires Admin strictly, hide it for non-admin users
-      if (item.adminOnly) return false;
+
       
       // Check if user has permission for ANY of the specified doctypes in the module
       if (item.doctypes && item.doctypes.length > 0) {

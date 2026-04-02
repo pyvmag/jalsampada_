@@ -17,18 +17,18 @@ import {
 } from "lucide-react";
 
 const masterDoctypes: Doctype[] = [
-  { name: "doctype/asset", title: "Asset", icon: Database },
-  { name: "doctype/asset-category", title: "Asset Category", icon: Database },
-  { name: "doctype/lift-irrigation-scheme", title: "Lift Irrigation Scheme", icon: Droplets },
-  { name: "doctype/stage-no", title: "Stage No", icon: Layers },
-  { name: "doctype/equipment-make", title: "Equipement Make", icon: Factory },
-  { name: "doctype/equipement-model", title: "Equipement Model", icon: Package },
-  { name: "doctype/equipement-capacity", title: "Equipement Capacity", icon: Ruler },
-  { name: "doctype/rating", title: "Rating", icon: Star },
-  { name: "doctype/district", title: "District", icon: MapPin },  // Change icon to represent a district location
-  { name: "doctype/taluka", title: "Taluka", icon: Star },        // You could keep Star for Taluka as a general icon
-  { name: "doctype/location", title: "Location", icon: MapPin },
-  { name: "doctype/village", title: "Village", icon: Home }
+  { name: "doctype/asset", title: "Asset", doctype: "Asset", icon: Database },
+  { name: "doctype/asset-category", title: "Asset Category", doctype: "Asset Category", icon: Database },
+  { name: "doctype/lift-irrigation-scheme", title: "Lift Irrigation Scheme", doctype: "Lift Irrigation Scheme", icon: Droplets },
+  { name: "doctype/stage-no", title: "Stage No", doctype: "Stage No", icon: Layers },
+  { name: "doctype/equipment-make", title: "Equipment Make", doctype: "Equipment Make", icon: Factory },
+  { name: "doctype/equipement-model", title: "Equipment Model", doctype: "Equipment Model", icon: Package },
+  { name: "doctype/equipement-capacity", title: "Equipment Capacity", doctype: "Equipment Capacity", icon: Ruler },
+  { name: "doctype/rating", title: "Rating", doctype: "Rating", icon: Star },
+  { name: "doctype/district", title: "District", doctype: "District", icon: MapPin },
+  { name: "doctype/taluka", title: "Taluka", doctype: "Taluka", icon: Star },
+  { name: "doctype/location", title: "Location", doctype: "Location", icon: MapPin },
+  { name: "doctype/village", title: "Village", doctype: "Village", icon: Home }
 ];
 
 const transactionDoctypes: Doctype[] = [

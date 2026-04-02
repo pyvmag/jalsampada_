@@ -5,11 +5,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export interface Doctype {
   name: string;
   title: string;
   icon: React.ElementType;
+  doctype?: string;
 }
 
 export interface DoctypeGroup {
@@ -29,10 +31,37 @@ interface WorkspaceProps {
 export function Workspace({
   title,
   description,
-  doctypeGroups,
+  doctypeGroups: inputDoctypeGroups,
   basePath,
   layout = "default",
 }: WorkspaceProps) {
+  const { hasPermission, isAdmin } = useAuth();
+
+  const doctypeGroups = React.useMemo(() => {
+    if (isAdmin) return inputDoctypeGroups;
+    return inputDoctypeGroups
+      .map((group) => ({
+        ...group,
+        doctypes: group.doctypes.filter((doc) => {
+          // Some items like reports might not be in the permission system
+          // or might have different names. We identify them by group title or doc name.
+          const isReportGroup = group.title.toLowerCase().includes("report");
+          const isReportDoc = doc.name.toLowerCase().includes("report");
+          
+          if (isReportGroup || isReportDoc) return true;
+          
+          // 1. Check explicit doctype name if provided
+          if (doc.doctype && hasPermission(doc.doctype, "read")) return true;
+          
+          // 2. Check title as is
+          if (hasPermission(doc.title, "read")) return true;
+          
+          // 3. Fallback: Check title without spaces (e.g., "Log Book" -> "Logbook")
+          return hasPermission(doc.title.replace(/\s+/g, ""), "read");
+        }),
+      }))
+      .filter((group) => group.doctypes.length > 0);
+  }, [inputDoctypeGroups, hasPermission, isAdmin]);
   // Normalize titles for robust matching
   const getLowerTitle = (g: DoctypeGroup) => g.title.toLowerCase();
 
