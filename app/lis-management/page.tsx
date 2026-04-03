@@ -21,14 +21,14 @@ const masterDoctypes: Doctype[] = [
   { name: "doctype/asset-category", title: "Asset Category", doctype: "Asset Category", icon: Database },
   { name: "doctype/lift-irrigation-scheme", title: "Lift Irrigation Scheme", doctype: "Lift Irrigation Scheme", icon: Droplets },
   { name: "doctype/stage-no", title: "Stage No", doctype: "Stage No", icon: Layers },
-  { name: "doctype/equipment-make", title: "Equipment Make", doctype: "Equipment Make", icon: Factory },
-  { name: "doctype/equipement-model", title: "Equipment Model", doctype: "Equipment Model", icon: Package },
-  { name: "doctype/equipement-capacity", title: "Equipment Capacity", doctype: "Equipment Capacity", icon: Ruler },
+  { name: "doctype/equipment-make", title: "Equipment Make", doctype: "Equipement Make", icon: Factory },
+  { name: "doctype/equipement-model", title: "Equipment Model", doctype: "Equipement Model", icon: Package },
+  { name: "doctype/equipement-capacity", title: "Equipment Capacity", doctype: "Equipement Capacity", icon: Ruler },
   { name: "doctype/rating", title: "Rating", doctype: "Rating", icon: Star },
-  { name: "doctype/district", title: "District", doctype: "District", icon: MapPin },
-  { name: "doctype/taluka", title: "Taluka", doctype: "Taluka", icon: Star },
+  { name: "doctype/district", title: "District", doctype: "WRD District", icon: MapPin },
+  { name: "doctype/taluka", title: "Taluka", doctype: "WRD Taluka", icon: Star },
   { name: "doctype/location", title: "Location", doctype: "Location", icon: MapPin },
-  { name: "doctype/village", title: "Village", doctype: "Village", icon: Home }
+  { name: "doctype/village", title: "Village", doctype: "WRD Village", icon: Home }
 ];
 
 const transactionDoctypes: Doctype[] = [
