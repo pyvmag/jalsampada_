@@ -32,7 +32,7 @@ interface ContractorData {
   custom_contractor_company?: string;
   custom_gst?: string;
   custom_pan?: string;
-  custom_aadhar_no?: string;
+  custom_aadhaar_no?: string;
   modified?: string;
   docstatus?: 0 | 1 | 2;
 }
@@ -208,10 +208,10 @@ export default function NewContractorPage() {
 
       toast.success("Contractor created successfully!");
 
-      // Navigate to the created record using contractor_name or name
-      const contractorName = response.data.data.contractor_name;
+      // Navigate to the created record using its primary name (ID)
       const docName = response.data.data.name;
-      const navigationId = contractorName || docName;
+      const contractorName = response.data.data.contractor_name;
+      const navigationId = docName || contractorName;
 
       router.push(`/tender/doctype/contractor/${encodeURIComponent(navigationId)}`);
     } catch (err: any) {
