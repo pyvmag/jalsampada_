@@ -31,7 +31,7 @@ interface ContractorData {
   custom_contractor_company?: string;
   custom_gst?: string;
   custom_pan?: string;
-  custom_aadhar_no?: string;
+  custom_aadhaar_no?: string;
   docstatus: 0 | 1 | 2;
   owner?: string;
   modified?: string;
@@ -210,11 +210,64 @@ export default function ContractorDetailsPage({
    3. Update Handler
   ------------------------------------------------- */
   const handleUpdate = async (formData: Record<string, any>) => {
-    if (!apiKey || !apiSecret) return;
+    if (!apiKey || !apiSecret || !recordId) return;
 
     setIsSaving(true);
     try {
       const payload: Record<string, any> = JSON.parse(JSON.stringify(formData));
+      
+      // 1. Handle Rename if Firm/Company Name changed (ensure raw spaces are sent)
+      let newFirmNameRaw = payload.custom_contractor_company?.toString() || "";
+      let currentIdRaw = recordId.toString();
+
+      // Clean out any lingering %20 characters to ensure raw spaces
+      newFirmNameRaw = decodeURIComponent(newFirmNameRaw).replace(/%20/g, " ");
+      currentIdRaw = decodeURIComponent(currentIdRaw).replace(/%20/g, " ");
+
+      if (newFirmNameRaw && newFirmNameRaw !== currentIdRaw) {
+        try {
+          // Use URLSearchParams but ensure values are provided as raw strings
+          const renameData = {
+            doctype: doctypeName,
+            docname: currentIdRaw,   // Old Name (source)
+            name: newFirmNameRaw,    // New Name (target)
+            enqueue: "true",
+            merge: "0",
+            freeze: "true",
+            freeze_message: "Updating related fields...",
+          };
+
+          // Re-running the identical Desk UI logic with the raw strings
+          const params = new URLSearchParams();
+          Object.entries(renameData).forEach(([key, val]) => params.append(key, val));
+
+          await axios.post(
+            `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.model.rename_doc.update_document_title`,
+            params.toString(),
+            {
+              headers: {
+                Authorization: `token ${apiKey}:${apiSecret}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              withCredentials: true,
+            }
+          );
+          
+          toast.success("Firm name updated (Record renamed)");
+          // Redirect to the new ID
+          router.push(`/tender/doctype/contractor/${encodeURIComponent(newFirmNameRaw)}`);
+          return;
+        } catch (renameErr: any) {
+          console.error("DEBUG: Rename failure:", renameErr);
+          toast.error("Failed to rename record.", {
+            description: renameErr.response?.data?.message || "Check rename permissions in Role Permissions Manager.",
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // 2. Otherwise perform regular update
       const nonDataFields = new Set([
         "address_and_contact_section",
         "column_break_nkmc",
@@ -227,6 +280,10 @@ export default function ContractorDetailsPage({
         if (!nonDataFields.has(key)) {
           finalPayload[key] = payload[key];
         }
+      }
+
+      if (data?.modified) {
+        finalPayload.modified = data.modified;
       }
 
       const url = `${API_BASE_URL}/${doctypeName}/${decodeURIComponent(recordId)}`;
@@ -246,6 +303,7 @@ export default function ContractorDetailsPage({
         toast.error(messages.message);
       }
     } catch (err: any) {
+      console.error("Update error:", err);
       toast.error("Failed to update Contractor");
     } finally {
       setIsSaving(false);

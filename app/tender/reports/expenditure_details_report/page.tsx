@@ -46,29 +46,21 @@ type ColumnConfig = {
   isLastSticky?: boolean;
 };
 
-// --- CONFIG: Define Fixed Columns Order & Widths ---
-// Only first column (tender_number) is fixed
-const FIXED_COLUMNS_ORDER = [
+// --- CONFIG: Define Column Order, Labels & Widths ---
+const COLUMN_DEFINITIONS = [
   { fieldname: "tender_number", label: "Tender Number", width: 150 },
   { fieldname: "bill_type", label: "Bill Type", width: 100 },
-  { fieldname: "bill_number", label: "Bill No.", width: 150 },
+  { fieldname: "bill_number", label: "Bill No", width: 150 },
   { fieldname: "bill_date", label: "Bill Date", width: 100 },
+  { fieldname: "fiscal_year", label: "Fiscal Year", width: 120 },
+  { fieldname: "stage", label: "LIS Stage", width: 140 },
+  { fieldname: "work_type", label: "Work Type", width: 150 },
+  { fieldname: "work_subtype", label: "Work Subtype", width: 150 },
+  { fieldname: "asset_no", label: "Asset No", width: 100 },
+  { fieldname: "remarks", label: "Expenditure Work Details", width: 300 },
 ];
 
-// Default column widths for remaining columns
-const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
-  fiscal_year: 120,
-  lis: 120,
-  stage: 140,
-  work_type: 150,
-  work_subtype: 150,
-  asset_no: 100,
-  bill_type: 150,
-  bill_amount: 150,
-  bill_number: 150,
-  bill_date: 130,
-  remarks: 300,
-};
+const DEFAULT_COLUMN_WIDTH = 150;
 
 // --- Helper Functions ---
 
@@ -107,7 +99,6 @@ export default function ExpenditureDetailsReport() {
   const [apiFields, setApiFields] = useState<ReportField[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
 
   const [filters, setFilters] = useState<Filters>({
     fiscal_year: "",
@@ -143,43 +134,38 @@ export default function ExpenditureDetailsReport() {
   const columnConfig = useMemo((): ColumnConfig[] => {
     if (apiFields.length === 0) return [];
 
-    // 1. Separate Fixed columns from Scrollable columns
-    let fixedCols: ColumnConfig[] = [];
-    let scrollableCols: ColumnConfig[] = [];
-
-    // Create a map for quick lookup of API fields
     const apiFieldMap = new Map(apiFields.map(f => [f.fieldname, f]));
+    const resultCols: ColumnConfig[] = [];
+    let currentLeftOffset = 0;
 
-    // Process Fixed Columns based on defined order (only first column)
-    FIXED_COLUMNS_ORDER.forEach(fixedDef => {
-      const apiField = apiFieldMap.get(fixedDef.fieldname);
+    // 1. Process columns in the order defined in COLUMN_DEFINITIONS
+    COLUMN_DEFINITIONS.forEach((def, index) => {
+      const apiField = apiFieldMap.get(def.fieldname);
       if (apiField) {
-        fixedCols.push({
+        const isSticky = index < 4; // First 4 are sticky
+        const col: ColumnConfig = {
           fieldname: apiField.fieldname,
-          label: apiField.label,
-          width: `${fixedDef.width}px`,
-          widthInt: fixedDef.width,
+          label: def.label,
+          width: `${def.width}px`,
+          widthInt: def.width,
           formatter: getFieldFormatter(apiField.fieldtype, apiField.fieldname),
-          isSticky: true,
-          stickyLeft: 0 // Will calculate below
-        });
-        apiFieldMap.delete(fixedDef.fieldname); // Remove from map so we don't add it again
+          isSticky: isSticky,
+          stickyLeft: isSticky ? currentLeftOffset : undefined,
+          isLastSticky: index === 3 // Last of the sticky ones
+        };
+        resultCols.push(col);
+        if (isSticky) currentLeftOffset += def.width;
+        apiFieldMap.delete(def.fieldname);
       }
     });
 
-    // Process remaining fields as Scrollable
+    // 2. Process any remaining fields from API not in our defined list
     apiFields.forEach(field => {
       if (apiFieldMap.has(field.fieldname)) {
-        const width = DEFAULT_COLUMN_WIDTHS[field.fieldname] || field.width || 150;
-
-        let label = field.label;
-        if (field.fieldname === "asset_no") {
-          label = "Asset No";
-        }
-
-        scrollableCols.push({
+        const width = field.width || DEFAULT_COLUMN_WIDTH;
+        resultCols.push({
           fieldname: field.fieldname,
-          label: label,
+          label: field.label,
           width: `${width}px`,
           widthInt: width,
           formatter: getFieldFormatter(field.fieldtype, field.fieldname),
@@ -188,21 +174,7 @@ export default function ExpenditureDetailsReport() {
       }
     });
 
-    // 2. Calculate Left Offsets for Sticky Columns (only one column in this case)
-    let currentLeftOffset = 0;
-    fixedCols = fixedCols.map((col, index) => {
-      const updatedCol = {
-        ...col,
-        stickyLeft: currentLeftOffset,
-        isLastSticky: index === fixedCols.length - 1
-      };
-      currentLeftOffset += col.widthInt;
-      return updatedCol;
-    });
-
-    // 3. Combine
-    return [...fixedCols, ...scrollableCols];
-
+    return resultCols;
   }, [apiFields]);
 
   // --- Actions ---
@@ -297,117 +269,6 @@ export default function ExpenditureDetailsReport() {
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = async () => {
-    if (reportData.length === 0) return;
-
-    setPdfLoading(true);
-
-    try {
-      const { jsPDF } = await import('jspdf');
-
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 15;
-      const usableWidth = pageWidth - (margin * 2);
-
-      // Title
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
-      pdf.text('Expenditure Details Report', pageWidth / 2, 20, { align: 'center' });
-
-      // Summary
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, margin, 30);
-      pdf.text(`Total Records: ${reportData.length}`, margin, 37);
-
-      // Calculate column widths proportionally
-      const columnWidths: number[] = [];
-      const totalSpecifiedWidth = columnConfig.reduce((sum, col) => {
-        return sum + col.widthInt;
-      }, 0);
-
-      columnConfig.forEach(col => {
-        const proportionalWidth = (col.widthInt / totalSpecifiedWidth) * usableWidth;
-        columnWidths.push(proportionalWidth);
-      });
-
-      // Headers
-      let currentY = 50;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-
-      columnConfig.forEach((col, index) => {
-        const x = margin + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
-        pdf.text(col.label, x + 2, currentY);
-      });
-
-      // Draw header underline
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
-
-      // Data rows
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'normal');
-      currentY += 8;
-
-      reportData.forEach((row, rowIndex) => {
-        if (currentY > pdf.internal.pageSize.getHeight() - 20) {
-          pdf.addPage();
-          currentY = 20;
-
-          // Redraw headers on new page
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          columnConfig.forEach((col, index) => {
-            const x = margin + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
-            pdf.text(col.label, x + 2, currentY);
-          });
-          pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          currentY += 8;
-        }
-
-        // Alternate row background
-        if (rowIndex % 2 === 1) {
-          pdf.setFillColor(249, 249, 249);
-          pdf.rect(margin, currentY - 4, usableWidth, 10, 'F');
-        }
-
-        columnConfig.forEach((col, index) => {
-          const x = margin + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
-          let value = row[col.fieldname];
-
-          if (value === null || value === undefined || value === '') {
-            value = '';
-          } else if (col.formatter) {
-            value = col.formatter(value);
-          } else {
-            value = String(value);
-          }
-
-          // Split text if too long
-          const textLines = pdf.splitTextToSize(value, columnWidths[index] - 4);
-          pdf.text(textLines, x + 2, currentY);
-        });
-
-        currentY += 10;
-      });
-
-      pdf.save(`expenditure_details_report_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      setError('Failed to generate PDF. Please try again.');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
 
   const handleFilterChange = (field: keyof Filters, value: string) => {
     setFilters((prev) => {
@@ -472,203 +333,301 @@ export default function ExpenditureDetailsReport() {
   };
 
   return (
-    <div className="module active">
-      <div className="module-header">
-        <div>
-          <h2>Expenditure Details Report</h2>
-          <p>Track tender expenditures, bills, and work details.</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn btn--primary" onClick={() => fetchReportData(filters)} disabled={loading}>
-            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i>
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
-          <div className="export-buttons flex gap-2 ml-2">
-            <button
-              className="btn btn--outline"
-              onClick={handleExportCSV}
-              disabled={reportData.length === 0}
-            >
-              <i className="fas fa-file-csv"></i> CSV
+    <>
+      <div className="module active print:hidden">
+        <div className="module-header">
+          <div>
+            <h2>Expenditure Details Report</h2>
+            <p>Track tender expenditures, bills, and work details.</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="btn btn--primary" onClick={() => fetchReportData(filters)} disabled={loading}>
+              <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i>
+              {loading ? "Refreshing..." : "Refresh"}
             </button>
-            <button
-              className="btn btn--danger"
-              onClick={handleExportPDF}
-              disabled={pdfLoading || reportData.length === 0}
-            >
-              <i className={`fas ${pdfLoading ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
-              {pdfLoading ? 'Generating...' : 'PDF'}
-            </button>
+            <div className="export-buttons flex gap-2 ml-2">
+              <button
+                className="btn btn--outline"
+                onClick={handleExportCSV}
+                disabled={reportData.length === 0}
+              >
+                <i className="fas fa-file-csv"></i> CSV
+              </button>
+              <button
+                className="btn btn--outline"
+                onClick={() => window.print()}
+                disabled={reportData.length === 0 || loading}
+              >
+                <i className="fas fa-print"></i> Print
+              </button>
+            </div>
           </div>
         </div>
+
+        <div className="tab-content active relative">
+          {error && <div className="alert alert--danger mb-5"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
+          {loading && !reportData.length && <div className="alert alert--info mb-5"><i className="fas fa-spinner fa-spin"></i> Loading...</div>}
+
+          <div className="filters-grid grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
+
+            <div className="form-group z-[150]">
+              <label className="text-sm font-medium mb-1 block">From Date</label>
+              <DatePicker
+                selected={filters.from_date ? new Date(filters.from_date) : null}
+                onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))}
+                placeholderText="DD/MM/YYYY"
+                dateFormat="dd/MM/yyyy"
+                className="form-control w-full"
+              />
+            </div>
+
+            <div className="form-group z-[150]">
+              <label className="text-sm font-medium mb-1 block">To Date</label>
+              <DatePicker
+                selected={filters.to_date ? new Date(filters.to_date) : null}
+                onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))}
+                placeholderText="DD/MM/YYYY"
+                dateFormat="dd/MM/yyyy"
+                className="form-control w-full"
+              />
+            </div>
+
+            <div className="form-group z-[140]">
+              <label className="text-sm font-medium mb-1 block">Fiscal Year</label>
+              <LinkInput
+                value={filters.fiscal_year}
+                onChange={(v) => handleFilterChange("fiscal_year", v)}
+                placeholder="Select Year..."
+                linkTarget="Fiscal Year"
+                className="w-full relative"
+              />
+            </div>
+
+            <div className="form-group z-[130]">
+              <label className="text-sm font-medium mb-1 block">Lift Irrigation Scheme</label>
+              <LinkInput
+                value={filters.lift_irrigation_scheme}
+                onChange={(v) => handleFilterChange("lift_irrigation_scheme", v)}
+                placeholder="Select LIS..."
+                linkTarget="Lift Irrigation Scheme"
+                className="w-full relative"
+              />
+            </div>
+
+            <div className="form-group relative z-[120]">
+              <label className="text-sm font-medium mb-1 block">Stage</label>
+              <LinkInput
+                value={filters.stage}
+                onChange={(v) => handleFilterChange("stage", v)}
+                placeholder="Select Stage..."
+                linkTarget="Stage No"
+                className="w-full"
+                filters={{ lis_name: filters.lift_irrigation_scheme || undefined }}
+              />
+            </div>
+
+            <div className="form-group z-[110]">
+              <label className="text-sm font-medium mb-1 block">Tender Number</label>
+              <LinkInput
+                value={filters.tender_number}
+                onChange={(v) => handleFilterChange("tender_number", v)}
+                placeholder="Select Tender..."
+                linkTarget="Project"
+                className="w-full relative"
+                filters={{
+                  custom_lis_name: filters.lift_irrigation_scheme || undefined,
+                  custom_stage_no: filters.stage || undefined
+                }}
+              />
+            </div>
+
+            <div className="form-group z-[100]">
+              <label className="text-sm font-medium mb-1 block">Work Type</label>
+              <LinkInput
+                value={filters.work_type}
+                onChange={(v) => handleFilterChange("work_type", v)}
+                placeholder="Select Work Type..."
+                linkTarget="Work Type"
+                className="w-full relative"
+              />
+            </div>
+          </div>
+
+          {/* --- TABLE CONTAINER --- */}
+          <div
+            ref={tableRef}
+            className="stock-table-container border rounded-md relative z-10"
+            style={{
+              overflowX: "auto",
+              overflowY: "auto",
+              maxHeight: "70vh",
+              cursor: dragState.isGrabbing ? "grabbing" : "grab",
+              userSelect: dragState.isGrabbing ? "none" : "auto"
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
+            <table className="stock-table sticky-header-table" style={{ minWidth: `${totalTableWidth}px`, borderCollapse: "separate", borderSpacing: 0 }}>
+              <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
+                <tr>
+                  {columnConfig.map((column) => (
+                    <th
+                      key={column.fieldname}
+                      style={{
+                        width: column.width,
+                        minWidth: column.width,
+                        // Sticky Logic for Header - Only first column is sticky
+                        position: column.isSticky ? "sticky" : "relative",
+                        left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                        zIndex: column.isSticky ? 30 : 20,
+                        backgroundColor: "#3683f6",
+                        color: "white",
+                        borderRight: "none",
+                        boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
+                      }}
+                    >
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.length === 0 ? (
+                  <tr>
+                    <td colSpan={Math.max(columnConfig.length, 1)} className="text-center p-10">
+                      {loading ? "Fetching records..." : "No records found matching criteria"}
+                    </td>
+                  </tr>
+                ) : (
+                  reportData.map((row, index) => {
+                    const isTotal = !!row.bold || !!row.is_total || [row.tender_number, row.bill_type, row.bill_number].some(val => String(val || "").toLowerCase().includes("total"));
+                    return (
+                      <tr key={index} className={`${index % 2 === 1 ? "bg-gray-25" : ""} ${isTotal ? "font-bold" : ""}`}>
+                        {columnConfig.map((column) => (
+                          <td
+                            key={`${index}-${column.fieldname}`}
+                            style={{
+                              // Sticky Logic for Body - Only first column is sticky
+                              position: column.isSticky ? "sticky" : "relative",
+                              left: column.isSticky ? `${column.stickyLeft}px` : "auto",
+                              zIndex: column.isSticky ? 10 : 1,
+                              backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
+                              borderRight: "none",
+                              boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none",
+                              fontWeight: isTotal ? "bold" : "normal"
+                            }}
+                          >
+                            {renderCellValue(row, column)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div >
       </div>
 
-      <div className="tab-content active relative">
-        {error && <div className="alert alert--danger mb-5"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
-        {loading && !reportData.length && <div className="alert alert--info mb-5"><i className="fas fa-spinner fa-spin"></i> Loading...</div>}
+      {/* --- PRINT ONLY LAYOUT --- */}
+      <div className="print-only-layout w-full bg-white text-black p-4">
+        <style>{`
+          .print-only-layout { display: none; }
+          @media print {
+            .print-only-layout { display: block !important; }
+            @page { margin: 10mm; size: landscape; }
+            html, body { 
+              height: auto !important; 
+              overflow: visible !important; 
+              -webkit-print-color-adjust: exact; 
+              print-color-adjust: exact; 
+              padding: 0 !important; 
+              margin: 0 !important; 
+              background: white !important;
+            }
+            .module.active, .header, .sidebar, .footer, .mobile-overlay, .print\\:hidden { display: none !important; }
+            .app-container, .main-content {
+              display: block !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              max-width: none !important;
+              height: auto !important;
+              overflow: visible !important;
+              position: static !important;
+            }
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            table-layout: auto;
+          }
+          .print-table th, .print-table td {
+            border: 1px solid #000;
+            padding: 4px;
+            text-align: left;
+            word-break: break-word;
+            vertical-align: top;
+          }
+          .print-table th {
+            background-color: #f3f4f6 !important;
+            font-weight: bold;
+          }
+          .print-header {
+            margin-bottom: 20px;
+          }
+          .print-title {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: underline;
+            margin-bottom: 10px;
+          }
+          .print-summary {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 10px;
+            font-weight: 500;
+          }
+        `}</style>
 
-        <div className="filters-grid grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
-
-          <div className="form-group z-[150]">
-            <label className="text-sm font-medium mb-1 block">From Date</label>
-            <DatePicker
-              selected={filters.from_date ? new Date(filters.from_date) : null}
-              onChange={(date: Date | null) => handleFilterChange("from_date", formatDateForAPI(date))}
-              placeholderText="DD/MM/YYYY"
-              dateFormat="dd/MM/yyyy"
-              className="form-control w-full"
-            />
-          </div>
-
-          <div className="form-group z-[150]">
-            <label className="text-sm font-medium mb-1 block">To Date</label>
-            <DatePicker
-              selected={filters.to_date ? new Date(filters.to_date) : null}
-              onChange={(date: Date | null) => handleFilterChange("to_date", formatDateForAPI(date))}
-              placeholderText="DD/MM/YYYY"
-              dateFormat="dd/MM/yyyy"
-              className="form-control w-full"
-            />
-          </div>
-
-          <div className="form-group z-[140]">
-            <label className="text-sm font-medium mb-1 block">Fiscal Year</label>
-            <LinkInput
-              value={filters.fiscal_year}
-              onChange={(v) => handleFilterChange("fiscal_year", v)}
-              placeholder="Select Year..."
-              linkTarget="Fiscal Year"
-              className="w-full relative"
-            />
-          </div>
-
-          <div className="form-group z-[130]">
-            <label className="text-sm font-medium mb-1 block">Lift Irrigation Scheme</label>
-            <LinkInput
-              value={filters.lift_irrigation_scheme}
-              onChange={(v) => handleFilterChange("lift_irrigation_scheme", v)}
-              placeholder="Select LIS..."
-              linkTarget="Lift Irrigation Scheme"
-              className="w-full relative"
-            />
-          </div>
-
-          <div className="form-group relative z-[120]">
-            <label className="text-sm font-medium mb-1 block">Stage</label>
-            <LinkInput
-              value={filters.stage}
-              onChange={(v) => handleFilterChange("stage", v)}
-              placeholder="Select Stage..."
-              linkTarget="Stage No"
-              className="w-full"
-              filters={{ lis_name: filters.lift_irrigation_scheme || undefined }}
-            />
-          </div>
-
-          <div className="form-group z-[110]">
-            <label className="text-sm font-medium mb-1 block">Tender Number</label>
-            <LinkInput
-              value={filters.tender_number}
-              onChange={(v) => handleFilterChange("tender_number", v)}
-              placeholder="Select Tender..."
-              linkTarget="Project"
-              className="w-full relative"
-              filters={{
-                custom_lis_name: filters.lift_irrigation_scheme || undefined,
-                custom_stage_no: filters.stage || undefined
-              }}
-            />
-          </div>
-
-          <div className="form-group z-[100]">
-            <label className="text-sm font-medium mb-1 block">Work Type</label>
-            <LinkInput
-              value={filters.work_type}
-              onChange={(v) => handleFilterChange("work_type", v)}
-              placeholder="Select Work Type..."
-              linkTarget="Work Type"
-              className="w-full relative"
-            />
+        <div className="print-header">
+          <h1 className="print-title">Expenditure Details Report</h1>
+          <div className="print-summary">
+            <span>Generated At: {new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            <span>Total Records: {reportData.length}</span>
           </div>
         </div>
 
-        {/* --- TABLE CONTAINER --- */}
-        <div
-          ref={tableRef}
-          className="stock-table-container border rounded-md relative z-10"
-          style={{
-            overflowX: "auto",
-            overflowY: "auto",
-            maxHeight: "70vh",
-            cursor: dragState.isGrabbing ? "grabbing" : "grab",
-            userSelect: dragState.isGrabbing ? "none" : "auto"
-          }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-        >
-          <table className="stock-table sticky-header-table" style={{ minWidth: `${totalTableWidth}px`, borderCollapse: "separate", borderSpacing: 0 }}>
-            <thead style={{ position: "sticky", top: 0, zIndex: 30 }}>
-              <tr>
-                {columnConfig.map((column) => (
-                  <th
-                    key={column.fieldname}
-                    style={{
-                      width: column.width,
-                      minWidth: column.width,
-                      // Sticky Logic for Header - Only first column is sticky
-                      position: column.isSticky ? "sticky" : "relative",
-                      left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                      zIndex: column.isSticky ? 30 : 20,
-                      backgroundColor: "#3683f6",
-                      color: "white",
-                      borderRight: "none",
-                      boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none"
-                    }}
-                  >
-                    {column.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.length === 0 ? (
-                <tr>
-                  <td colSpan={Math.max(columnConfig.length, 1)} className="text-center p-10">
-                    {loading ? "Fetching records..." : "No records found matching criteria"}
-                  </td>
+        <table className="print-table">
+          <thead>
+            <tr>
+              {columnConfig.map((col) => (
+                <th key={col.fieldname}>{col.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {reportData.map((row, idx) => {
+               const isTotal = !!row.bold || !!row.is_total || [row.tender_number, row.bill_type, row.bill_number].some(val => String(val || "").toLowerCase().includes("total"));
+               return (
+                <tr key={idx} style={{ fontWeight: isTotal ? 'bold' : 'normal', backgroundColor: isTotal ? '#f9fafb' : 'transparent' }}>
+                  {columnConfig.map((col) => (
+                    <td key={`${idx}-${col.fieldname}`}>
+                      {renderCellValue(row, col)}
+                    </td>
+                  ))}
                 </tr>
-              ) : (
-                reportData.map((row, index) => {
-                  const isTotal = !!row.bold || !!row.is_total || [row.tender_number, row.bill_type, row.bill_number].some(val => String(val || "").toLowerCase().includes("total"));
-                  return (
-                    <tr key={index} className={`${index % 2 === 1 ? "bg-gray-25" : ""} ${isTotal ? "font-bold" : ""}`}>
-                      {columnConfig.map((column) => (
-                        <td
-                          key={`${index}-${column.fieldname}`}
-                          style={{
-                            // Sticky Logic for Body - Only first column is sticky
-                            position: column.isSticky ? "sticky" : "relative",
-                            left: column.isSticky ? `${column.stickyLeft}px` : "auto",
-                            zIndex: column.isSticky ? 10 : 1,
-                            backgroundColor: column.isSticky ? (index % 2 === 1 ? "#fafafa" : "white") : "inherit",
-                            borderRight: "none",
-                            boxShadow: column.isLastSticky ? "4px 0 5px -2px rgba(0,0,0,0.1)" : "none",
-                            fontWeight: isTotal ? "bold" : "normal"
-                          }}
-                        >
-                          {renderCellValue(row, column)}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div >
-    </div >
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

@@ -22,25 +22,25 @@ import {
 
 const masterDoctypes: Doctype[] = [
   // Master
-  { name: "temperature", title: "Temperature", icon: Thermometer },
+  { name: "temperature", title: "Temperature", doctype: "Temperature Readings", icon: Thermometer },
   { name: "gate", title: "Gate", icon: DoorOpen },
   { name: "item", title: "Item", icon: Box },
-  { name: "warehouse", title: "Store Location", icon: Warehouse },
+  { name: "warehouse", title: "Store Location", doctype: "Warehouse", icon: Warehouse },
 ];
 
 const operationLogsDoctypes: Doctype[] = [
   // Operation Logs
-  { name: "logbook", title: "Log Book", icon: Book },
-  { name: "logsheet", title: "Log Sheet", icon: FileText },
-  { name: "gate-operation-logbook", title: "Gate Operation Logbook", icon: ClipboardList },
-  { name: "repair-work-requirement", title: "Repair Work Requirement", icon: Wrench },
-  { name: "lis-incident-record", title: "LIS Incident Record", icon: AlertTriangle },
+  { name: "logbook", title: "Log Book", doctype: "Logbook", icon: Book },
+  { name: "logsheet", title: "Log Sheet", doctype: "Log Sheet", icon: FileText },
+  { name: "gate-operation-logbook", title: "Gate Operation Logbook", doctype: "Gate Operation Logbook", icon: ClipboardList },
+  { name: "repair-work-requirement", title: "Repair Work Requirement", doctype: "Repair Work Requirement", icon: Wrench },
+  { name: "lis-incident-record", title: "LIS Incident Record", doctype: "Issue", icon: AlertTriangle },
 ];
 
 
 const stockTransactionDoctypes: Doctype[] = [
   // Stock Transaction
-  { name: "spare-indent", title: "Spare Indent", icon: FilePlus },
+  { name: "spare-indent", title: "Spare Indent", doctype: "Material Request", icon: FilePlus },
   { name: "stock-entry", title: "Stock Entry", icon: ArrowDownUp },
   { name: "stock-reconciliation", title: "Stock Reconciliation", icon: ListChecks },
 ];

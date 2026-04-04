@@ -339,9 +339,25 @@ export default function LogBookSheetReportPage() {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [dragState.isGrabbing]);
 
+  const groupedData = useMemo(() => {
+    const groups: Record<string, typeof reportData> = {};
+    if (!reportData || reportData.length === 0) return groups;
+    reportData.forEach(row => {
+      const assetNo = row.asset_no || "Unknown Pump";
+      if (!groups[assetNo]) {
+        groups[assetNo] = [];
+      }
+      groups[assetNo].push(row);
+    });
+    return groups;
+  }, [reportData]);
+
+  const printLisName = reportData.length > 0 ? reportData[0].lis_name : filters.lis_name || "Unknown LIS";
+
   return (
-    <div className="module active">
-      <div className="module-header">
+    <>
+      <div className="module active print:hidden">
+        <div className="module-header">
         <div>
           <h2>Logbook Ledger</h2>
           <p>Track pump running hours and operator entries.</p>
@@ -352,6 +368,9 @@ export default function LogBookSheetReportPage() {
           </button>
           <button className="btn btn--outline" onClick={handleExportCSV}>
             <i className="fas fa-file-csv"></i> CSV
+          </button>
+          <button className="btn btn--outline" onClick={() => window.print()} disabled={reportData.length === 0 || loading}>
+            <i className="fas fa-print"></i> Print
           </button>
         </div>
       </div>
@@ -476,5 +495,72 @@ export default function LogBookSheetReportPage() {
         </div>
       </div>
     </div>
+
+    {/* --- PRINT ONLY LAYOUT --- */}
+    <div className="print-only-layout w-full bg-white text-black mt-8">
+      <style>{`
+        .print-only-layout { display: none; }
+        @media print {
+          .print-only-layout { display: block !important; }
+          @page { margin: 10mm; }
+          html, body { height: auto !important; overflow: visible !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0 !important; margin: 0 !important; background: white !important; }
+          .module.active { display: none !important; }
+          .header, .sidebar, .footer, .mobile-overlay { display: none !important; }
+          .app-container, .main-content {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+          }
+        }
+      `}</style>
+      <div className="text-center mb-8 font-bold">
+        <h2 className="text-xl inline-block border-b border-black pb-1 mb-1">Log book</h2>
+      </div>
+
+      {Object.entries(groupedData).map(([pumpNo, rows], groupIdx) => (
+        <div key={pumpNo} className="mb-12" style={{ pageBreakInside: 'avoid' }}>
+          <div className="font-bold mb-2 text-sm text-left pl-1">
+            <span className="inline-block w-24">Pump No</span>
+            <span>{pumpNo}</span>
+          </div>
+          <table className="w-full border-collapse border border-black text-sm text-center">
+            <thead>
+              <tr>
+                <th className="border border-black p-2 font-bold bg-gray-50" style={{width: '20%'}}>Pump Start Date & Time</th>
+                <th className="border border-black p-2 font-bold bg-gray-50" style={{width: '20%'}}>Pump Stop Date & Time</th>
+                <th className="border border-black p-2 font-bold bg-gray-50" style={{width: '10%'}}>Hours</th>
+                <th className="border border-black p-2 font-bold bg-gray-50" style={{width: '35%'}}>Remark/Reason</th>
+                <th className="border border-black p-2 font-bold bg-gray-50" style={{width: '15%'}}>Sign of operator</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => {
+                const formatPrintDate = (val: string) => {
+                  if (!val) return "";
+                  const d = new Date(val);
+                  if (isNaN(d.getTime())) return val;
+                  const pad = (n: number) => n.toString().padStart(2, '0');
+                  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                };
+                return (
+                  <tr key={idx}>
+                    <td className="border border-black p-2 whitespace-nowrap">{formatPrintDate(row.start_datetime)}</td>
+                    <td className="border border-black p-2 whitespace-nowrap">{formatPrintDate(row.end_datetime)}</td>
+                    <td className="border border-black p-2 whitespace-nowrap">{formatDuration(row.current_hours)}</td>
+                    <td className="border border-black p-2 text-left">{row.pump_stop_reason || ""}</td>
+                    <td className="border border-black p-2"></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  </>
   );
 }
