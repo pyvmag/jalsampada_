@@ -14,9 +14,8 @@ pipeline {
         stage('Build & Deploy') {
             steps {
                 dir('/home/erpadmin/bench-Jalsampada/apps/Jalsampada_ui') {
-                    // Your Docker commands
                     sh 'docker compose build --parallel'
-                    sh 'docker compose up -d'
+                    sh 'docker compose up -d --force-recreate --remove-orphans'
                 }
             }
         }
