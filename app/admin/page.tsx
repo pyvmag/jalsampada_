@@ -23,8 +23,9 @@ const adminDoctypeGroups: DoctypeGroup[] = [
   },
   {
     title: "Tools",
-    basePath: "/admin",
+    basePath: "/admin/doctype",
     doctypes: [
+      { name: "data-import", title: "Data Import", icon: Contact },
       { name: "role-permission-manager", title: "Role Permission Manager", icon: ShieldAlert },
     ]
   }
