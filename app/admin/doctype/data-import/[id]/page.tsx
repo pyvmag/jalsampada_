@@ -91,6 +91,198 @@ export default function DataImportDetailsPage() {
     fetchData();
   }, [fetchData]);
 
+  const handleUpdate = async (formData: Record<string, any>) => {
+    if (!apiKey || !apiSecret || !recordId) return;
+
+    setIsSaving(true);
+    try {
+      const nonDataFields = new Set([
+        "column_break_5",
+        "section_import_preview",
+        "import_log_section",
+        "import_warnings_section",
+        "download_template",
+        "refresh_google_sheet",
+        "template_warnings",
+        "import_warnings",
+        "import_preview",
+        "import_log_preview",
+        "status",
+        "payload_count",
+        "import_actions_section",
+        "start_import_btn",
+        "main_import_preview"
+      ]);
+
+      const finalPayload: Record<string, any> = {};
+      for (const key in formData) {
+        if (!nonDataFields.has(key)) {
+          let val = formData[key];
+          if (val instanceof File) {
+            // Upload the file first to Frappe
+            const fd = new FormData();
+            fd.append("file", val, val.name);
+            fd.append("is_private", "1");
+            fd.append("doctype", "Data Import");
+            fd.append("docname", recordId);
+
+            try {
+              const uploadResp = await axios.post(
+                `${API_BASE_URL.replace("/api/resource", "/api/method")}/upload_file`,
+                fd,
+                {
+                  headers: {
+                    Authorization: `token ${apiKey}:${apiSecret}`,
+                    "Content-Type": "multipart/form-data"
+                  },
+                  withCredentials: true,
+                }
+              );
+              val = uploadResp.data.message.file_url;
+            } catch (err) {
+              console.error("File upload failed", err);
+              toast.error("Failed to upload the attached file.");
+              throw err;
+            }
+          } else if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+            val = JSON.stringify(val);
+          }
+          finalPayload[key] = val;
+        }
+      }
+
+      const url = `${API_BASE_URL}/${doctypeName}/${recordId}`;
+      const response = await axios.put(url, finalPayload, {
+        headers: {
+          Authorization: `token ${apiKey}:${apiSecret}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+
+      const messages = getApiMessages(response, null, "Data Import updated!", "Failed to update Data Import");
+      if (messages.success) {
+        toast.success(messages.message);
+        fetchData();
+      } else {
+        toast.error(messages.message);
+      }
+    } catch (err: any) {
+      console.error("Update error:", err);
+      const serverData = err.response?.data;
+      const serverMsg = serverData?._server_messages
+        ? JSON.parse(serverData._server_messages)[0]
+        : serverData?.exception || err.message || "Failed to update Data Import";
+
+      toast.error("Failed to update Data Import", { description: typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg) });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStartImport = async () => {
+    if (!apiKey || !apiSecret || !recordId) return;
+
+    setIsStartingImport(true);
+    try {
+      // Formally map the preview columns to guarantee Frappe backend doesn't silently skip child tables
+      if (previewData && previewData.columns) {
+        const columnMap: Record<string, string> = {};
+        previewData.columns.forEach((col: { skip_import: any; df: { fieldname: string; }; header_title: string | number; }) => {
+          if (!col.skip_import && col.df?.fieldname) {
+            columnMap[col.header_title] = col.df.fieldname;
+          }
+        });
+
+        let currentOptions: any = {};
+        try {
+          if (data?.template_options) currentOptions = JSON.parse(data.template_options);
+        } catch (e) { }
+
+        const mergedOptions = {
+          import_type: "Insert New Records",
+          skip_errors: 0,
+          ...currentOptions,
+          column_to_field_map: columnMap
+        };
+
+        await axios.put(
+          `${API_BASE_URL.replace("/api/method", "/api/resource")}/${doctypeName}/${recordId}`,
+          { template_options: JSON.stringify(mergedOptions) },
+          { headers: { Authorization: `token ${apiKey}:${apiSecret}` }, withCredentials: true }
+        );
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.core.doctype.data_import.data_import.form_start_import`,
+        { data_import: recordId },
+        {
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      toast.success("Import started in background.");
+      fetchData(); // Refresh to see progress/logs
+    } catch (err: any) {
+      console.error("Start import error:", err);
+      toast.error("Failed to start import.");
+    } finally {
+      setIsStartingImport(false);
+    }
+  };
+
+  const handleStopImport = async () => {
+    if (!apiKey || !apiSecret || !recordId) return;
+
+    try {
+      await axios.post(
+        `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.core.doctype.data_import.data_import.stop_data_import`,
+        { doc_name: recordId },
+        {
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+      toast.success("Import job stopped.");
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to stop job.");
+    }
+  };
+
+  const handleSubmit = async (formData: Record<string, any>) => {
+    await handleUpdate(formData);
+  };
+
+  const handleCancel = () => router.push("/admin/doctype/data-import");
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this data import task?")) return;
+
+    setIsDeleting(true);
+    try {
+      const url = `${API_BASE_URL}/${doctypeName}/${recordId}`;
+      await axios.delete(url, {
+        headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+        withCredentials: true,
+      });
+
+      toast.success("Data Import deleted");
+      router.push("/admin/doctype/data-import");
+    } catch (err: any) {
+      toast.error("Failed to delete Data Import");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formTabs: TabbedLayout[] = React.useMemo(() => {
     if (!data) return [];
 
@@ -181,6 +373,38 @@ export default function DataImportDetailsPage() {
             type: "Int",
             readOnly: true,
           },
+          {
+            name: "import_actions_section",
+            label: "Import Preview & Actions",
+            type: "Section Break",
+          },
+          {
+            name: "start_import_btn",
+            label: data.status === "Pending" ? "Start Import" : "Retry Import",
+            type: "Button",
+            action: handleStartImport,
+            description: isStartingImport ? "Starting import..." : "Click to process the uploaded file",
+            displayDependsOn: (values) => ["Pending", "Error", "Partial Success"].includes(data.status),
+          },
+          {
+            name: "main_import_preview",
+            label: "File Preview",
+            type: "HTML",
+            customElement: isLoadingPreview ? (
+              <div className="flex flex-col items-center justify-center p-12 text-muted-foreground bg-slate-50 rounded-xl border-2 border-dashed">
+                <Loader2 className="h-10 w-10 mb-4 animate-spin text-blue-500" />
+                <p>Loading preview data...</p>
+              </div>
+            ) : (
+              <ImportPreview 
+                doctype={data.reference_doctype} 
+                previewData={previewData} 
+                status={data.status}
+                onRefresh={fetchPreviewData}
+              />
+            ),
+            displayDependsOn: () => !!previewData,
+          },
         ]),
       },
       {
@@ -204,29 +428,6 @@ export default function DataImportDetailsPage() {
             type: "HTML",
           },
           {
-            name: "section_import_preview",
-            label: "Preview",
-            type: "Section Break",
-          },
-          {
-            name: "import_preview",
-            label: "Import Preview",
-            type: "HTML",
-            customElement: isLoadingPreview ? (
-              <div className="flex flex-col items-center justify-center p-12 text-muted-foreground bg-slate-50 rounded-xl border-2 border-dashed">
-                <Loader2 className="h-10 w-10 mb-4 animate-spin text-blue-500" />
-                <p>Loading preview data...</p>
-              </div>
-            ) : (
-              <ImportPreview 
-                doctype={data.reference_doctype} 
-                previewData={previewData} 
-                status={data.status}
-                onRefresh={fetchPreviewData}
-              />
-            )
-          },
-          {
             name: "import_log_section",
             label: "Import Log",
             type: "Section Break",
@@ -246,225 +447,12 @@ export default function DataImportDetailsPage() {
     ];
   }, [data, previewData, fetchPreviewData]);
 
-  const handleUpdate = async (formData: Record<string, any>) => {
-    if (!apiKey || !apiSecret || !recordId) return;
-
-    setIsSaving(true);
-    try {
-      const nonDataFields = new Set([
-        "column_break_5",
-        "section_import_preview",
-        "import_log_section",
-        "import_warnings_section",
-        "download_template",
-        "refresh_google_sheet",
-        "template_warnings",
-        "import_warnings",
-        "import_preview",
-        "import_log_preview",
-        "status",
-        "payload_count"
-      ]);
-
-      const finalPayload: Record<string, any> = {};
-      for (const key in formData) {
-        if (!nonDataFields.has(key)) {
-          let val = formData[key];
-          if (val instanceof File) {
-            // Upload the file first to Frappe
-            const fd = new FormData();
-            fd.append("file", val, val.name);
-            fd.append("is_private", "1");
-            fd.append("doctype", "Data Import");
-            fd.append("docname", recordId);
-
-            try {
-              const uploadResp = await axios.post(
-                `${API_BASE_URL.replace("/api/resource", "/api/method")}/upload_file`,
-                fd,
-                {
-                  headers: {
-                    Authorization: `token ${apiKey}:${apiSecret}`,
-                    "Content-Type": "multipart/form-data"
-                  },
-                  withCredentials: true,
-                }
-              );
-              val = uploadResp.data.message.file_url;
-            } catch (err) {
-              console.error("File upload failed", err);
-              toast.error("Failed to upload the attached file.");
-              throw err; 
-            }
-          } else if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-            val = JSON.stringify(val);
-          }
-          finalPayload[key] = val;
-        }
-      }
-
-      const url = `${API_BASE_URL}/${doctypeName}/${recordId}`;
-      const response = await axios.put(url, finalPayload, {
-        headers: {
-          Authorization: `token ${apiKey}:${apiSecret}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
-
-      const messages = getApiMessages(response, null, "Data Import updated!", "Failed to update Data Import");
-      if (messages.success) {
-        toast.success(messages.message);
-        fetchData();
-      } else {
-        toast.error(messages.message);
-      }
-    } catch (err: any) {
-      console.error("Update error:", err);
-      const serverData = err.response?.data;
-      const serverMsg = serverData?._server_messages 
-        ? JSON.parse(serverData._server_messages)[0] 
-        : serverData?.exception || err.message || "Failed to update Data Import";
-        
-      toast.error("Failed to update Data Import", { description: typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg) });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleStartImport = async () => {
-    if (!apiKey || !apiSecret || !recordId) return;
-
-    setIsStartingImport(true);
-    try {
-      // Formally map the preview columns to guarantee Frappe backend doesn't silently skip child tables
-      if (previewData && previewData.columns) {
-        const columnMap: Record<string, string> = {};
-        previewData.columns.forEach((col: { skip_import: any; df: { fieldname: string; }; header_title: string | number; }) => {
-          if (!col.skip_import && col.df?.fieldname) {
-            columnMap[col.header_title] = col.df.fieldname;
-          }
-        });
-
-        let currentOptions: any = {};
-        try {
-          if (data?.template_options) currentOptions = JSON.parse(data.template_options);
-        } catch (e) {}
-
-        const mergedOptions = {
-          import_type: "Insert New Records",
-          skip_errors: 0,
-          ...currentOptions,
-          column_to_field_map: columnMap
-        };
-        
-        await axios.put(
-          `${API_BASE_URL.replace("/api/method", "/api/resource")}/${doctypeName}/${recordId}`,
-          { template_options: JSON.stringify(mergedOptions) },
-          { headers: { Authorization: `token ${apiKey}:${apiSecret}` }, withCredentials: true }
-        );
-      }
-
-      const response = await axios.post(
-        `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.core.doctype.data_import.data_import.form_start_import`,
-        { data_import: recordId },
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-
-      toast.success("Import started in background.");
-      fetchData(); // Refresh to see progress/logs
-    } catch (err: any) {
-      console.error("Start import error:", err);
-      toast.error("Failed to start import.");
-    } finally {
-      setIsStartingImport(false);
-    }
-  };
-
-  const handleStopImport = async () => {
-    if (!apiKey || !apiSecret || !recordId) return;
-
-    try {
-      await axios.post(
-        `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.core.doctype.data_import.data_import.stop_data_import`,
-        { doc_name: recordId },
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-      toast.success("Import job stopped.");
-      fetchData();
-    } catch (err) {
-      toast.error("Failed to stop job.");
-    }
-  };
-
-  const handleSubmit = async (formData: Record<string, any>) => {
-    await handleUpdate(formData);
-  };
-
-  const handleCancel = () => router.push("/admin/doctype/data-import");
-
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this data import task?")) return;
-
-    setIsDeleting(true);
-    try {
-      const url = `${API_BASE_URL}/${doctypeName}/${recordId}`;
-      await axios.delete(url, {
-        headers: { Authorization: `token ${apiKey}:${apiSecret}` },
-        withCredentials: true,
-      });
-
-      toast.success("Data Import deleted");
-      router.push("/admin/doctype/data-import");
-    } catch (err: any) {
-      toast.error("Failed to delete Data Import");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading details...</div>;
   if (!data) return <div className="p-8 text-center text-red-500">Record not found</div>;
 
   return (
-    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
-      <div className="px-4 md:px-8 pt-6 flex justify-end gap-2">
-        {data.status === "Pending" && (
-           <Button onClick={handleStartImport} disabled={isStartingImport}>
-             {isStartingImport ? "Starting..." : "Start Import"}
-           </Button>
-        )}
-        {(data.status === "Error" || data.status === "Partial Success") && (
-           <Button onClick={handleStartImport} disabled={isStartingImport}>
-             Retry Import
-           </Button>
-        )}
-        {/* If background jobs were tracked, we'd show Stop here */}
-      </div>
-
-      {previewData && (
-        <div className="px-4 md:px-8 pb-6">
-          <ImportPreview
-            doctype={data?.reference_doctype || doctypeName}
-            previewData={previewData}
-            onRefresh={fetchPreviewData}
-            status={data?.status || "Pending"}
-          />
-        </div>
-      )}
-
+    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen pt-4">
       <DynamicForm
         tabs={formTabs}
         onSubmit={handleSubmit}
