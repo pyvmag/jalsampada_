@@ -40,7 +40,7 @@ interface Column {
 interface PreviewData {
   columns: Column[];
   data: any[][];
-  warnings: string[];
+  warnings: (string | { col?: string | number; message?: string; type?: string; row?: number; })[];
   max_rows_exceeded?: boolean;
   total_number_of_rows?: number;
 }
@@ -111,7 +111,6 @@ export function ImportPreview({ doctype, previewData, onRefresh, status }: Impor
         </div>
       </div>
 
-      {/* Warnings Panel */}
       {warnings && warnings.length > 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 space-y-1">
           <p className="font-bold flex items-center gap-2 mb-2">
@@ -120,7 +119,14 @@ export function ImportPreview({ doctype, previewData, onRefresh, status }: Impor
           </p>
           <ul className="list-disc pl-5 space-y-1">
             {warnings.map((w, i) => (
-              <li key={i}>{w}</li>
+              <li key={i}>
+                {typeof w === "string" ? w : (
+                  <span>
+                    <strong>{w.col ? `${w.col}: ` : ""}</strong>
+                    {w.message || JSON.stringify(w)}
+                  </span>
+                )}
+              </li>
             ))}
           </ul>
         </div>

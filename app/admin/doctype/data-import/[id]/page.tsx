@@ -337,6 +337,34 @@ export default function DataImportDetailsPage() {
 
     setIsStartingImport(true);
     try {
+      // Formally map the preview columns to guarantee Frappe backend doesn't silently skip child tables
+      if (previewData && previewData.columns) {
+        const columnMap: Record<string, string> = {};
+        previewData.columns.forEach((col: { skip_import: any; df: { fieldname: string; }; header_title: string | number; }) => {
+          if (!col.skip_import && col.df?.fieldname) {
+            columnMap[col.header_title] = col.df.fieldname;
+          }
+        });
+
+        let currentOptions: any = {};
+        try {
+          if (data?.template_options) currentOptions = JSON.parse(data.template_options);
+        } catch (e) {}
+
+        const mergedOptions = {
+          import_type: "Insert New Records",
+          skip_errors: 0,
+          ...currentOptions,
+          column_to_field_map: columnMap
+        };
+        
+        await axios.put(
+          `${API_BASE_URL.replace("/api/method", "/api/resource")}/${doctypeName}/${recordId}`,
+          { template_options: JSON.stringify(mergedOptions) },
+          { headers: { Authorization: `token ${apiKey}:${apiSecret}` }, withCredentials: true }
+        );
+      }
+
       const response = await axios.post(
         `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.core.doctype.data_import.data_import.form_start_import`,
         { data_import: recordId },
@@ -425,6 +453,17 @@ export default function DataImportDetailsPage() {
         )}
         {/* If background jobs were tracked, we'd show Stop here */}
       </div>
+
+      {previewData && (
+        <div className="px-4 md:px-8 pb-6">
+          <ImportPreview
+            doctype={data?.reference_doctype || doctypeName}
+            previewData={previewData}
+            onRefresh={fetchPreviewData}
+            status={data?.status || "Pending"}
+          />
+        </div>
+      )}
 
       <DynamicForm
         tabs={formTabs}
