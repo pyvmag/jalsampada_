@@ -58,18 +58,62 @@ export function DownloadTemplateModal({
   const [exportType, setExportType] = React.useState("blank_template");
 
   const fetchDoctypeDetails = React.useCallback(async (dtName: string) => {
-    const url = `http://103.219.1.138:4412/api/resource/DocType/${encodeURIComponent(dtName)}`;
-    const resp = await axios.get(url, {
-      headers: { Authorization: `token ${apiKey}:${apiSecret}` },
-    });
-    return resp.data.data;
+    try {
+      // Use getdoctype which is the most comprehensive API for schema, used by Desk
+      const url = `http://103.219.1.138:4412/api/method/frappe.desk.form.load.getdoctype`;
+      const params = new URLSearchParams();
+      params.append("doctype", dtName);
+      
+      const resp = await axios.post(url, params.toString(), {
+        headers: { 
+          Authorization: `token ${apiKey}:${apiSecret}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        withCredentials: true
+      });
+      
+      // getdoctype returns { docs: [ { name: ..., fields: [...] } ] }
+      const docSchema = resp.data.docs ? resp.data.docs[0] : null;
+      if (!docSchema || !docSchema.fields) {
+        throw new Error("No fields found for " + dtName);
+      }
+
+      console.log(`Loaded ${docSchema.fields.length} fields for ${dtName}`);
+      return { 
+        name: dtName, 
+        fields: docSchema.fields 
+      };
+    } catch (e) {
+      console.warn(`getdoctype failed for ${dtName}, falling back to get_docfields`, e);
+      // Fallback 1: get_docfields
+      try {
+        const url = `http://103.219.1.138:4412/api/method/frappe.model.meta.get_docfields`;
+        const params = new URLSearchParams();
+        params.append("doctype", dtName);
+        const resp2 = await axios.post(url, params.toString(), {
+          headers: { 
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          withCredentials: true
+        });
+        return { name: dtName, fields: resp2.data.message || [] };
+      } catch (e2) {
+        // Fallback 2: resource API
+        const resp3 = await axios.get(`http://103.219.1.138:4412/api/resource/DocType/${encodeURIComponent(dtName)}`, {
+          headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+          withCredentials: true
+        });
+        return resp3.data.data;
+      }
+    }
   }, [apiKey, apiSecret]);
 
   const initModal = React.useCallback(async () => {
     if (!referenceDoctype || !isOpen) return;
     setLoading(true);
     try {
-      // 1. Fetch Main DocType
+      // 1. Fetch Main DocType Schema (includes ALL fields: custom, core, etc.)
       const mainDt = await fetchDoctypeDetails(referenceDoctype);
       const newDoctypes: Record<string, DoctypeDef> = { [referenceDoctype]: mainDt };
       const initialSelected: Record<string, string[]> = {
@@ -87,7 +131,7 @@ export function DownloadTemplateModal({
             newDoctypes[tableField.options] = tableDt;
             initialSelected[tableField.fieldname] = ["name"];
           } catch (e) {
-            console.error(`Failed to fetch child table ${tableField.options}`, e);
+            console.error(`Failed to fetch child table schema for ${tableField.options}`, e);
           }
         }
       }
@@ -95,6 +139,8 @@ export function DownloadTemplateModal({
       // Add mandatory fields to selection by default
       Object.keys(newDoctypes).forEach(dtName => {
         const dt = newDoctypes[dtName];
+        if (!dt || !dt.fields) return;
+
         const mandatory = dt.fields
           .filter(f => f.reqd && !["Section Break", "Column Break", "Table"].includes(f.fieldtype))
           .map(f => f.fieldname);
