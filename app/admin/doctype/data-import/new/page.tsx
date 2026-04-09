@@ -15,6 +15,52 @@ import { UseFormReturn } from "react-hook-form";
 
 const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 
+const ALLOWED_DOCTYPES = [
+  "Asset",
+  "Asset Category",
+  "Lift Irrigation Scheme",
+  "Stage No",
+  "Equipement Make",
+  "Equipement Model",
+  "Equipement Capacity",
+  "Rating",
+  "WRD District",
+  "WRD Taluka",
+  "Location",
+  "WRD Village",
+  "Temperature Readings",
+  "Gate",
+  "Item",
+  "Warehouse",
+  "Logbook",
+  "Log Sheet",
+  "Gate Operation Logbook",
+  "Repair Work Requirement",
+  "Issue",
+  "Material Request",
+  "Stock Entry",
+  "Stock Reconciliation",
+  "Maintenance Checklist",
+  "Asset Maintenance",
+  "Asset Maintenance Log",
+  "Employee",
+  "Designation",
+  "Attendance Sheet",
+  "Contractor",
+  "Work Type",
+  "Work Subtype",
+  "Fund Head",
+  "Prapan Suchi",
+  "Project",
+  "Draft Tender Paper",
+  "Expenditure",
+  "User",
+  "Role",
+  "Role Profile",
+  "Data Import",
+  "Asset Interchange",
+].sort();
+
 export default function NewDataImportPage() {
   const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
@@ -33,8 +79,8 @@ export default function NewDataImportPage() {
           {
             name: "reference_doctype",
             label: "Document Type",
-            type: "Link",
-            linkTarget: "DocType",
+            type: "Select",
+            options: ALLOWED_DOCTYPES.join("\n"),
             required: true,
           },
           {
