@@ -52,6 +52,7 @@ const reportsDoctypes: Doctype[] = [
   { name: "lis-incident-report", title: "LIS Incident Report", icon: FileText },
   { name: "gate-logbook-report", title: "Gate Logbook Report", icon: FileText },
   { name: "pump-hour-report", title: "Pump Hour Report", icon: FileText },
+  { name: "cumulative-pump-hours-report", title: "Cumulative Pump Hours Report", icon: FileText },
 ];
 
 const stockReportsDoctypes: Doctype[] = [
