@@ -1077,9 +1077,60 @@ export default function RecordDetailPage() {
 
       const payload: any = JSON.parse(JSON.stringify(data));
 
+      // 1. Handle Rename if Tender ID changed (naming series field)
+      let newTenderIdRaw = payload.custom_tender_id?.toString() || "";
+      let currentIdRaw = docname.toString();
+
+      // Clean out any lingering %20 characters to ensure raw spaces
+      newTenderIdRaw = decodeURIComponent(newTenderIdRaw).replace(/%20/g, " ");
+      currentIdRaw = decodeURIComponent(currentIdRaw).replace(/%20/g, " ");
+
+      if (newTenderIdRaw && newTenderIdRaw !== currentIdRaw) {
+        try {
+          // Use URLSearchParams but ensure values are provided as raw strings
+          const renameData = {
+            doctype: doctypeName,
+            docname: currentIdRaw,   // Old Name (source)
+            name: newTenderIdRaw,    // New Name (target)
+            enqueue: "true",
+            merge: "0",
+            freeze: "true",
+            freeze_message: "Updating related fields...",
+          };
+
+          // Re-running the identical Desk UI logic with the raw strings
+          const params = new URLSearchParams();
+          Object.entries(renameData).forEach(([key, val]) => params.append(key, val));
+
+          await axios.post(
+            `${API_BASE_URL.replace("/api/resource", "/api/method")}/frappe.model.rename_doc.update_document_title`,
+            params.toString(),
+            {
+              headers: {
+                Authorization: `token ${apiKey}:${apiSecret}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              withCredentials: true,
+            }
+          );
+
+          toast.success("Tender ID updated (Record renamed)");
+          // Redirect to the new ID
+          router.push(`/tender/doctype/tender/${encodeURIComponent(newTenderIdRaw)}`);
+          return;
+        } catch (renameErr: any) {
+          console.error("DEBUG: Rename failure:", renameErr);
+          toast.error("Failed to rename record.", {
+            description: renameErr.response?.data?.message || "Check rename permissions in Role Permissions Manager.",
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // 2. Otherwise perform regular update
+
       const baseUrl = API_BASE_URL.replace("/api/resource", "");
-
-
 
       // Handle file uploads
 
@@ -1187,6 +1238,9 @@ export default function RecordDetailPage() {
 
       const finalPayload: any = {};
 
+      console.log("Payload before filtering:", payload);
+      console.log("Non-data fields:", nonDataFields);
+
       for (const key in payload) {
 
         if (!nonDataFields.has(key)) {
@@ -1196,6 +1250,10 @@ export default function RecordDetailPage() {
         }
 
       }
+
+      console.log("Final payload:", finalPayload);
+      console.log("custom_tender_id in payload:", "custom_tender_id" in payload);
+      console.log("custom_tender_id in finalPayload:", "custom_tender_id" in finalPayload);
 
 
 
@@ -1241,9 +1299,13 @@ export default function RecordDetailPage() {
 
       );
 
+      console.log("API Response:", resp.data);
+
 
 
       const messages = getApiMessages(resp, null, "Changes saved!", "Failed to save");
+
+
 
       if (messages.success) {
 
