@@ -2,6 +2,9 @@
 FROM oven/bun:1-slim AS base
 WORKDIR /app
 
+# Install npm (needed for dependency installation)
+RUN apt-get update && apt-get install -y npm && rm -rf /var/lib/apt/lists/*
+
 # Copy package files first (for better caching)
 COPY package.json bun.lockb* ./
 
