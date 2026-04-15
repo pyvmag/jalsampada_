@@ -1,15 +1,11 @@
-# Use Node.js base image and install bun
-FROM node:20-slim AS base
+# Use the official Bun image
+FROM oven/bun:1-slim AS base
 WORKDIR /app
-
-# Install bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
 
 # Copy package files first (for better caching)
 COPY package.json bun.lockb* ./
 
-# Install dependencies with bun install
+# Install dependencies (cached if package.json unchanged)
 RUN bun install --frozen-lockfile
 
 # Copy source code (only when files change)
@@ -19,12 +15,8 @@ COPY . .
 RUN bun run build
 
 # Production stage - use the standalone output
-FROM node:20-slim AS production
+FROM oven/bun:1-slim AS production
 WORKDIR /app
-
-# Install bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
 
 # Copy the standalone build
 COPY --from=base /app/.next/standalone ./
