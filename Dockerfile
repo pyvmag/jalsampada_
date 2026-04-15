@@ -1,15 +1,13 @@
-# Use the official Bun image
-FROM oven/bun:1-slim AS base
+# Use the official Bun image (full version, not slim)
+FROM oven/bun:1 AS base
 WORKDIR /app
-
-# Install npm (needed for dependency installation)
-RUN apt-get update && apt-get install -y npm && rm -rf /var/lib/apt/lists/*
 
 # Copy package files first (for better caching)
 COPY package.json bun.lockb* ./
 
-# Install dependencies using npm (more stable in Docker than bun install)
-RUN npm install
+# Install dependencies with bun install (faster than npm)
+# Use --backend=copy to avoid hanging issues
+RUN bun install --frozen-lockfile --backend=copy
 
 # Copy source code (only when files change)
 COPY . .
@@ -18,7 +16,7 @@ COPY . .
 RUN bun run build
 
 # Production stage - use the standalone output
-FROM oven/bun:1-slim AS production
+FROM oven/bun:1 AS production
 WORKDIR /app
 
 # Copy the standalone build
