@@ -574,11 +574,11 @@ export default function NewExpenditurePage() {
                   const rowStage = getValues("stage");
                   const lis = getValues("parent.lift_irrigation_scheme");
 
-                  return {
-                    custom_lis_name: lis,
-                    custom_stage_no: rowStage,
-                    custom_obsolete: 0
-                  };
+                  const filters: Record<string, any> = {};
+                  if (lis) filters["custom_lis_name"] = lis;
+                  if (rowStage) filters["custom_stage_no"] = rowStage;
+
+                  return filters;
                 },
               },
               {

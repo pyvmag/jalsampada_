@@ -75,6 +75,7 @@ export type FieldType =
   | "Attach Image"
   | "DurationHHMM"
   | "Geolocation"
+  | "HTML"
   | "Custom";
 export interface FormField {
   name: string;
@@ -1716,6 +1717,17 @@ export function DynamicForm({
         case "Attach":
         case "Attach Image":
           return renderAttachment(field);
+        case "HTML":
+          return (
+            <div className="form-group py-2">
+              {field.label && <label className="form-label font-bold mb-2 block">{field.label}</label>}
+              <div 
+                className="html-field-content"
+                dangerouslySetInnerHTML={{ __html: watch(field.name) || "" }} 
+              />
+              <FieldHelp text={field.description} />
+            </div>
+          );
         case "Custom":
           return (
             <div className="form-group">

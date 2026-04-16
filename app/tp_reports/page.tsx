@@ -53,6 +53,11 @@ const reportDoctypeGroups = [
         name: "gate-logbook-report",
         title: "Gate Logbook Report",
         icon: DoorOpen
+      },
+      {
+        name: "pump-hour-report",
+        title: "Pump Hour Report",
+        icon: FileText
       }
     ]
   },

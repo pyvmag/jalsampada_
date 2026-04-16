@@ -713,11 +713,11 @@ export default function RecordDetailPage() {
                   const rowStage = getValues("stage");
                   const lis = getValues("parent.lift_irrigation_scheme");
 
-                  return {
-                    lift_irrigation_scheme: lis,
-                    stage_no_sub_scheme: rowStage,
-                    obsolete: "No"
-                  };
+                  const filters: Record<string, any> = {};
+                  if (lis) filters["custom_lis_name"] = lis;
+                  if (rowStage) filters["custom_stage_no"] = rowStage;
+
+                  return filters;
                 },
               },
               {
