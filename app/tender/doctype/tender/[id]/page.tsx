@@ -1092,7 +1092,7 @@ export default function RecordDetailPage() {
             doctype: doctypeName,
             docname: currentIdRaw,   // Old Name (source)
             name: newTenderIdRaw,    // New Name (target)
-            enqueue: "true",
+            enqueue: "false",
             merge: "0",
             freeze: "true",
             freeze_message: "Updating related fields...",
@@ -1115,6 +1115,10 @@ export default function RecordDetailPage() {
           );
 
           toast.success("Tender ID updated (Record renamed)");
+          
+          // Wait a moment for the DB to settle before redirecting
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
           // Redirect to the new ID
           router.push(`/tender/doctype/tender/${encodeURIComponent(newTenderIdRaw)}`);
           return;
