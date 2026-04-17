@@ -43,6 +43,9 @@ interface ExpenditureDetailsRow {
   invoice_number?: string;        // Data
   expenditure_date?: string;      // Date (Invoice Date)
   remarks?: string;               // Text (Work Details)
+  custom_basic_amount?: number;   // Currency
+  custom_insurance?: number;      // Currency
+  custom_gst?: string;            // Data
 }
 
 interface ExpenditureData {
@@ -428,8 +431,8 @@ export default function RecordDetailPage() {
           isInitialLoad.current = false;
         } else {
           // Normal update (User typing or subsequent updates)
-          formInstance.setValue("bill_upto", billUpto, { shouldDirty: !isProgrammaticUpdate.current });
-          formInstance.setValue("remaining_amount", remainingAmount, { shouldDirty: !isProgrammaticUpdate.current });
+          formInstance.setValue("bill_upto", Number(billUpto.toFixed(2)), { shouldDirty: !isProgrammaticUpdate.current });
+          formInstance.setValue("remaining_amount", Number(remainingAmount.toFixed(2)), { shouldDirty: !isProgrammaticUpdate.current });
         }
       }
     };
@@ -445,6 +448,54 @@ export default function RecordDetailPage() {
 
       if (name === "bill_amount" || name === "tender_amount" || name === undefined) {
         calculateTotals(value);
+      }
+
+      // 🟢 Add listener for child table fields to recalculate expenditure_details bill_amount and parent total
+      if (
+        name?.startsWith("expenditure_details.") &&
+        (name.includes("custom_basic_amount") ||
+         name.includes("custom_insurance") ||
+         name.includes("custom_gst") ||
+         name.includes("bill_amount"))
+      ) {
+        const match = name.match(/expenditure_details\.(\d+)\./);
+        if (match) {
+          const index = parseInt(match[1]);
+          const details = formInstance.getValues("expenditure_details");
+          if (details && details[index]) {
+            const row = details[index];
+            const basic = Number(row.custom_basic_amount) || 0;
+            const ins = Number(row.custom_insurance) || 0;
+            const gstStr = row.custom_gst
+              ? row.custom_gst.toString().replace("%", "").trim()
+              : "0";
+            const gst = Number(gstStr) || 0;
+            
+            const totalBase = basic + ins;
+            const calculatedRowAmt = Number((totalBase * (gst / 100)).toFixed(2));
+
+            // Update row bill_amount if it changed
+            if (Number(row.bill_amount) !== calculatedRowAmt) {
+              formInstance.setValue(
+                `expenditure_details.${index}.bill_amount`,
+                calculatedRowAmt,
+                { shouldDirty: true, shouldValidate: true }
+              );
+            }
+
+            // Always recalculate parent total using the freshly calculated value for the current row
+            // to avoid state sync delays
+            const allDetails = formInstance.getValues("expenditure_details") || [];
+            const newTotal = Number(allDetails.reduce((sum: number, r: any, i: number) => {
+              const val = (i === index) ? calculatedRowAmt : (Number(r.bill_amount) || 0);
+              return sum + val;
+            }, 0).toFixed(2));
+
+            if (Number(formInstance.getValues("bill_amount")) !== newTotal) {
+              formInstance.setValue("bill_amount", newTotal, { shouldDirty: true, shouldValidate: true });
+            }
+          }
+        }
       }
     });
 
@@ -701,7 +752,7 @@ export default function RecordDetailPage() {
                 linkTarget: "Work Subtype",
                 filterMapping: [{ sourceField: "work_type", targetField: "work_type" }]
               },
-              { name: "bill_amount", label: "Expenditure Amount", type: "Currency", precision: 2 },
+              { name: "remarks", label: "Work Details", type: "Text" },
               { name: "have_asset", label: "Have Asset", type: "Check", displayDependsOn: "work_type==Miscellaneous" },
               {
                 name: "asset",
@@ -736,10 +787,13 @@ export default function RecordDetailPage() {
               },
               { name: "from_date", label: "From Date", type: "Date", displayDependsOn: "work_type==Operation || work_type==Security" },
               { name: "to_date", label: "To Date", type: "Date", displayDependsOn: "work_type==Operation || work_type==Security" },
-              { name: "tax_amount", label: "Tax Amount", type: "Currency", precision: 2 },
               { name: "invoice_number", label: "Invoice Number", type: "Data" },
               { name: "expenditure_date", label: "Invoice Date", type: "Date" },
-              { name: "remarks", label: "Work Details", type: "Text" },
+              { name: "calculation_section", label: "", type: "Section Break" },
+              { name: "custom_basic_amount", label: "Basic Amount", type: "Currency", precision: 2 },
+              { name: "custom_insurance", label: "Insurance", type: "Currency", precision: 2 },
+              { name: "custom_gst", label: "GST(%)", type: "Data" },
+              { name: "bill_amount", label: "Expenditure Amount", type: "Currency", precision: 2, readOnly: true },
               { name: "attach", label: "Attach", type: "Attach" },
               { name: "cb", label: "Column Break", type: "Column Break" },
               { name: "job_carried_out", label: "Job Carried Out", type: "Long Text", displayDependsOn: "work_type==Repair" },

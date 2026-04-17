@@ -343,6 +343,33 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
 
     formMethods.setValue(`${field.name}.${rowIndex}.${fieldName}`, value, { shouldDirty: true });
 
+    // 🟢 Real-time calculation for Expenditure table in the grid
+    if (field.name === "expenditure_details") {
+      const currentRow = (formMethods.getValues(field.name) || [])[rowIndex] || {};
+      const newRow = { ...currentRow, [fieldName]: value };
+
+      if (fieldName === "custom_basic_amount" || fieldName === "custom_insurance" || fieldName === "custom_gst") {
+        const basic = parseFloat(newRow.custom_basic_amount) || 0;
+        const ins = parseFloat(newRow.custom_insurance) || 0;
+        const gstStr = newRow.custom_gst ? newRow.custom_gst.toString().replace("%", "").trim() : "0";
+        const gst = parseFloat(gstStr) || 0;
+
+        const rowTotal = Number(((basic + ins) * (gst / 100)).toFixed(2));
+        formMethods.setValue(`${field.name}.${rowIndex}.bill_amount`, rowTotal, { shouldDirty: true });
+
+        // Update parent total immediately to keep everything in sync
+        const allRows = formMethods.getValues(field.name) || [];
+        const newParentTotal = Number(allRows.reduce((sum: number, r: any, i: number) => {
+          const val = (i === rowIndex) ? rowTotal : (Number(r.bill_amount) || 0);
+          return sum + val;
+        }, 0).toFixed(2));
+
+        if (Number(formMethods.getValues("bill_amount")) !== newParentTotal) {
+          formMethods.setValue("bill_amount", newParentTotal, { shouldDirty: true });
+        }
+      }
+    }
+
     const dependentColumns = field.columns?.filter(col =>
       col.fetchFrom && col.fetchFrom.sourceField === fieldName
     );

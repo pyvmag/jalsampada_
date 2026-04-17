@@ -250,6 +250,18 @@ export function DynamicFormForTable({
                 newFormData = { ...newFormData, amount: amount.toString() };
             }
 
+            // 🟢 Add Expenditure calculation logic
+            if (fieldName === 'custom_basic_amount' || fieldName === 'custom_insurance' || fieldName === 'custom_gst') {
+                const basic = parseFloat(newFormData.custom_basic_amount) || 0;
+                const ins = parseFloat(newFormData.custom_insurance) || 0;
+                const gstStr = newFormData.custom_gst ? newFormData.custom_gst.toString().replace("%", "").trim() : "0";
+                const gst = parseFloat(gstStr) || 0;
+                
+                const totalBase = basic + ins;
+                const finalAmt = Number((totalBase * (gst / 100)).toFixed(2));
+                newFormData = { ...newFormData, bill_amount: finalAmt };
+            }
+
             // Calculate end_date dynamically based on start_date and period_in_days
             if (fieldName === 'start_date' || fieldName === 'period_in_days') {
                 const start_date = newFormData.start_date;
