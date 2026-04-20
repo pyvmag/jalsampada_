@@ -248,8 +248,15 @@ export default function ExpenditureDetailsReport() {
   const handleExportCSV = () => {
     if (reportData.length === 0) return;
 
-    const headers = columnConfig.map(c => c.label).join(",");
-    const rows = reportData.map(row => {
+    const headers = columnConfig.map(c => {
+      let label = c.label || '';
+      if (label.includes(',') || label.includes('\n') || label.includes('"')) {
+        label = `"${label.replace(/"/g, '""')}"`;
+      }
+      return label;
+    }).join(",");
+
+    const csvRows = reportData.map(row => {
       return columnConfig.map(col => {
         let val = row[col.fieldname];
         if (col.formatter) {
@@ -264,13 +271,18 @@ export default function ExpenditureDetailsReport() {
       }).join(",");
     }).join("\n");
 
-    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows);
+    const csvContent = headers + "\n" + csvRows;
+    const BOM = '\ufeff';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.href = encodedUri;
+    link.href = url;
     link.download = `expenditure_details_report_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
 
