@@ -28,8 +28,9 @@ type Filters = {
   from_date: string;
   to_date: string;
   lift_irrigation_scheme: string;
-  stage: string;
+  custom_stage_no: string;
   work_type: string;
+  asset_category: string;
   tender_number: string;
 };
 
@@ -49,21 +50,23 @@ type ColumnConfig = {
 // --- CONFIG: Define Column Order, Labels & Widths ---
 const COLUMN_DEFINITIONS = [
   { fieldname: "tender_number", label: "Tender Number", width: 150 },
-  { fieldname: "bill_type", label: "Bill Type", width: 100 },
-  { fieldname: "bill_number", label: "Bill No", width: 150 },
-  { fieldname: "bill_date", label: "Bill Date", width: 100 },
-  { fieldname: "fiscal_year", label: "Fiscal Year", width: 120 },
-  { fieldname: "stage", label: "LIS Stage", width: 140 },
+  { fieldname: "bill_type", label: "Bill Type", width: 120 },
+  { fieldname: "bill_number", label: "Bill No", width: 120 },
+  { fieldname: "bill_date", label: "Bill Date", width: 120 },
+  { fieldname: "fiscal_year", label: "Fiscal Year", width: 100 },
+  { fieldname: "lis", label: "LIS", width: 150 },
+  { fieldname: "asset_category", label: "Asset Category", width: 150 },
+  { fieldname: "stage", label: "Stage", width: 100 },
   { fieldname: "work_type", label: "Work Type", width: 150 },
   { fieldname: "work_subtype", label: "Work Subtype", width: 150 },
-  { fieldname: "asset_no", label: "Asset No", width: 100 },
-  { fieldname: "remarks", label: "Expenditure Work Details", width: 300 },
+  { fieldname: "asset_no", label: "Pump No", width: 100 },
+  { fieldname: "bill_amount", label: "Expenditure", width: 120 },
+  { fieldname: "remarks", label: "Work Details", width: 250 },
 ];
 
 const DEFAULT_COLUMN_WIDTH = 150;
 
 // --- Helper Functions ---
-
 const formatDateForAPI = (date: Date | null): string => {
   if (!date) return "";
   const year = date.getFullYear();
@@ -105,8 +108,9 @@ export default function ExpenditureDetailsReport() {
     from_date: getOneMonthAgo(),
     to_date: getToday(),
     lift_irrigation_scheme: "",
-    stage: "",
+    custom_stage_no: "",
     work_type: "",
+    asset_category: "",
     tender_number: "",
   });
 
@@ -275,10 +279,10 @@ export default function ExpenditureDetailsReport() {
       const newFilters = { ...prev, [field]: value };
       // Clear dependent filters
       if (field === 'lift_irrigation_scheme') {
-        newFilters.stage = "";
+        newFilters.custom_stage_no = "";
         newFilters.tender_number = "";
       }
-      if (field === 'stage') {
+      if (field === 'custom_stage_no') {
         newFilters.tender_number = "";
       }
       return newFilters;
@@ -417,8 +421,8 @@ export default function ExpenditureDetailsReport() {
             <div className="form-group relative z-[120]">
               <label className="text-sm font-medium mb-1 block">Stage</label>
               <LinkInput
-                value={filters.stage}
-                onChange={(v) => handleFilterChange("stage", v)}
+                value={filters.custom_stage_no}
+                onChange={(v) => handleFilterChange("custom_stage_no", v)}
                 placeholder="Select Stage..."
                 linkTarget="Stage No"
                 className="w-full"
@@ -436,7 +440,7 @@ export default function ExpenditureDetailsReport() {
                 className="w-full relative"
                 filters={{
                   custom_lis_name: filters.lift_irrigation_scheme || undefined,
-                  custom_stage_no: filters.stage || undefined
+                  custom_stage_no: filters.custom_stage_no || undefined
                 }}
               />
             </div>
@@ -448,6 +452,17 @@ export default function ExpenditureDetailsReport() {
                 onChange={(v) => handleFilterChange("work_type", v)}
                 placeholder="Select Work Type..."
                 linkTarget="Work Type"
+                className="w-full relative"
+              />
+            </div>
+
+            <div className="form-group z-[90]">
+              <label className="text-sm font-medium mb-1 block">Asset Category</label>
+              <LinkInput
+                value={filters.asset_category}
+                onChange={(v) => handleFilterChange("asset_category", v)}
+                placeholder="Select Asset Category..."
+                linkTarget="Asset Category"
                 className="w-full relative"
               />
             </div>

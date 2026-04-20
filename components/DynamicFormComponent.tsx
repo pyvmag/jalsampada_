@@ -124,6 +124,8 @@ export interface FormField {
     | Record<string, any>
     | ((values: Record<string, any>) => boolean);
     filters?: (getValue: (name: string) => any) => Record<string, any>;
+    readOnly?: boolean;
+    disabled?: boolean;
   }[];
   action?: () => void;
   buttonLabel?: string;

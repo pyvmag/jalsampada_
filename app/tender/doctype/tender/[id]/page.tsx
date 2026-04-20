@@ -210,6 +210,8 @@ export default function RecordDetailPage() {
 
   const [isSaving, setIsSaving] = React.useState(false);
 
+  const [hasExpenditures, setHasExpenditures] = React.useState(false);
+
 
 
   /* -------------------------------------------------
@@ -388,11 +390,87 @@ export default function RecordDetailPage() {
 
 
 
+  const checkExpenditures = React.useCallback(async () => {
+
+    if (!record || !record.name || !isAuthenticated || !apiKey || !apiSecret) {
+
+      setHasExpenditures(false);
+
+      return;
+
+    }
+
+
+
+    try {
+
+      const response = await axios.get(
+
+        `${API_BASE_URL}/Expenditure`,
+
+        {
+
+          params: {
+
+            filters: JSON.stringify([
+
+              ["tender_number", "=", record.name],
+
+              ["docstatus", "!=", 2] // Exclude cancelled documents
+
+            ]),
+
+            fields: JSON.stringify(["name"]),
+
+            limit_page_length: 1
+
+          },
+
+          headers: {
+
+            Authorization: `token ${apiKey}:${apiSecret}`,
+
+            "Content-Type": "application/json",
+
+          },
+
+          withCredentials: true,
+
+        }
+
+      );
+
+
+
+      const data = response.data?.data;
+
+      setHasExpenditures(data && data.length > 0);
+
+    } catch (err: any) {
+
+      console.error("Expenditure check error:", err);
+
+      setHasExpenditures(false);
+
+    }
+
+  }, [record, isAuthenticated, apiKey, apiSecret]);
+
+
+
   React.useEffect(() => {
 
     checkProjectExtension();
 
   }, [checkProjectExtension]);
+
+
+
+  React.useEffect(() => {
+
+    checkExpenditures();
+
+  }, [checkExpenditures]);
 
 
 
@@ -591,6 +669,8 @@ export default function RecordDetailPage() {
         type: "Data",
 
         required: true,
+
+        readOnly: hasExpenditures,
 
       },
 
@@ -917,7 +997,7 @@ export default function RecordDetailPage() {
 
     ];
 
-  }, [record]);
+  }, [record, hasExpenditures]);
 
 
 
@@ -1084,6 +1164,16 @@ export default function RecordDetailPage() {
       // Clean out any lingering %20 characters to ensure raw spaces
       newTenderIdRaw = decodeURIComponent(newTenderIdRaw).replace(/%20/g, " ");
       currentIdRaw = decodeURIComponent(currentIdRaw).replace(/%20/g, " ");
+
+      // Validation: Prevent changing Tender ID if expenditures exist
+      if (newTenderIdRaw && newTenderIdRaw !== currentIdRaw && hasExpenditures) {
+        toast.error("Cannot Change Tender ID", {
+          description: "Tender ID cannot be changed because there are expenditures linked to this tender.",
+          duration: Infinity,
+        });
+        setIsSaving(false);
+        return;
+      }
 
       if (newTenderIdRaw && newTenderIdRaw !== currentIdRaw) {
         try {
