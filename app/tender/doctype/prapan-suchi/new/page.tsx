@@ -143,7 +143,7 @@ export default function NewPrapanSuchiPage() {
           {
             name: "work_name",
             label: "Name of Work",
-            type: "Text",
+            type: "Small Text",
             required: true,
           },
           {
