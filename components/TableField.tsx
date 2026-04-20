@@ -21,6 +21,45 @@ import "react-datepicker/dist/react-datepicker.css";
 const SERVER_URL = "http://103.219.1.138:4412";
 const API_BASE_URL = `${SERVER_URL}/api/resource`;
 
+/**
+ * Safely parse date strings into Date objects, supporting multiple formats
+ * like YYYY-MM-DD, DD-MM-YYYY, and DD/MM/YYYY.
+ */
+const parseSafeDate = (dateStr: any): Date | null => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+  if (typeof dateStr !== 'string') return null;
+  
+  // Try standard parsing first (works for YYYY-MM-DD)
+  let date = new Date(dateStr);
+  if (!isNaN(date.getTime())) return date;
+
+  // Try parsing DD-MM-YYYY or DD/MM/YYYY
+  const parts = dateStr.split(/[-/]/).map(p => p.trim());
+  if (parts.length === 3) {
+    let d, m, y;
+    // Check for DD-MM-YYYY
+    if (parts[2].length === 4 && parts[0].length <= 2) {
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+    } 
+    // Check for YYYY-MM-DD (as fallback)
+    else if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    }
+
+    if (y !== undefined && m !== undefined && d !== undefined) {
+      const newDate = new Date(y, m, d);
+      if (!isNaN(newDate.getTime())) return newDate;
+    }
+  }
+  
+  return null;
+};
+
 interface Option {
   value: string;
   label: string;
@@ -454,14 +493,29 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
   };
 
   const handleDownload = () => {
-    const csvContent = [
-      (field.columns || []).map(c => c.label).join(','),
-      ...rows.map((row: any) =>
-        (field.columns || []).map(c => row[c.name] || '').join(',')
-      )
-    ].join('\n');
+    const headers = (field.columns || []).map(c => {
+      let label = c.label || '';
+      if (label.includes(',') || label.includes('\n') || label.includes('"')) {
+        label = `"${label.replace(/"/g, '""')}"`;
+      }
+      return label;
+    }).join(',');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvRows = rows.map((row: any) =>
+      (field.columns || []).map(c => {
+        let val = row[c.name] === null || row[c.name] === undefined ? "" : String(row[c.name]);
+        if (val.includes(',') || val.includes('\n') || val.includes('"')) {
+          val = `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      }).join(',')
+    );
+
+    const csvContent = [headers, ...csvRows].join('\n');
+    
+    // Add UTF-8 BOM to ensure Excel opens Marathi characters correctly
+    const BOM = '\ufeff';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -480,15 +534,46 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
+      let text = e.target?.result as string;
+      
+      // Remove BOM if present
+      if (text.startsWith('\ufeff')) {
+        text = text.substring(1);
+      }
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
 
       if (lines.length < 2) {
         alert('File must contain headers and at least one data row');
         return;
       }
 
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      // Improved CSV parsing to handle quoted values with commas
+      const parseCSVLine = (line: string) => {
+        const result = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              current += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
+      const headers = parseCSVLine(lines[0]);
       const columnMap = new Map<string, number>();
 
       (field.columns || []).forEach(col => {
@@ -501,18 +586,28 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
       });
 
       const newRows = lines.slice(1).map((line) => {
-        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const values = parseCSVLine(line);
         const row: any = { id: Date.now().toString() + Math.random() };
 
         (field.columns || []).forEach(col => {
           const colIndex = columnMap.get(col.name);
-          row[col.name] = (colIndex !== undefined && values[colIndex]) ? values[colIndex] : '';
+          let val = (colIndex !== undefined && values[colIndex] !== undefined) ? values[colIndex] : '';
+          
+          // Normalize dates to YYYY-MM-DD if the column is a Date type
+          if (col.type === "Date" && val) {
+            const parsed = parseSafeDate(val);
+            if (parsed) {
+              val = parsed.toISOString().split('T')[0];
+            }
+          }
+          
+          row[col.name] = val;
         });
 
         return row;
       });
 
-      remove();
+      // remove(); // Removed to allow appending rows instead of overriding
       newRows.forEach(row => append(row));
       alert(`Successfully imported ${newRows.length} rows`);
     };
@@ -616,7 +711,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
                             />
                           ) : c.type === "Date" ? (
                             <DatePicker
-                              selected={currentRowData[c.name] ? new Date(currentRowData[c.name]) : null}
+                              selected={parseSafeDate(currentRowData[c.name])}
                               onChange={(date: Date | null) => {
                                 handleTableInputChange(idx, c.name, date ? date.toISOString().split('T')[0] : '');
                               }}
