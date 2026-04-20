@@ -14,7 +14,7 @@ import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 import { TimeAgo } from "@/components/TimeAgo";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 const INITIAL_PAGE_SIZE = 25;
 const LOAD_MORE_SIZE = 10;
 
@@ -192,7 +192,7 @@ export default function DataImportListPage() {
             <th>Import Type</th>
             <th>Status</th>
             <th className="text-right pr-4" style={{ width: "100px" }}>
-               {filteredRecords.length} / {totalCount}
+              {filteredRecords.length} / {totalCount}
             </th>
           </tr>
         </thead>
@@ -209,11 +209,10 @@ export default function DataImportListPage() {
                   <td>{record.reference_doctype}</td>
                   <td>{record.import_type}</td>
                   <td>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      record.status === 'Success' ? 'bg-green-100 text-green-700' :
-                      record.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${record.status === 'Success' ? 'bg-green-100 text-green-700' :
+                        record.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                      }`}>
                       {record.status}
                     </span>
                   </td>

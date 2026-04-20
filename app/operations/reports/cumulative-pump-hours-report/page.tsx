@@ -8,7 +8,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 // --- API Configuration ---
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.3.169:2223/";
 const REPORT_API_PATH = "api/method/frappe.desk.query_report.run";
 const REPORT_NAME = "Cumulative Pump Hours Report";
 
@@ -74,11 +74,11 @@ export default function CumulativePumpHoursReportPage() {
   // --- Helper Functions ---
   const groupDataByLISStage = useMemo(() => {
     const grouped: Record<string, Record<string, ReportData[]>> = {};
-    
+
     reportData.forEach((row: ReportData) => {
       const lis = row.lis_name || "Unknown";
       const stage = row.stage || "Unknown";
-      
+
       if (!grouped[lis]) {
         grouped[lis] = {};
       }
@@ -87,7 +87,7 @@ export default function CumulativePumpHoursReportPage() {
       }
       grouped[lis][stage].push(row);
     });
-    
+
     return grouped;
   }, [reportData]);
 
@@ -100,7 +100,7 @@ export default function CumulativePumpHoursReportPage() {
       total_this_year: 0,
       cumulative_hours_till_date: 0,
     };
-    
+
     rows.forEach((row: ReportData) => {
       total.hours_till_jun_2024 += parseFloat(row.hours_till_jun_2024) || 0;
       total.jul_24 += parseFloat(row.jul_24) || 0;
@@ -118,7 +118,7 @@ export default function CumulativePumpHoursReportPage() {
       total.total_this_year += parseFloat(row.total_this_year) || 0;
       total.cumulative_hours_till_date += parseFloat(row.cumulative_hours_till_date) || 0;
     });
-    
+
     return total;
   }, []);
 
@@ -380,7 +380,7 @@ export default function CumulativePumpHoursReportPage() {
 
         <div className="tab-content active relative">
           {error && <div className="alert alert--danger mb-5"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
-          
+
           <div className="filters-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
             <div className="form-group z-[150]">
               <label className="text-sm font-medium mb-1 block">Fiscal Year</label>
@@ -520,7 +520,7 @@ export default function CumulativePumpHoursReportPage() {
           .print-header { text-align: center; margin-bottom: 20px; }
           .print-header h2 { font-size: 18px; font-weight: bold; margin: 0 0 10px 0; }
         `}</style>
-        
+
         <div className="print-header">
           <h2>CUMULATIVE PUMP HOURS {formatFiscalYearShort(filters.fiscal_year)}</h2>
         </div>

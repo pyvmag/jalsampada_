@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ImportPreview } from "../ImportPreview";
 import { Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 
 export default function DataImportDetailsPage() {
   const router = useRouter();
@@ -396,9 +396,9 @@ export default function DataImportDetailsPage() {
                 <p>Loading preview data...</p>
               </div>
             ) : (
-              <ImportPreview 
-                doctype={data.reference_doctype} 
-                previewData={previewData} 
+              <ImportPreview
+                doctype={data.reference_doctype}
+                previewData={previewData}
                 status={data.status}
                 onRefresh={fetchPreviewData}
               />

@@ -60,18 +60,18 @@ export function DownloadTemplateModal({
   const fetchDoctypeDetails = React.useCallback(async (dtName: string) => {
     try {
       // Use getdoctype which is the most comprehensive API for schema, used by Desk
-      const url = `http://103.219.1.138:4412/api/method/frappe.desk.form.load.getdoctype`;
+      const url = `http://103.219.3.169:2223/api/method/frappe.desk.form.load.getdoctype`;
       const params = new URLSearchParams();
       params.append("doctype", dtName);
-      
+
       const resp = await axios.post(url, params.toString(), {
-        headers: { 
+        headers: {
           Authorization: `token ${apiKey}:${apiSecret}`,
           "Content-Type": "application/x-www-form-urlencoded"
         },
         withCredentials: true
       });
-      
+
       // getdoctype returns { docs: [ { name: ..., fields: [...] } ] }
       const docSchema = resp.data.docs ? resp.data.docs[0] : null;
       if (!docSchema || !docSchema.fields) {
@@ -79,19 +79,19 @@ export function DownloadTemplateModal({
       }
 
       console.log(`Loaded ${docSchema.fields.length} fields for ${dtName}`);
-      return { 
-        name: dtName, 
-        fields: docSchema.fields 
+      return {
+        name: dtName,
+        fields: docSchema.fields
       };
     } catch (e) {
       console.warn(`getdoctype failed for ${dtName}, falling back to get_docfields`, e);
       // Fallback 1: get_docfields
       try {
-        const url = `http://103.219.1.138:4412/api/method/frappe.model.meta.get_docfields`;
+        const url = `http://103.219.3.169:2223/api/method/frappe.model.meta.get_docfields`;
         const params = new URLSearchParams();
         params.append("doctype", dtName);
         const resp2 = await axios.post(url, params.toString(), {
-          headers: { 
+          headers: {
             Authorization: `token ${apiKey}:${apiSecret}`,
             "Content-Type": "application/x-www-form-urlencoded"
           },
@@ -100,7 +100,7 @@ export function DownloadTemplateModal({
         return { name: dtName, fields: resp2.data.message || [] };
       } catch (e2) {
         // Fallback 2: resource API
-        const resp3 = await axios.get(`http://103.219.1.138:4412/api/resource/DocType/${encodeURIComponent(dtName)}`, {
+        const resp3 = await axios.get(`http://103.219.3.169:2223/api/resource/DocType/${encodeURIComponent(dtName)}`, {
           headers: { Authorization: `token ${apiKey}:${apiSecret}` },
           withCredentials: true
         });
@@ -144,12 +144,12 @@ export function DownloadTemplateModal({
         const mandatory = dt.fields
           .filter(f => f.reqd && !["Section Break", "Column Break", "Table"].includes(f.fieldtype))
           .map(f => f.fieldname);
-        
+
         // Find if this doctype is the main one or a child table field name
-        const key = dtName === referenceDoctype 
-          ? referenceDoctype 
+        const key = dtName === referenceDoctype
+          ? referenceDoctype
           : tables.find((t: any) => t.options === dtName)?.fieldname;
-        
+
         if (key) {
           initialSelected[key] = Array.from(new Set([...(initialSelected[key] || []), ...mandatory]));
         }
@@ -191,7 +191,7 @@ export function DownloadTemplateModal({
     next[referenceDoctype] = ["name", ...doctypes[referenceDoctype].fields
       .filter(f => !["Section Break", "Column Break", "Table"].includes(f.fieldtype))
       .map(f => f.fieldname)];
-    
+
     // Child Tables
     childTableFields.forEach(t => {
       const dt = doctypes[t.options!];
@@ -222,7 +222,7 @@ export function DownloadTemplateModal({
       params.append("file_type", fileType);
 
       const response = await axios.post(
-        `http://103.219.1.138:4412/api/method/frappe.core.doctype.data_import.data_import.download_template`,
+        `http://103.219.3.169:2223/api/method/frappe.core.doctype.data_import.data_import.download_template`,
         params.toString(),
         {
           headers: {
@@ -234,8 +234,8 @@ export function DownloadTemplateModal({
         }
       );
 
-      const blob = new Blob([response.data], { 
-        type: fileType === "CSV" ? "text/csv" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+      const blob = new Blob([response.data], {
+        type: fileType === "CSV" ? "text/csv" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -245,7 +245,7 @@ export function DownloadTemplateModal({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success("Template downloaded successfully!");
       onOpenChange(false);
     } catch (err) {
@@ -267,11 +267,11 @@ export function DownloadTemplateModal({
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 pt-1">
-        {[{fieldname: "name", label: "ID", reqd: 1, fieldtype: "Data"}, ...fields]
+        {[{ fieldname: "name", label: "ID", reqd: 1, fieldtype: "Data" }, ...fields]
           .filter(f => !["Section Break", "Column Break", "Table"].includes(f.fieldtype))
           .map(field => (
             <div key={field.fieldname} className="flex items-center space-x-3 group cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors"
-                 onClick={() => handleToggleField(groupKey, field.fieldname)}>
+              onClick={() => handleToggleField(groupKey, field.fieldname)}>
               <Checkbox
                 id={`${groupKey}-${field.fieldname}`}
                 checked={(selectedFields[groupKey] || []).includes(field.fieldname)}
