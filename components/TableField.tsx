@@ -15,6 +15,7 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import "./TableField.css";
 import "react-datepicker/dist/react-datepicker.css";
+import { toast } from "sonner";
 
 // 🔴 OLD: const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
 // 🟢 NEW: Split into Server Root and API Path
@@ -396,16 +397,7 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
         const rowTotal = Number(((basic + ins) * (gst / 100)).toFixed(2));
         formMethods.setValue(`${field.name}.${rowIndex}.bill_amount`, rowTotal, { shouldDirty: true });
 
-        // Update parent total immediately to keep everything in sync
-        const allRows = formMethods.getValues(field.name) || [];
-        const newParentTotal = Number(allRows.reduce((sum: number, r: any, i: number) => {
-          const val = (i === rowIndex) ? rowTotal : (Number(r.bill_amount) || 0);
-          return sum + val;
-        }, 0).toFixed(2));
-
-        if (Number(formMethods.getValues("bill_amount")) !== newParentTotal) {
-          formMethods.setValue("bill_amount", newParentTotal, { shouldDirty: true });
-        }
+        // Check logic removed as per request
       }
     }
 
