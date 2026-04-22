@@ -300,7 +300,7 @@ export default function NewExpenditurePage() {
 
     const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
       // Recalculate when bill_amount or tender_amount changes
-      if (name === "bill_amount" || name === "tender_amount" || name === undefined) {
+      if (name === "bill_amount" || name === "tender_amount" || name === "expenditure_details" || name === undefined) {
         calculateTotals(value);
       }
 
@@ -337,16 +337,7 @@ export default function NewExpenditurePage() {
               );
             }
 
-            // Always recalculate parent total using the freshly calculated value for the current row
-            const allDetails = formInstance.getValues("expenditure_details") || [];
-            const newTotal = Number(allDetails.reduce((sum: number, r: any, i: number) => {
-              const val = (i === index) ? calculatedRowAmt : (Number(r.bill_amount) || 0);
-              return sum + val;
-            }, 0).toFixed(2));
-
-            if (Number(formInstance.getValues("bill_amount")) !== newTotal) {
-              formInstance.setValue("bill_amount", newTotal, { shouldDirty: true, shouldValidate: true });
-            }
+            // Removed toast check as per request
           }
         }
       }
