@@ -17,7 +17,7 @@ import "./TableField.css";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "sonner";
 
-// 🔴 OLD: const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+// 🔴 OLD: const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 // 🟢 NEW: Split into Server Root and API Path
 const SERVER_URL = "http://103.219.1.138:4412";
 const API_BASE_URL = `${SERVER_URL}/api/resource`;
@@ -394,7 +394,9 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
         const gstStr = newRow.custom_gst ? newRow.custom_gst.toString().replace("%", "").trim() : "0";
         const gst = parseFloat(gstStr) || 0;
 
-        const rowTotal = Number(((basic + ins) * (gst / 100)).toFixed(2));
+        const totalBase = basic + ins;
+        const gstAmount = totalBase * (gst / 100);
+        const rowTotal = Number((totalBase + gstAmount).toFixed(2));
         formMethods.setValue(`${field.name}.${rowIndex}.bill_amount`, rowTotal, { shouldDirty: true });
 
         // Check logic removed as per request

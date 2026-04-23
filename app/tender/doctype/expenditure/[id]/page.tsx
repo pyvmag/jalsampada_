@@ -472,7 +472,8 @@ export default function RecordDetailPage() {
             const gst = Number(gstStr) || 0;
             
             const totalBase = basic + ins;
-            const calculatedRowAmt = Number((totalBase * (gst / 100)).toFixed(2));
+            const gstAmount = totalBase * (gst / 100);
+            const calculatedRowAmt = Number((totalBase + gstAmount).toFixed(2));
 
             // Update row bill_amount if it changed
             if (Number(row.bill_amount) !== calculatedRowAmt) {
