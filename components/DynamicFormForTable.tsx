@@ -14,7 +14,7 @@ import { Upload, X, Eye } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.1.138:4412";
 
 // Helper: Build dynamic filters for Link fields
 function buildDynamicFilters(
@@ -258,7 +258,8 @@ export function DynamicFormForTable({
                 const gst = parseFloat(gstStr) || 0;
                 
                 const totalBase = basic + ins;
-                const finalAmt = Number((totalBase * (gst / 100)).toFixed(2));
+                const gstAmount = totalBase * (gst / 100);
+                const finalAmt = Number((totalBase + gstAmount).toFixed(2));
                 newFormData = { ...newFormData, bill_amount: finalAmt };
             }
 
