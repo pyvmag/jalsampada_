@@ -394,7 +394,9 @@ function TableFieldContent({ field, control, register, errors, disabled = false 
         const gstStr = newRow.custom_gst ? newRow.custom_gst.toString().replace("%", "").trim() : "0";
         const gst = parseFloat(gstStr) || 0;
 
-        const rowTotal = Number(((basic + ins) * (gst / 100)).toFixed(2));
+        const totalBase = basic + ins;
+        const gstAmount = totalBase * (gst / 100);
+        const rowTotal = Number((totalBase + gstAmount).toFixed(2));
         formMethods.setValue(`${field.name}.${rowIndex}.bill_amount`, rowTotal, { shouldDirty: true });
 
         // Check logic removed as per request

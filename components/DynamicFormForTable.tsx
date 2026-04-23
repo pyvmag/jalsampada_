@@ -258,7 +258,8 @@ export function DynamicFormForTable({
                 const gst = parseFloat(gstStr) || 0;
                 
                 const totalBase = basic + ins;
-                const finalAmt = Number((totalBase * (gst / 100)).toFixed(2));
+                const gstAmount = totalBase * (gst / 100);
+                const finalAmt = Number((totalBase + gstAmount).toFixed(2));
                 newFormData = { ...newFormData, bill_amount: finalAmt };
             }
 
