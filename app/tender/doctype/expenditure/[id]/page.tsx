@@ -433,6 +433,11 @@ export default function RecordDetailPage() {
           // Normal update (User typing or subsequent updates)
           formInstance.setValue("bill_upto", Number(billUpto.toFixed(2)), { shouldDirty: !isProgrammaticUpdate.current });
           formInstance.setValue("remaining_amount", Number(remainingAmount.toFixed(2)), { shouldDirty: !isProgrammaticUpdate.current });
+
+          // 🟢 Auto-set saved_amount if bill_type is Final
+          if (formInstance.getValues("bill_type") === "Final") {
+            formInstance.setValue("saved_amount", Number(remainingAmount.toFixed(2)), { shouldDirty: !isProgrammaticUpdate.current });
+          }
         }
       }
     };
@@ -508,9 +513,13 @@ export default function RecordDetailPage() {
     form.watch((value: any, { name }: { name?: string }) => {
       if (name === "bill_type") {
         setBillType(value.bill_type);
+        if (value.bill_type === "Final") {
+          const remaining = form.getValues("remaining_amount");
+          form.setValue("saved_amount", remaining, { shouldDirty: true });
+        }
 
         // 🟢 Update bill_number format
-        const currentBillNo = form.getValues('bill_number');
+        const currentBillNo = form.getValues("bill_number");
         if (currentBillNo) {
           const match = currentBillNo.match(/\d+/);
           if (match) {
@@ -861,14 +870,12 @@ export default function RecordDetailPage() {
     }
 
     if (data.bill_type === "Final") {
-      // Rule 2: Mentor's Rule for Final Bills
-      // bill_upto = bill_amount + prev_cumulative_amount
-      const billUpto = billAmount + prevCumulativeAmount;
-      const diff = Math.abs(billUpto - savedAmount);
+      // Rule 2: Saved Amount must equal Remaining Amount
+      const diff = Math.abs(remainingAmount - savedAmount);
 
       if (diff > 0.01) {
         toast.error("Saved Amount Mismatch", {
-          description: `As per rule: Tender Amount (${tenderAmount.toLocaleString()}) - Remaining Amount must equal Saved Amount (${savedAmount.toLocaleString()}). Currently there is a difference of ${diff.toLocaleString()}.`,
+          description: `Saved Amount (${savedAmount.toLocaleString()}) must be exactly equal to Bill Remaining Amount (${remainingAmount.toLocaleString()}) for Final bills.`,
           duration: Infinity,
         });
         return;
@@ -1144,32 +1151,29 @@ export default function RecordDetailPage() {
         return;
       }
 
-      // Rule 2: Balance Check
       const details = formData.expenditure_details || [];
       const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
 
-      const amtToBeMatched = formData.bill_type === "Final"
-        ? (savedAmount - prevCumulativeAmount)
-        : (totalChildBillAmt + savedAmount);
-
-      if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
-        const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
-        toast.error("Amount Mismatch", {
-          description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
-          duration: Infinity
-        });
-        return;
-      }
-
-      // Rule 3: Saved Amount check (Only for Final bills)
+      // Validation Logic
       if (formData.bill_type === "Final") {
-        const billUpto = billAmount + prevCumulativeAmount;
-        const diff = Math.abs(billUpto - savedAmount);
+        // Saved Amount must equal Remaining Amount
+        const remainingAmount = Number(formData.remaining_amount) || 0;
+        const diff = Math.abs(remainingAmount - savedAmount);
 
         if (diff > 0.01) {
-          toast.error("Saved Amount Validation Failed", {
-            description: `Tender Amount (${tenderAmount.toLocaleString()}) - Bill Remaining Amount (${(Number(formData.remaining_amount) || 0).toLocaleString()}) must be equal to Saved Amount (${savedAmount.toLocaleString()}).`,
+          toast.error("Saved Amount Mismatch", {
+            description: `Saved Amount (${savedAmount.toLocaleString()}) must be exactly equal to Bill Remaining Amount (${remainingAmount.toLocaleString()}) for Final bills.`,
             duration: Infinity,
+          });
+          return;
+        }
+      } else {
+        // For Running Bills, ensure table matches Bill Amount
+        if (Math.abs(billAmount - totalChildBillAmt) > 0.01) {
+          const relation = billAmount > totalChildBillAmt ? "exceeds" : "is less than";
+          toast.error("Amount Mismatch", {
+            description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${totalChildBillAmt.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
+            duration: Infinity
           });
           return;
         }

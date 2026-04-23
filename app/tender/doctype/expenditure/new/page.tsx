@@ -292,6 +292,11 @@ export default function NewExpenditurePage() {
       const remainingAmount = tenderAmount - billUpto;
       if (Number(formInstance.getValues("remaining_amount")) !== remainingAmount) {
         formInstance.setValue("remaining_amount", Number(remainingAmount.toFixed(2)), { shouldDirty: true });
+        
+        // 🟢 Auto-set saved_amount if bill_type is Final
+        if (formInstance.getValues("bill_type") === "Final") {
+          formInstance.setValue("saved_amount", Number(remainingAmount.toFixed(2)), { shouldDirty: true });
+        }
       }
     };
 
@@ -393,12 +398,17 @@ export default function NewExpenditurePage() {
 
     // 3️⃣ Watch bill_type to update buttons dynamically
     form.watch((value: any, { name }: { name?: string }) => {
-      if (name === 'bill_type') {
-        const currentType = form.getValues('bill_type');
+      if (name === "bill_type") {
+        const currentType = form.getValues("bill_type");
         setBillType(currentType); // this controls DynamicForm buttons
 
+        if (currentType === "Final") {
+          const remaining = form.getValues("remaining_amount");
+          form.setValue("saved_amount", remaining, { shouldDirty: true });
+        }
+
         // 🟢 Update bill_number based on type (RA Xst vs Xst & Final)
-        const currentBillNo = form.getValues('bill_number');
+        const currentBillNo = form.getValues("bill_number");
         if (currentBillNo) {
           const match = currentBillNo.match(/\d+/);
           if (match) {
@@ -689,13 +699,6 @@ export default function NewExpenditurePage() {
     const savedAmount = Number(data.saved_amount) || 0;
     const details = data.expenditure_details || [];
     const totalChildBillAmt = details.reduce((sum: number, row: any) => sum + (Number(row.bill_amount) || 0), 0);
-    // For Final bills, Saved Amount is the project total (Previous + This Bill).
-    // For Running bills, Saved Amount is just the non-table part of THIS bill.
-    // 🟢 MENTOR'S LOGIC VALIDATION
-    // Formula: Tender Amount - Bill Remaining Amount = Saved Amount
-    // This is mathematically equivalent to: bill_upto = saved_amount
-
-    // Validation: Bill Remaining Amount
     const remainingAmount = Number(data.remaining_amount) || 0;
 
     // 1) Bill Remaining Amount should not be negative.
@@ -726,14 +729,12 @@ export default function NewExpenditurePage() {
     }
 
     if (data.bill_type === "Final") {
-      // Rule 2: Mentor's Rule for Final Bills
-      // bill_upto = bill_amount + prev_cumulative_amount
-      const billUpto = billAmount + prevCumulativeAmount;
-      const diff = Math.abs(billUpto - savedAmount);
+      // Rule 2: Saved Amount must equal Remaining Amount
+      const diff = Math.abs(remainingAmount - savedAmount);
 
       if (diff > 0.01) {
         toast.error("Saved Amount Mismatch", {
-          description: `As per rule: Tender Amount (${tenderAmount.toLocaleString()}) - Remaining Amount must equal Saved Amount (${savedAmount.toLocaleString()}). Currently there is a difference of ${diff.toLocaleString()}.`,
+          description: `Saved Amount (${savedAmount.toLocaleString()}) must be exactly equal to Bill Remaining Amount (${remainingAmount.toLocaleString()}) for Final bills.`,
           duration: Infinity,
         });
         return;
