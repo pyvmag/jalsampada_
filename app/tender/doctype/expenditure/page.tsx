@@ -14,7 +14,7 @@ import { useSelection } from "@/hooks/useSelection";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { bulkDeleteRPC } from "@/api/rpc";
 import { toast } from "sonner";
-import { getApiMessages} from "@/lib/utils";
+import { getApiMessages } from "@/lib/utils";
 import { FrappeErrorDisplay } from "@/components/FrappeErrorDisplay";
 import { Plus, List, LayoutGrid, Loader2 } from "lucide-react";
 import { TimeAgo } from "@/components/TimeAgo";
@@ -87,7 +87,7 @@ export default function DoctypePage() {
   // Filter rows client-side for instant results
   const filteredRows = React.useMemo(() => {
     let filtered = rows;
-    
+
     // Apply search filter
     if (debouncedSearch) {
       filtered = filtered.filter(record =>
@@ -97,12 +97,12 @@ export default function DoctypePage() {
         (record.lift_irrigation_scheme && record.lift_irrigation_scheme.toLowerCase().includes(debouncedSearch.toLowerCase()))
       );
     }
-    
+
     // Apply LIS filter
     if (selectedLis) {
       filtered = filtered.filter(record => record.lift_irrigation_scheme === selectedLis);
     }
-    
+
     return filtered;
   }, [rows, debouncedSearch, selectedLis]);
 
@@ -194,11 +194,11 @@ export default function DoctypePage() {
           }),
           isReset
             ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-                params: { 
-                    doctype: doctypeName,
-                },
-                headers: commonHeaders,
-              })
+              params: {
+                doctype: doctypeName,
+              },
+              headers: commonHeaders,
+            })
             : Promise.resolve(null),
         ]);
 
@@ -281,7 +281,7 @@ export default function DoctypePage() {
 
         if (errorMessages.length > 0) {
           // Show error messages from server
-          toast.error("Failed to delete records", { 
+          toast.error("Failed to delete records", {
             description: <FrappeErrorDisplay messages={errorMessages} />,
             duration: Infinity
           });
@@ -295,14 +295,14 @@ export default function DoctypePage() {
       fetchRecords(0, true); // Refresh list
     } catch (err: any) {
       console.error("Bulk Delete Error:", err);
-      
+
       const messages = getApiMessages(
         null,
         err,
         "Records deleted successfully",
         "Failed to delete records"
       );
-      
+
       toast.error(messages.message, { description: messages.description, duration: Infinity });
     } finally {
       setIsDeleting(false);
@@ -384,14 +384,13 @@ export default function DoctypePage() {
                   </td>
                   <td>{record.name}</td>
                   <td>
-                    <span 
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.docstatus === 1 
-                          ? "bg-green-100 text-green-800" 
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${record.docstatus === 1
+                          ? "bg-green-100 text-green-800"
                           : record.docstatus === 2
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                     >
                       {record.docstatus === 1 ? "Submitted" : record.docstatus === 2 ? "Cancelled" : "Draft"}
                     </span>
@@ -462,7 +461,7 @@ export default function DoctypePage() {
           <h2>{title}</h2>
           <p>Manage Expenditure records</p>
         </div>
-        
+
         {/* 🟢 3. Header Action Switch */}
         {selectedIds.size > 0 ? (
           <BulkActionBar
@@ -472,7 +471,7 @@ export default function DoctypePage() {
             isDeleting={isDeleting}
           />
         ) : (
-          <button 
+          <button
             className="btn btn--primary flex items-center gap-2"
             onClick={() => router.push('/tender/doctype/expenditure/new')}
           >
