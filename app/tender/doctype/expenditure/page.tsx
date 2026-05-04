@@ -87,7 +87,7 @@ export default function DoctypePage() {
   // Filter rows client-side for instant results
   const filteredRows = React.useMemo(() => {
     let filtered = rows;
-    
+
     // Apply search filter
     if (debouncedSearch) {
       filtered = filtered.filter(record =>
@@ -97,12 +97,12 @@ export default function DoctypePage() {
         (record.lift_irrigation_scheme && record.lift_irrigation_scheme.toLowerCase().includes(debouncedSearch.toLowerCase()))
       );
     }
-    
+
     // Apply LIS filter
     if (selectedLis) {
       filtered = filtered.filter(record => record.lift_irrigation_scheme === selectedLis);
     }
-    
+
     return filtered;
   }, [rows, debouncedSearch, selectedLis]);
 
@@ -194,11 +194,11 @@ export default function DoctypePage() {
           }),
           isReset
             ? axios.get(`${API_BASE_URL}/api/method/frappe.client.get_count`, {
-                params: { 
-                    doctype: doctypeName,
-                },
-                headers: commonHeaders,
-              })
+              params: {
+                doctype: doctypeName,
+              },
+              headers: commonHeaders,
+            })
             : Promise.resolve(null),
         ]);
 
@@ -384,14 +384,13 @@ export default function DoctypePage() {
                   </td>
                   <td>{record.name}</td>
                   <td>
-                    <span 
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.docstatus === 1 
-                          ? "bg-green-100 text-green-800" 
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${record.docstatus === 1
+                          ? "bg-green-100 text-green-800"
                           : record.docstatus === 2
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                     >
                       {record.docstatus === 1 ? "Submitted" : record.docstatus === 2 ? "Cancelled" : "Draft"}
                     </span>

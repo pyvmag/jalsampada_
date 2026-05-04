@@ -293,7 +293,7 @@ export function DynamicFormForTable({
         const targetFields = [...new Set(dependentFields.map(f => f.fetchFrom!.targetField))];
 
         try {
-            const response = await axios.get(`${API_BASE_URL}api/method/frappe.client.validate_link`, {
+            const response = await axios.get(`${API_BASE_URL}/api/method/frappe.client.validate_link`, {
                 params: {
                     doctype: targetDoctype,
                     docname: value,

@@ -740,8 +740,8 @@ export default function NewExpenditurePage() {
         return;
       }
     } else {
-      // Rule 3: For Running Bills, ensure table matches Bill Amount
-      if (Math.abs(billAmount - totalChildBillAmt) > 0.01) {
+      // Rule 3: For Running Bills, ensure table matches Bill Amount (nearest integer)
+      if (Math.round(billAmount) !== Math.round(totalChildBillAmt)) {
         const relation = billAmount > totalChildBillAmt ? "exceeds" : "is less than";
         toast.error("Amount Mismatch", {
           description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${totalChildBillAmt.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
@@ -945,7 +945,8 @@ export default function NewExpenditurePage() {
         ? (savedAmount - prevCumulativeAmount)
         : (totalChildBillAmt + savedAmount);
 
-      if (Math.abs(billAmount - amtToBeMatched) > 0.01) {
+      // Nearest integer comparison
+      if (Math.round(billAmount) !== Math.round(amtToBeMatched)) {
         const relation = billAmount > amtToBeMatched ? "exceeds" : "is less than";
         toast.error("Amount Mismatch", {
           description: `Entered Bill Amount (${billAmount.toLocaleString()}) ${relation} the Invoice Amount (${amtToBeMatched.toLocaleString()}). Please review and correct the amounts. Both amounts must be equal to proceed.`,
