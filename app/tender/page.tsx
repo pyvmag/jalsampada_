@@ -34,6 +34,7 @@ const reportsDoctypes: Doctype[] = [
   // Reports
   { name: "expenditure_details_report", title: "Expenditure Details Report", icon: BarChart3 },
   { name: "tender_level_report", title: "Tender Level Report", icon: BarChart3 },
+  { name: "pump-expenditure-report", title: "Pump Expenditure Report", icon: BarChart3 },
 ];
 
 const reportsGroup: DoctypeGroup = {
