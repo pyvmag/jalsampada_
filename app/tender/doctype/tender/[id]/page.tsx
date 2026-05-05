@@ -82,15 +82,17 @@ interface TenderProjectData {
   // Extension Child Table
 
   custom_tender_extension_history?: Array<{
-
     extension_count?: string;
-
     extension_upto?: string;
-
     sanction_letter?: string;
-
     attach?: string;
+  }>;
 
+  // EIRL Child Table
+  custom_is_eirl?: 0 | 1;
+  custom_eirl_details?: Array<{
+    sanction_letter?: string;
+    attach?: string;
   }>;
 
 
@@ -763,29 +765,42 @@ export default function RecordDetailPage() {
       },
 
       {
-
         name: "custom_tender_extension_history",
-
         label: "Tender Extension Details",
-
         type: "Table",
-
         options: "Extension Period Details",
-
         columns: [
-
           { name: "extension_count", label: "Extension Count", type: "Read Only" },
-
-          { name: "extension_upto", label: "Extension Upto", type: "Date", },
-
+          { name: "extension_upto", label: "Extension Upto", type: "Date" },
           { name: "sanction_letter", label: "Sanction Letter", type: "Data" },
-
           { name: "attach", label: "Attach", type: "Attach" },
-
         ],
-
         displayDependsOn: "custom_is_extension==1"
-
+      },
+      {
+        name: "custom_is_eirl",
+        label: "Is EIRL",
+        type: "Check",
+        displayDependsOn: (data: any) => {
+          if (!data.custom_expected_date) return false;
+          const completionDate = new Date(data.custom_expected_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          completionDate.setHours(0, 0, 0, 0);
+          const diffInDays = (completionDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+          return diffInDays <= 2;
+        },
+      },
+      {
+        name: "custom_eirl_details",
+        label: "EIRL Details",
+        type: "Table",
+        options: "EIRL Details",
+        columns: [
+          { name: "sanction_letter", label: "Sanction Letter", type: "Data" },
+          { name: "attach", label: "Attach", type: "Attach" },
+        ],
+        displayDependsOn: "custom_is_eirl==1"
       },
 
       {
@@ -1011,96 +1026,54 @@ export default function RecordDetailPage() {
 
     const { watch, setValue, getValues } = methods;
 
-    const tableName = 'custom_tender_extension_history';
-
-
-
     const subscription = watch((value: any, { name, type }: any) => {
+      const extensionTable = 'custom_tender_extension_history';
+      const eirlTable = 'custom_eirl_details';
 
-
-
-      // 1. Toggle ON -> Add first row (01) if empty
-
-      // We check if value exists because in some cases value might be partial
-
+      // 1. Extension Toggle ON -> Add first row (01) if empty
       if (name === 'custom_is_extension' && (value?.custom_is_extension === 1 || value?.custom_is_extension === true)) {
-
-        const currentHistory = getValues(tableName) || [];
-
-
-
+        const currentHistory = getValues(extensionTable) || [];
         if (currentHistory.length === 0) {
-
-          setValue(tableName, [
-
+          setValue(extensionTable, [
             {
-
               extension_count: "01",
-
               extension_upto: "",
-
               sanction_letter: "",
-
               attach: ""
-
             }
-
           ], { shouldDirty: true });
-
-
-
-
-
-          return;
-
         }
-
       }
 
+      // 2. EIRL Toggle ON -> Add first row if empty
+      if (name === 'custom_is_eirl' && (value?.custom_is_eirl === 1 || value?.custom_is_eirl === true)) {
+        const currentEirl = getValues(eirlTable) || [];
+        if (currentEirl.length === 0) {
+          setValue(eirlTable, [
+            {
+              sanction_letter: "",
+              attach: ""
+            }
+          ], { shouldDirty: true });
+        }
+      }
 
-
-      // 2. Auto-Indexing Strategy (Handles Add/Delete)
-
-      // Checks table changes to enforce sequential indexing (01, 02, 03...)
-
-      if (!name || name === tableName || name.startsWith(tableName)) {
-
-        // slight delay to ensure getValues gets the *new* row added by the UI
-
+      // 3. Auto-Indexing Strategy (Extension)
+      if (!name || name === extensionTable || name.startsWith(extensionTable)) {
         setTimeout(() => {
-
-          const rows = getValues(tableName);
-
-
-
+          const rows = getValues(extensionTable);
           if (Array.isArray(rows) && rows.length > 0) {
-
-            let hasUpdated = false;
-
             rows.forEach((row: any, index: number) => {
-
               const expected = (index + 1).toString().padStart(2, '0');
-
-
-
-              // Only update if strictly different to avoid render loops
-
               if (row.extension_count !== expected) {
-
-                setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
-
-                hasUpdated = true;
-
+                setValue(`${extensionTable}.${index}.extension_count`, expected, { shouldDirty: true });
               }
-
             });
-
           }
-
         }, 50);
-
       }
 
+      // 4. Auto-Indexing Strategy (EIRL) - Removed as no count field now
     });
 
 
@@ -1272,29 +1245,27 @@ export default function RecordDetailPage() {
 
 
 
-      if (payload.custom_tender_extension_history) {
-
+      if (payload.custom_eirl_details) {
         await Promise.all(
-
-          payload.custom_tender_extension_history.map(async (row: any, index: number) => {
-
-            const original = data.custom_tender_extension_history?.[index]?.attach;
-
+          payload.custom_eirl_details.map(async (row: any, index: number) => {
+            const original = data.custom_eirl_details?.[index]?.attach;
             if (original instanceof File) {
-
               row.attach = await uploadFile(original, apiKey, apiSecret, baseUrl);
-
             }
-
           })
-
         );
-
       }
 
-
-
-      const nonDataFields = new Set<string>();
+      if (payload.custom_tender_extension_history) {
+        await Promise.all(
+          payload.custom_tender_extension_history.map(async (row: any, index: number) => {
+            const original = data.custom_tender_extension_history?.[index]?.attach;
+            if (original instanceof File) {
+              row.attach = await uploadFile(original, apiKey, apiSecret, baseUrl);
+            }
+          })
+        );
+      }      const nonDataFields = new Set<string>();
 
       formTabs.forEach((tab) => {
 
@@ -1357,7 +1328,7 @@ export default function RecordDetailPage() {
 
 
 
-      const boolFields = ["custom_is_extension"];
+      const boolFields = ["custom_is_extension", "custom_is_eirl"];
 
       boolFields.forEach((f) => {
 

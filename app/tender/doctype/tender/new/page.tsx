@@ -36,11 +36,19 @@ interface TenderProjectData {
   custom_expected_date?: string;
   custom_is_extension?: 0 | 1;
 
-  // Extension Child Table
   custom_tender_extension_history?: Array<{
     extension_count?: string;
     extension_upto?: string;
     sanction_letter?: string;
+    attach?: string;
+  }>;
+
+  // EIRL Child Table
+  custom_is_eirl?: 0 | 1;
+  custom_eirl_details?: Array<{
+    eirl_count?: string;
+    eirl_date?: string;
+    eirl_description?: string;
     attach?: string;
   }>;
 
@@ -58,10 +66,7 @@ interface TenderProjectData {
   custom_aadhaar_no?: string;
 }
 
-interface FormData {
-  [key: string]: any;
-  custom_expected_date?: string;
-}
+// No local FormData interface to avoid conflict with global FormData
 
 /* -------------------------------------------------
    2. Helper: upload a file to Frappe
@@ -195,7 +200,7 @@ export default function NewTenderPage() {
         label: "Is Extension",
         type: "Check",
         // This logic determines if field should be visible
-        displayDependsOn: (data: FormData) => {
+        displayDependsOn: (data: any) => {
           if (!data.custom_expected_date) return false;
 
           const completionDate = new Date(data.custom_expected_date);
@@ -246,6 +251,51 @@ export default function NewTenderPage() {
           { name: "attach", label: "Attach", type: "Attach" },
         ],
         displayDependsOn: "custom_is_extension==1"
+      },
+      {
+        name: "custom_is_eirl",
+        label: "Is EIRL",
+        type: "Check",
+        displayDependsOn: (data: any) => {
+          if (!data.custom_expected_date) return false;
+
+          const completionDate = new Date(data.custom_expected_date);
+          const today = new Date();
+
+          today.setHours(0, 0, 0, 0);
+          completionDate.setHours(0, 0, 0, 0);
+
+          const diffInTime = completionDate.getTime() - today.getTime();
+          const diffInDays = diffInTime / (1000 * 3600 * 24);
+
+          return diffInDays <= 2;
+        },
+        onChange: (value: any, data: any, setFieldValue: any) => {
+          if (value === 1 || value === true) {
+            const currentRows = data.custom_eirl_details || [];
+            if (currentRows.length === 0) {
+              setFieldValue("custom_eirl_details", [
+                {
+                  sanction_letter: "",
+                  attach: ""
+                }
+              ]);
+            }
+          } else {
+            setFieldValue("custom_eirl_details", []);
+          }
+        }
+      },
+      {
+        name: "custom_eirl_details",
+        label: "EIRL Details",
+        type: "Table",
+        options: "EIRL Details",
+        columns: [
+          { name: "sanction_letter", label: "Sanction Letter", type: "Data" },
+          { name: "attach", label: "Attach", type: "Attach" },
+        ],
+        displayDependsOn: "custom_is_eirl==1"
       },
       {
         name: "section_break0",
@@ -396,17 +446,15 @@ export default function NewTenderPage() {
   ------------------------------------------------- */
   const handleFormInit = React.useCallback((methods: any) => {
     const { watch, setValue, getValues } = methods;
-    const tableName = 'custom_tender_extension_history';
-
     const subscription = watch((value: any, { name, type }: any) => {
+      const extensionTable = 'custom_tender_extension_history';
+      const eirlTable = 'custom_eirl_details';
 
-      // 1. Toggle ON -> Add first row (01) if empty
-      // We check if value exists because in some cases value might be partial
+      // 1. Extension Toggle ON -> Add first row (01) if empty
       if (name === 'custom_is_extension' && (value?.custom_is_extension === 1 || value?.custom_is_extension === true)) {
-        const currentHistory = getValues(tableName) || [];
-
+        const currentHistory = getValues(extensionTable) || [];
         if (currentHistory.length === 0) {
-          setValue(tableName, [
+          setValue(extensionTable, [
             {
               extension_count: "01",
               extension_upto: "",
@@ -414,33 +462,38 @@ export default function NewTenderPage() {
               attach: ""
             }
           ], { shouldDirty: true });
-
-
-          return;
         }
       }
 
-      // 2. Auto-Indexing Strategy (Handles Add/Delete)
-      // Checks table changes to enforce sequential indexing (01, 02, 03...)
-      if (!name || name === tableName || name.startsWith(tableName)) {
-        // slight delay to ensure getValues gets the *new* row added by the UI
-        setTimeout(() => {
-          const rows = getValues(tableName);
+      // 2. EIRL Toggle ON -> Add first row if empty
+      if (name === 'custom_is_eirl' && (value?.custom_is_eirl === 1 || value?.custom_is_eirl === true)) {
+        const currentEirl = getValues(eirlTable) || [];
+        if (currentEirl.length === 0) {
+          setValue(eirlTable, [
+            {
+              sanction_letter: "",
+              attach: ""
+            }
+          ], { shouldDirty: true });
+        }
+      }
 
+      // 3. Auto-Indexing Strategy (Extension)
+      if (!name || name === extensionTable || name.startsWith(extensionTable)) {
+        setTimeout(() => {
+          const rows = getValues(extensionTable);
           if (Array.isArray(rows) && rows.length > 0) {
-            let hasUpdated = false;
             rows.forEach((row: any, index: number) => {
               const expected = (index + 1).toString().padStart(2, '0');
-
-              // Only update if strictly different to avoid render loops
               if (row.extension_count !== expected) {
-                setValue(`${tableName}.${index}.extension_count`, expected, { shouldDirty: true });
-                hasUpdated = true;
+                setValue(`${extensionTable}.${index}.extension_count`, expected, { shouldDirty: true });
               }
             });
           }
         }, 50);
       }
+
+      // 4. Auto-Indexing Strategy (EIRL) - Removed as no count field now
     });
 
     return () => subscription.unsubscribe();
@@ -510,6 +563,28 @@ export default function NewTenderPage() {
         );
       }
 
+      // Upload files for custom_eirl_details
+      if (payload.custom_eirl_details) {
+        toast.info("Uploading EIRL documents...");
+        await Promise.all(
+          payload.custom_eirl_details.map(
+            async (row: any, index: number) => {
+              const original =
+                data.custom_eirl_details?.[index]?.attach;
+              if (original instanceof File) {
+                const fileUrl = await uploadFile(
+                  original,
+                  apiKey,
+                  apiSecret,
+                  baseUrl
+                );
+                row.attach = fileUrl;
+              }
+            }
+          )
+        );
+      }
+
       // Upload files for custom_tender_extension_history
       if (payload.custom_tender_extension_history) {
         toast.info("Uploading extension documents...");
@@ -567,7 +642,7 @@ export default function NewTenderPage() {
       }
 
       // Convert checkboxes to 0/1
-      const boolFields = ["custom_is_extension"];
+      const boolFields = ["custom_is_extension", "custom_is_eirl"];
       boolFields.forEach((f) => {
         if (f in finalPayload) {
           finalPayload[f] = finalPayload[f] ? 1 : 0;
