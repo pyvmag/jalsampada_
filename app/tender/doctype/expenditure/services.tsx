@@ -77,7 +77,7 @@ export function updateWorkNameInTableRows(
             formInstance.setValue("expenditure_details", updatedRows, { shouldDirty: true });
         } else {
             // If no rows exist, create first one with work name
-            formInstance.setValue("expenditure_details", [{ name_of_work: workName }]);
+            formInstance.setValue("expenditure_details", [{ name_of_work: workName, custom_gst: "18" }]);
         }
     } catch (error) {
         console.error("Failed to update work name in table rows:", error);

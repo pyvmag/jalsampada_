@@ -656,7 +656,7 @@ export default function NewExpenditurePage() {
               { name: "calculation_section", label: "", type: "Section Break" },
               { name: "custom_basic_amount", label: "Basic Amount", type: "Currency", precision: 2 },
               { name: "custom_insurance", label: "Insurance", type: "Currency", precision: 2 },
-              { name: "custom_gst", label: "GST(%)", type: "Data" },
+              { name: "custom_gst", label: "GST(%)", type: "Data", defaultValue: "18" },
               { name: "bill_amount", label: "Expenditure Amount", type: "Currency", precision: 2, readOnly: true },
               { name: "attach", label: "Attach", type: "Attach" },
               { name: "cb", label: "Column Break", type: "Column Break" },

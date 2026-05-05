@@ -8,7 +8,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 // --- API Configuration ---
-const API_BASE_URL = "http://103.219.1.138:4412/";
+const API_BASE_URL = "http://103.219.3.169:2223/";
 const REPORT_API_PATH = "api/method/frappe.desk.query_report.run";
 const REPORT_NAME = "Pump Expenditure Report";
 
@@ -148,7 +148,7 @@ export default function PumpExpenditureReportPage() {
     if (!dateString) return "";
     const date = new Date(dateString);
     const months = ["January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"];
+      "July", "August", "September", "October", "November", "December"];
     return `${months[date.getMonth()]} ${date.getFullYear()}`;
   };
 
@@ -176,11 +176,11 @@ export default function PumpExpenditureReportPage() {
 
   const renderPrintValue = (row: ReportData, col: ColumnConfig): string => {
     const value = row[col.fieldname];
-    
+
     // Special formatting for Pump Hrs and Water Lifted rows
     const description = row.description || "";
     if ((description.includes("Pump Hrs.") || description.includes("Water Lifted (MCFT)")) &&
-        col.fieldname !== "sr_no" && col.fieldname !== "description") {
+      col.fieldname !== "sr_no" && col.fieldname !== "description") {
       if (value === null || value === undefined || value === "" || value === 0) {
         return "00";
       }
@@ -330,24 +330,24 @@ export default function PumpExpenditureReportPage() {
 
   const renderCellValue = (row: ReportData, col: ColumnConfig) => {
     const value = row[col.fieldname];
-    
+
     // Special formatting for Pump Hrs and Water Lifted rows (exclude sr_no and description columns)
     const description = row.description || "";
-    if ((description.includes("Pump Hrs.") || description.includes("Water Lifted (MCFT)")) && 
-        col.fieldname !== "sr_no" && col.fieldname !== "description") {
+    if ((description.includes("Pump Hrs.") || description.includes("Water Lifted (MCFT)")) &&
+      col.fieldname !== "sr_no" && col.fieldname !== "description") {
       if (value === null || value === undefined || value === "" || value === 0) {
         return "0.00";
       }
       return parseFloat(value).toFixed(2);
     }
-    
+
     // For expenditure columns, show "00" if no value
     if (col.fieldname !== "sr_no" && col.fieldname !== "description") {
       if (value === null || value === undefined || value === "" || value === 0) {
         return "0.00";
       }
     }
-    
+
     if (col.formatter) return col.formatter(value, row);
     return String(value);
   };
@@ -412,7 +412,7 @@ export default function PumpExpenditureReportPage() {
 
         <div className="tab-content active relative">
           {error && <div className="alert alert--danger mb-5"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
-          
+
           <div className="filters-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 relative z-[60]">
             <div className="form-group z-[150]">
               <label className="text-sm font-medium mb-1 block">LIS Name <span className="text-red-500">*</span></label>
