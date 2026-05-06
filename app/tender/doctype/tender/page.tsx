@@ -66,6 +66,7 @@ export default function DoctypePage() {
   const [hasMore, setHasMore] = React.useState(true);       // Are there more records?
   const [totalCount, setTotalCount] = React.useState(0);    // 🟢 Total count of records
   const [error, setError] = React.useState<string | null>(null);
+  const [prapanSuchiMap, setPrapanSuchiMap] = React.useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = React.useState("");
   const [lisOptions, setLisOptions] = React.useState<LisOption[]>([]);
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -88,6 +89,7 @@ export default function DoctypePage() {
       filtered = filtered.filter(tender =>
         tender.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         (tender.tender_name && tender.tender_name.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
+        (prapanSuchiMap[tender.tender_name || ""] && prapanSuchiMap[tender.tender_name || ""].toLowerCase().includes(debouncedSearch.toLowerCase())) ||
         (tender.status && tender.status.toLowerCase().includes(debouncedSearch.toLowerCase()))
       );
     }
@@ -135,6 +137,34 @@ export default function DoctypePage() {
     };
 
     fetchFilterOptions();
+  }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
+
+  // ── 🟢 Fetch Prapan Suchi Mapping for display names ──────────────────
+  React.useEffect(() => {
+    const fetchPrapanSuchiNames = async () => {
+      if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret) return;
+
+      try {
+        const resp = await axios.get(`${API_BASE_URL}/api/resource/Prapan Suchi`, {
+          params: {
+            fields: JSON.stringify(["name", "work_name"]),
+            limit_page_length: 2000, // Reasonable limit for mapping
+          },
+          headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+        });
+
+        const data = resp.data?.data ?? [];
+        const map: Record<string, string> = {};
+        data.forEach((item: any) => {
+          map[item.name] = item.work_name;
+        });
+        setPrapanSuchiMap(map);
+      } catch (err) {
+        console.error("Failed to load Prapan Suchi mapping:", err);
+      }
+    };
+
+    fetchPrapanSuchiNames();
   }, [isInitialized, isAuthenticated, apiKey, apiSecret]);
 
   // ── 🟢 Fetch Logic (Refactored for Pagination and Total Count) ───────────────────
@@ -304,7 +334,8 @@ export default function DoctypePage() {
     const fields: RecordCardField[] = [];
     fields.push({ label: "ID", value: t.name });
     if (t.status) fields.push({ label: "Status", value: t.status });
-    if (t.tender_name) fields.push({ label: "Prapan Suchi", value: t.tender_name });
+    const workName = prapanSuchiMap[t.tender_name || ""] || t.tender_name;
+    if (workName) fields.push({ label: "Name of Work", value: workName });
     if (t.lis_name) fields.push({ label: "LIS", value: t.lis_name });
     return fields;
   };
@@ -316,7 +347,7 @@ export default function DoctypePage() {
         filteredTenders.map((t) => (
           <RecordCard
             key={t.name}
-            title={t.tender_name || t.name}
+            title={prapanSuchiMap[t.tender_name || ""] || t.tender_name || t.name}
             subtitle={t.status}
             fields={getFieldsForTender(t)}
             onClick={() => handleCardClick(t.name)}
@@ -344,7 +375,7 @@ export default function DoctypePage() {
               />
             </th>
             <th>ID</th>
-            <th>Prapan Suchi</th>
+            <th>Name of Work</th>
             <th>LIS</th>
             <th>Status</th>
             <th className="text-right pr-4" style={{ width: "100px" }}>
@@ -382,7 +413,11 @@ export default function DoctypePage() {
                     />
                   </td>
                   <td>{t.name}</td>
-                  <td>{t.tender_name}</td>
+                  <td title={prapanSuchiMap[t.tender_name || ""] || t.tender_name}>
+                    {prapanSuchiMap[t.tender_name || ""] 
+                      ? (prapanSuchiMap[t.tender_name || ""].length > 60 ? prapanSuchiMap[t.tender_name || ""].substring(0, 60) + "..." : prapanSuchiMap[t.tender_name || ""])
+                      : t.tender_name}
+                  </td>
                   <td>{t.lis_name}</td>
                   <td>{t.status}</td>
                   <td className="text-right pr-4">
