@@ -174,6 +174,7 @@ export default function NewExpenditurePage() {
 
   const [formInstance, setFormInstance] = React.useState<any>(null);
   const [prevCumulativeAmount, setPrevCumulativeAmount] = React.useState(0);
+  const prevRowsCount = React.useRef(0);
 
 
   React.useEffect(() => {
@@ -307,6 +308,26 @@ export default function NewExpenditurePage() {
       // Recalculate when bill_amount or tender_amount changes
       if (name === "bill_amount" || name === "tender_amount" || name === "expenditure_details" || name === undefined) {
         calculateTotals(value);
+
+        // ── 🟢 Auto-copy Invoice Number and Date to new rows ──────────
+        if (name === "expenditure_details" || name === undefined) {
+          const rows = formInstance.getValues("expenditure_details") || [];
+          if (rows.length > prevRowsCount.current) {
+            const lastIdx = rows.length - 1;
+            const prevIdx = lastIdx - 1;
+            if (prevIdx >= 0) {
+              const prevRow = rows[prevIdx];
+              const currentRow = rows[lastIdx];
+              if (!currentRow.invoice_number && prevRow.invoice_number) {
+                formInstance.setValue(`expenditure_details.${lastIdx}.invoice_number`, prevRow.invoice_number);
+              }
+              if (!currentRow.expenditure_date && prevRow.expenditure_date) {
+                formInstance.setValue(`expenditure_details.${lastIdx}.expenditure_date`, prevRow.expenditure_date);
+              }
+            }
+          }
+          prevRowsCount.current = rows.length;
+        }
       }
 
       // 🟢 Add listener for child table fields to recalculate expenditure_details bill_amount and parent total

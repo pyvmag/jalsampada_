@@ -41,6 +41,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 interface PrapanSuchi {
   name: string;
+  work_name?: string;
   fiscal_year?: string;
   lis_name?: string;
   type?: string;
@@ -87,6 +88,7 @@ export default function DoctypePage() {
     // Apply search filter
     if (debouncedSearch) {
       filtered = filtered.filter(record =>
+        (record.work_name?.toLowerCase() || "").includes(debouncedSearch.toLowerCase()) ||
         record.name.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
@@ -168,6 +170,7 @@ export default function DoctypePage() {
           params: {
             fields: JSON.stringify([
               "name",
+              "work_name",
               "fiscal_year",
               "lis_name",
               "type",
@@ -195,6 +198,7 @@ export default function DoctypePage() {
       const raw = dataResp.data?.data ?? [];
       const mapped: PrapanSuchi[] = raw.map((r: any) => ({
         name: r.name,
+        work_name: r.work_name ?? "",
         fiscal_year: r.fiscal_year ?? "",
         lis_name: r.lis_name ?? "",
         type: r.type ?? "",
@@ -328,7 +332,7 @@ export default function DoctypePage() {
                 style={{ cursor: "pointer", width: "16px", height: "16px" }}
               />
             </th>
-            <th>Name</th>
+            <th>Name of Work</th>
             <th>Fiscal Year</th>
             <th>LIS Name</th>
             <th>Type</th>
@@ -367,7 +371,11 @@ export default function DoctypePage() {
                       style={{ cursor: "pointer", width: "16px", height: "16px" }}
                     />
                   </td>
-                  <td>{record.name}</td>
+                  <td title={record.work_name || record.name}>
+                    {record.work_name 
+                      ? (record.work_name.length > 60 ? record.work_name.substring(0, 60) + "..." : record.work_name)
+                      : record.name}
+                  </td>
                   <td>{record.fiscal_year}</td>
                   <td>{record.lis_name}</td>
                   <td>{record.type}</td>
@@ -396,7 +404,7 @@ export default function DoctypePage() {
         displayRecords.map((record) => (
           <RecordCard
             key={record.name}
-            title={record.name}
+            title={record.work_name || record.name}
             subtitle={record.lis_name}
             fields={getFieldsForRecord(record)}
             onClick={() => handleCardClick(record.name)}
