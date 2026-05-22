@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { LinkField } from "@/components/LinkField";
 import { PumpHoursPivotTable, PumpHourRow } from "@/components/PumpHoursPivotTable";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Save } from "lucide-react";
 
 const API_BASE = "http://103.219.1.138:4412/api/resource";
 const DOCTYPE = "Schemewise Pump Hours";
@@ -59,17 +59,27 @@ export default function NewSchemewisePumpHoursPage() {
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto", padding: "1.5rem" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1.5rem" }}>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={() => router.back()}>
-          <ChevronLeft style={{ width: 16, height: 16 }} />
-        </button>
-        <div>
-          <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>New Schemewise Pump Hours</h2>
-          <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>Create a new monthly pump hours record</p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => router.back()}>
+            <ChevronLeft style={{ width: 16, height: 16 }} />
+          </button>
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>New Schemewise Pump Hours</h2>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>Create a new monthly pump hours record</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="btn btn--secondary" onClick={() => router.back()}>Cancel</button>
+          <button type="submit" form="new-schemewise-pump-hours-form" className="btn btn--primary" disabled={isSaving}>
+            {isSaving ? <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> : <Save style={{ width: 16, height: 16 }} />}
+            &nbsp;{isSaving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form id="new-schemewise-pump-hours-form" onSubmit={handleSubmit(onSubmit)}>
         {/* Fields Card */}
         <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
           <div className="form-panel__body">
@@ -121,14 +131,6 @@ export default function NewSchemewisePumpHoursPage() {
               onChange={setPumpHoursFlat}
             />
           </div>
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-          <button type="button" className="btn btn--secondary" onClick={() => router.back()}>Cancel</button>
-          <button type="submit" className="btn btn--primary" disabled={isSaving}>
-            {isSaving ? <><Loader2 style={{ width: 14, height: 14, display: "inline", marginRight: 6 }} className="animate-spin" />Saving…</> : "Create"}
-          </button>
         </div>
       </form>
     </div>
