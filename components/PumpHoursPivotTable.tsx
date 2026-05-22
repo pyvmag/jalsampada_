@@ -3,7 +3,8 @@
 import * as React from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertTriangle, Download, Upload as UploadIcon } from "lucide-react";
 
 const FETCH_PUMPS_URL = "http://103.219.1.138:4412/api/method/quantlis_management.api.fetch_pumps";
 
@@ -25,6 +26,66 @@ function fmtDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
+}
+
+function parseSafeDate(dateStr: string): string {
+  if (!dateStr) return "";
+
+  const trimmed = dateStr.trim();
+  const native = new Date(trimmed);
+  if (!isNaN(native.getTime())) return fmtDate(native);
+
+  const parts = trimmed.split(/[-/]/).map((part) => part.trim());
+  if (parts.length !== 3) return "";
+
+  let day = 0;
+  let month = 0;
+  let year = 0;
+
+  if (parts[0].length === 4) {
+    year = Number(parts[0]);
+    month = Number(parts[1]);
+    day = Number(parts[2]);
+  } else {
+    day = Number(parts[0]);
+    month = Number(parts[1]);
+    year = Number(parts[2]);
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  return isNaN(parsed.getTime()) ? "" : fmtDate(parsed);
+}
+
+function escapeCsvValue(value: string | number): string {
+  const text = String(value ?? "");
+  if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+  return text;
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
 }
 
 export interface PumpHourRow {
@@ -84,6 +145,7 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
   const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [pivot, setPivot] = React.useState<PivotData>({});
   const previousSelectionKey = React.useRef("");
+  const uploadInputRef = React.useRef<HTMLInputElement>(null);
 
   const dates = React.useMemo(() => getDatesForMonth(month, year), [month, year]);
   const dateKeys = React.useMemo(() => dates.map(fmtDate), [dates]);
@@ -147,6 +209,91 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
     });
   };
 
+  const notifyChange = React.useCallback((nextPivot: PivotData) => {
+    if (onChange && pumps.length > 0) {
+      onChange(pivotToFlat(nextPivot, pumps.map((p) => p.name)));
+    }
+  }, [onChange, pumps]);
+
+  const handleDownload = () => {
+    const headers = ["Date", ...pumps.map((pump) => pump.label)];
+    const csvRows = [
+      headers.map(escapeCsvValue).join(","),
+      ...dateKeys.map((date) => [
+        escapeCsvValue(date),
+        ...pumps.map((pump) => escapeCsvValue(pivot[date]?.[pump.name] ?? "")),
+      ].join(",")),
+    ];
+
+    const blob = new Blob(["\ufeff" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pump-hours-${lisName || "lis"}-${stage || "stage"}-${month || "month"}-${year || "year"}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let text = e.target?.result as string;
+      if (text.startsWith("\ufeff")) text = text.substring(1);
+
+      const lines = text.split(/\r?\n/).filter((line) => line.trim());
+      if (lines.length < 2) {
+        alert("File must contain headers and at least one data row");
+        return;
+      }
+
+      const headers = parseCSVLine(lines[0]);
+      const dateIndex = headers.findIndex((header) => header.toLowerCase() === "date");
+      if (dateIndex === -1) {
+        alert("CSV must contain a Date column");
+        return;
+      }
+
+      const pumpColumnMap = new Map<string, number>();
+      pumps.forEach((pump) => {
+        const headerIndex = headers.findIndex((header) =>
+          header.toLowerCase() === pump.label.toLowerCase() ||
+          header.toLowerCase() === pump.name.toLowerCase()
+        );
+        if (headerIndex !== -1) pumpColumnMap.set(pump.name, headerIndex);
+      });
+
+      const nextPivot: PivotData = {};
+      lines.slice(1).forEach((line) => {
+        const values = parseCSVLine(line);
+        const date = parseSafeDate(values[dateIndex] || "");
+        if (!date || !dateKeySet.has(date)) return;
+
+        pumps.forEach((pump) => {
+          const colIndex = pumpColumnMap.get(pump.name);
+          if (colIndex === undefined) return;
+
+          const value = values[colIndex] ?? "";
+          if (!nextPivot[date]) nextPivot[date] = {};
+          nextPivot[date][pump.name] = value;
+        });
+      });
+
+      setPivot(nextPivot);
+      notifyChange(nextPivot);
+      alert("Pump hours imported successfully");
+    };
+
+    reader.readAsText(file);
+    if (uploadInputRef.current) uploadInputRef.current.value = "";
+  };
+
   if (!lisName || !stage) return <HintBox text="Select LIS Name and Stage to load the pump hours matrix." />;
   if (!month || !year) return <HintBox text="Select Month and Year to view the date-wise matrix." />;
   if (loading) return <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "1rem", color: "#64748b", fontSize: "0.875rem" }}><Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> Fetching pumps…</div>;
@@ -154,50 +301,78 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
   if (pumps.length === 0) return <HintBox text="No pumps found for the selected LIS and Stage." variant="warn" />;
 
   return (
-    <div className="stock-table-container" style={{ overflowX: "auto" }}>
-      <table className="stock-table" style={{ minWidth: `${150 + pumps.length * 130}px` }}>
-        <thead>
-          <tr>
-            <th style={stickyHead}>Date</th>
-            {pumps.map((p) => (
-              <th key={p.name} title={p.name} style={pumpHead}>
-                {p.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {dates.map((d) => {
-            const dateStr = fmtDate(d);
-            const isSun = d.getDay() === 0;
-            const rowBg = isSun ? "#fff8f0" : "var(--color-surface,#fff)";
-            return (
-              <tr key={dateStr} style={{ background: isSun ? "#fff8f0" : undefined }}>
-                <td style={{ ...stickyCell, background: rowBg }}>
-                  <span style={{ fontWeight: 600 }}>{String(d.getDate()).padStart(2, "0")} {month.slice(0, 3)}</span>
-                  {" "}<span style={{ color: isSun ? "#ef4444" : "#94a3b8", fontSize: "0.75rem" }}>
-                    ({d.toLocaleDateString("en-IN", { weekday: "short" })})
-                  </span>
-                </td>
-                {pumps.map((p) => (
-                  <td key={p.name} style={{ textAlign: "center", padding: "3px 6px" }}>
-                    <input
-                      type="number" step="0.01" min="0"
-                      placeholder="—"
-                      value={pivot[dateStr]?.[p.name] ?? ""}
-                      onChange={(e) => handleCell(dateStr, p.name, e.target.value)}
-                      disabled={readOnly}
-                      style={{ width: "100%", textAlign: "center", fontSize: "0.875rem", padding: "5px 4px", borderRadius: 6, border: "1px solid transparent", background: "transparent", transition: "all 0.15s", cursor: readOnly ? "default" : "text" }}
-                      onFocus={(e) => { e.target.style.borderColor = "#3b82f6"; e.target.style.background = "#eff6ff"; }}
-                      onBlur={(e) => { e.target.style.borderColor = "transparent"; e.target.style.background = "transparent"; }}
-                    />
+    <div>
+      <div className="stock-table-container" style={{ overflowX: "auto" }}>
+        <table className="stock-table" style={{ minWidth: `${150 + pumps.length * 130}px` }}>
+          <thead>
+            <tr>
+              <th style={stickyHead}>Date</th>
+              {pumps.map((p) => (
+                <th key={p.name} title={p.name} style={pumpHead}>
+                  {p.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {dates.map((d) => {
+              const dateStr = fmtDate(d);
+              const isSun = d.getDay() === 0;
+              const rowBg = isSun ? "#fff8f0" : "var(--color-surface,#fff)";
+              return (
+                <tr key={dateStr} style={{ background: isSun ? "#fff8f0" : undefined }}>
+                  <td style={{ ...stickyCell, background: rowBg }}>
+                    <span style={{ fontWeight: 600 }}>{String(d.getDate()).padStart(2, "0")} {month.slice(0, 3)}</span>
+                    {" "}<span style={{ color: isSun ? "#ef4444" : "#94a3b8", fontSize: "0.75rem" }}>
+                      ({d.toLocaleDateString("en-IN", { weekday: "short" })})
+                    </span>
                   </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  {pumps.map((p) => (
+                    <td key={p.name} style={{ textAlign: "center", padding: "3px 6px" }}>
+                      <input
+                        type="number" step="0.01" min="0"
+                        placeholder="—"
+                        value={pivot[dateStr]?.[p.name] ?? ""}
+                        onChange={(e) => handleCell(dateStr, p.name, e.target.value)}
+                        disabled={readOnly}
+                        style={{ width: "100%", textAlign: "center", fontSize: "0.875rem", padding: "5px 4px", borderRadius: 6, border: "1px solid transparent", background: "transparent", transition: "all 0.15s", cursor: readOnly ? "default" : "text" }}
+                        onFocus={(e) => { e.target.style.borderColor = "#3b82f6"; e.target.style.background = "#eff6ff"; }}
+                        onBlur={(e) => { e.target.style.borderColor = "transparent"; e.target.style.background = "transparent"; }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end", gap: 8, alignItems: "center" }}>
+        <input
+          type="file"
+          ref={uploadInputRef}
+          accept=".csv"
+          onChange={handleUpload}
+          style={{ display: "none" }}
+          disabled={readOnly}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={handleDownload} title="Download as CSV">
+          <Download size={16} className="mr-2" />
+          Download
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => uploadInputRef.current?.click()}
+          title="Upload from CSV"
+          disabled={readOnly}
+        >
+          <UploadIcon size={16} className="mr-2" />
+          Upload
+        </Button>
+      </div>
     </div>
   );
 }
