@@ -175,10 +175,10 @@ export default function SchemewisePumpHoursDetailPage() {
   const isCancelled = record.docstatus === 2;
 
   const statusBadge = isDraft
-    ? { label: "Draft", color: "#f59e0b", bg: "#fffbeb" }
+    ? { label: "Draft", color: "#2563eb", bg: "#dbeafe", border: "#93c5fd" }
     : isSubmitted
-    ? { label: "Submitted", color: "#10b981", bg: "#ecfdf5" }
-    : { label: "Cancelled", color: "#ef4444", bg: "#fef2f2" };
+    ? { label: "Submitted", color: "#10b981", bg: "#ecfdf5", border: "#a7f3d0" }
+    : { label: "Cancelled", color: "#ef4444", bg: "#fef2f2", border: "#fca5a5" };
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto", padding: "1.5rem" }}>
@@ -190,12 +190,12 @@ export default function SchemewisePumpHoursDetailPage() {
           </button>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>{DOCTYPE}: {record.name}</h2>
-              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: "0.75rem", fontWeight: 600, background: statusBadge.bg, color: statusBadge.color, border: `1px solid ${statusBadge.color}30` }}>
+              <h2 style={{ margin: 0, fontSize: "1.25rem", lineHeight: "1.75rem", fontWeight: 700 }}>{DOCTYPE}: {record.name}</h2>
+              <span style={{ padding: "4px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, background: statusBadge.bg, color: statusBadge.color, border: `1px solid ${statusBadge.border}` }}>
                 {statusBadge.label}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Last modified: {record.modified}</p>
+            <p style={{ margin: "4px 0 0 0", color: "var(--color-text-muted, #6b7280)" }}>Last modified: {record.modified}</p>
           </div>
         </div>
 
