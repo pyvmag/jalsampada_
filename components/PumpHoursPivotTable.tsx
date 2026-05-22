@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle, Download, Upload as UploadIcon } from "lucide-react";
 
-const FETCH_PUMPS_URL = "http://103.219.1.138:4412/api/method/quantlis_management.api.fetch_pumps";
+const FETCH_PUMPS_URL = "http://103.219.3.169:2223/api/method/quantlis_management.api.fetch_pumps";
 
 const MONTH_TO_NUM: Record<string, number> = {
   January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,

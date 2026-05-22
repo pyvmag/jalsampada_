@@ -31,7 +31,7 @@ import {
   Clock
 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412";
+const API_BASE_URL = "http://103.219.3.169:2223";
 const INITIAL_PAGE_SIZE = 25;
 const LOAD_MORE_SIZE = 10;
 

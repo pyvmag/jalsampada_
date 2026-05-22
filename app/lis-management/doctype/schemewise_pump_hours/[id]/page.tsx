@@ -12,7 +12,7 @@ import DocumentActivity from "@/components/DocumentActivity";
 import { ChevronLeft, Loader2, Save, XCircle } from "lucide-react";
 import { getApiMessages } from "@/lib/utils";
 
-const API_BASE = "http://103.219.1.138:4412/api/resource";
+const API_BASE = "http://103.219.3.169:2223/api/resource";
 const DOCTYPE = "Schemewise Pump Hours";
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -264,7 +264,7 @@ export default function SchemewisePumpHoursDetailPage() {
       <DocumentActivity
         doctype={DOCTYPE}
         docname={docname}
-        baseUrl="http://103.219.1.138:4412"
+        baseUrl="http://103.219.3.169:2223"
         apiKey={apiKey || ""}
         apiSecret={apiSecret || ""}
         isInitialized={isInitialized}
