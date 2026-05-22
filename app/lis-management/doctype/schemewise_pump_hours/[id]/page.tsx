@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { LinkField } from "@/components/LinkField";
 import { PumpHoursPivotTable, PumpHourRow } from "@/components/PumpHoursPivotTable";
 import DocumentActivity from "@/components/DocumentActivity";
-import { ChevronLeft, Loader2, Save, CheckCircle, XCircle } from "lucide-react";
+import { ChevronLeft, Loader2, Save, XCircle } from "lucide-react";
 import { getApiMessages } from "@/lib/utils";
 
 const API_BASE = "http://103.219.1.138:4412/api/resource";
@@ -203,20 +203,16 @@ export default function SchemewisePumpHoursDetailPage() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {isDraft && (
             <>
-              <button type="button" className="btn btn--secondary btn--sm" onClick={handleDelete} style={{ color: "#ef4444" }}>Delete</button>
-              <button type="button" className="btn btn--secondary btn--sm" onClick={handleSubmitDoc} disabled={isSaving}>
-                {isSaving ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <CheckCircle style={{ width: 14, height: 14 }} />}
-                &nbsp;Submit
-              </button>
-              <button type="button" className="btn btn--primary btn--sm" onClick={() => document.getElementById("sph-save-btn")?.click()} disabled={isSaving}>
-                {isSaving ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Save style={{ width: 14, height: 14 }} />}
+              <button type="button" className="btn btn--secondary" onClick={handleDelete} style={{ color: "#ef4444" }}>Delete</button>
+              <button type="button" className="btn btn--primary" onClick={() => document.getElementById("sph-save-btn")?.click()} disabled={isSaving}>
+                {isSaving ? <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> : <Save style={{ width: 16, height: 16 }} />}
                 &nbsp;Save
               </button>
             </>
           )}
           {isSubmitted && (
-            <button type="button" className="btn btn--secondary btn--sm" onClick={handleCancelDoc} disabled={isSaving} style={{ color: "#ef4444" }}>
-              <XCircle style={{ width: 14, height: 14 }} /> &nbsp;Cancel
+            <button type="button" className="btn btn--secondary" onClick={handleCancelDoc} disabled={isSaving} style={{ color: "#ef4444" }}>
+              <XCircle style={{ width: 16, height: 16 }} /> &nbsp;Cancel
             </button>
           )}
         </div>
@@ -245,11 +241,11 @@ export default function SchemewisePumpHoursDetailPage() {
 
         {/* Pivot Table Card */}
         <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
-          <div className="form-panel__header" style={{ padding: "0.9rem 1.2rem", borderBottom: "1px solid var(--color-border)" }}>
+          <div className="form-panel__header" style={{ padding: "0.9rem 1.2rem" }}>
             <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Pump Hours Matrix</h3>
-            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Rows = dates, Columns = pumps. Enter operational hours per pump per day.</p>
+          
           </div>
-          <div className="form-panel__body" style={{ padding: "1rem" }}>
+          <div className="form-panel__body" style={{ padding: "0rem" }}>
             <PumpHoursPivotTable
               key={`${record.name}-${pivotKey}-${lisName}-${stage}-${month}-${year}`}
               lisName={lisName || record.lis_name || ""}

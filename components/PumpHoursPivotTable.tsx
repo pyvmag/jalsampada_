@@ -36,6 +36,7 @@ export interface PumpHourRow {
 }
 
 type PivotData = Record<string, Record<string, string>>;
+const EMPTY_PUMP_ROWS: PumpHourRow[] = [];
 
 function flatToPivot(rows: PumpHourRow[]): PivotData {
   const p: PivotData = {};
@@ -45,6 +46,10 @@ function flatToPivot(rows: PumpHourRow[]): PivotData {
     p[r.reading_date][r.pump] = r.hours != null ? String(r.hours) : "";
   }
   return p;
+}
+
+function flatRowsForDates(rows: PumpHourRow[], validDates: Set<string>): PumpHourRow[] {
+  return rows.filter((row) => row.reading_date && validDates.has(row.reading_date));
 }
 
 export function pivotToFlat(pivot: PivotData, pumpNames: string[]): Omit<PumpHourRow, "name">[] {
@@ -72,15 +77,22 @@ interface Props {
   readOnly?: boolean;
 }
 
-export function PumpHoursPivotTable({ lisName, stage, month, year, existingData = [], onChange, readOnly = false }: Props) {
+export function PumpHoursPivotTable({ lisName, stage, month, year, existingData = EMPTY_PUMP_ROWS, onChange, readOnly = false }: Props) {
   const { apiKey, apiSecret, isAuthenticated } = useAuth();
   const [pumps, setPumps] = React.useState<PumpInfo[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [pivot, setPivot] = React.useState<PivotData>({});
-  const isFirstNotify = React.useRef(true);
+  const previousSelectionKey = React.useRef("");
 
   const dates = React.useMemo(() => getDatesForMonth(month, year), [month, year]);
+  const dateKeys = React.useMemo(() => dates.map(fmtDate), [dates]);
+  const dateKeySet = React.useMemo(() => new Set(dateKeys), [dateKeys]);
+  const selectionKey = `${lisName}__${stage}__${month}__${year}`;
+  const existingDataSignature = React.useMemo(
+    () => existingData.map((row) => `${row.reading_date}|${row.pump}|${row.hours ?? ""}`).join("||"),
+    [existingData]
+  );
 
   // Fetch pumps when LIS + Stage change
   React.useEffect(() => {
@@ -95,10 +107,10 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
       const raw = resp.data?.message ?? resp.data?.data ?? resp.data ?? [];
       const arr: PumpInfo[] = Array.isArray(raw) ? raw.map((p: any) => {
         if (typeof p === "string") return { name: p, label: p };
-        const nm = p.name ?? p.pump ?? p.asset_name ?? String(p);
-        const lb = p.asset_name ?? p.pump_name ?? p.name ?? nm;
+        const nm = p.value ?? p.name ?? p.pump ?? p.asset_name ?? p.asset ?? "";
+        const lb = p.label ?? p.asset_name ?? p.pump_name ?? p.name ?? nm;
         return { name: nm, label: lb };
-      }) : [];
+      }).filter((p) => p.name) : [];
       setPumps(arr);
     }).catch((e) => {
       console.error("fetch_pumps error", e);
@@ -107,22 +119,32 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
     }).finally(() => setLoading(false));
   }, [lisName, stage, isAuthenticated, apiKey, apiSecret]);
 
-  // Load existing data into pivot
+  // Keep the matrix scoped to the selected LIS, stage, month and year.
   React.useEffect(() => {
-    if (existingData && existingData.length > 0) {
-      setPivot(flatToPivot(existingData));
-      isFirstNotify.current = true; // reset so we don't double-fire
-    }
-  }, [existingData]);
+    const scopedRows = flatRowsForDates(existingData, dateKeySet);
+    setPivot(flatToPivot(scopedRows));
 
-  // Notify parent on pivot change
-  React.useEffect(() => {
-    if (isFirstNotify.current) { isFirstNotify.current = false; return; }
-    if (onChange && pumps.length > 0) onChange(pivotToFlat(pivot, pumps.map((p) => p.name)));
-  }, [pivot]); // eslint-disable-line
+    if (previousSelectionKey.current && previousSelectionKey.current !== selectionKey) {
+      onChange?.(
+        scopedRows.map((row) => ({
+          pump: row.pump,
+          reading_date: row.reading_date,
+          hours: Number(row.hours) || 0,
+        }))
+      );
+    }
+
+    previousSelectionKey.current = selectionKey;
+  }, [selectionKey, existingDataSignature]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCell = (date: string, pump: string, val: string) => {
-    setPivot((prev) => ({ ...prev, [date]: { ...(prev[date] || {}), [pump]: val } }));
+    setPivot((prev) => {
+      const next = { ...prev, [date]: { ...(prev[date] || {}), [pump]: val } };
+      if (onChange && pumps.length > 0) {
+        onChange(pivotToFlat(next, pumps.map((p) => p.name)));
+      }
+      return next;
+    });
   };
 
   if (!lisName || !stage) return <HintBox text="Select LIS Name and Stage to load the pump hours matrix." />;
@@ -133,12 +155,12 @@ export function PumpHoursPivotTable({ lisName, stage, month, year, existingData 
 
   return (
     <div className="stock-table-container" style={{ overflowX: "auto" }}>
-      <table className="stock-table" style={{ borderCollapse: "collapse", minWidth: `${150 + pumps.length * 130}px` }}>
+      <table className="stock-table" style={{ minWidth: `${150 + pumps.length * 130}px` }}>
         <thead>
           <tr>
             <th style={stickyHead}>Date</th>
             {pumps.map((p) => (
-              <th key={p.name} title={p.name} style={{ minWidth: 130, textAlign: "center", padding: "10px 8px", fontWeight: 600, fontSize: "0.78rem", background: "var(--color-surface-elevated,#f1f5f9)", whiteSpace: "nowrap" }}>
+              <th key={p.name} title={p.name} style={pumpHead}>
                 {p.label}
               </th>
             ))}
@@ -196,13 +218,33 @@ function HintBox({ text, variant = "info" }: { text: string; variant?: "info" | 
 }
 
 const stickyHead: React.CSSProperties = {
-  position: "sticky", left: 0, zIndex: 10,
-  background: "var(--color-surface-elevated,#f1f5f9)",
-  minWidth: 140, fontWeight: 700, textAlign: "center",
-  padding: "10px 16px", borderRight: "2px solid #e2e8f0", whiteSpace: "nowrap",
+  position: "sticky",
+  left: 0,
+  top: 0,
+  zIndex: 20,
+  background: "#3683f6",
+  color: "#fff",
+  minWidth: 140,
+  fontWeight: 700,
+  textAlign: "center",
+  padding: "10px 16px",
+  borderRight: "1px solid var(--color-border, #e5e7eb)",
+  whiteSpace: "nowrap",
 };
+
+const pumpHead: React.CSSProperties = {
+  minWidth: 130,
+  textAlign: "center",
+  padding: "10px 8px",
+  fontWeight: 600,
+  fontSize: "0.9rem",
+  color: "#fff",
+  background: "#3683f6",
+  whiteSpace: "nowrap",
+};
+
 const stickyCell: React.CSSProperties = {
   position: "sticky", left: 0, zIndex: 5,
   fontWeight: 500, fontSize: "0.82rem", textAlign: "center",
-  padding: "6px 12px", borderRight: "2px solid #e2e8f0", whiteSpace: "nowrap",
+  padding: "6px 12px", borderRight: "1px solid var(--color-border, #e5e7eb)", whiteSpace: "nowrap",
 };
