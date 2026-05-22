@@ -60,7 +60,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         href: "/lis-management", 
         icon: "fa-cogs", 
         label: "Asset", 
-        doctypes: ["Asset", "Asset Category", "Asset Interchange", "District", "Equipement Capacity", "Equipement Model", "Equipment Make", "Lift Irrigation Scheme", "Location", "Rating", "Stage No", "Taluka", "Village"] 
+        doctypes: ["Asset", "Asset Category", "Asset Interchange", "District", "Equipement Capacity", "Equipement Model", "Equipment Make", "Lift Irrigation Scheme", "Location", "Rating", "Schemewise Pump Hours", "Stage No", "Taluka", "Village"] 
       },
       { 
         href: "/tender", 

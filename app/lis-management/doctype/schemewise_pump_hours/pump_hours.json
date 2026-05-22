@@ -1,0 +1,48 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-22 10:26:20.913922",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pump",
+  "reading_date",
+  "hours"
+ ],
+ "fields": [
+  {
+   "fieldname": "pump",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Pump",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "reading_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Reading Date"
+  },
+  {
+   "fieldname": "hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Hours"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-22 11:10:01.762136",
+ "modified_by": "vishal.dhayarkar@erpdata.in",
+ "module": "LIS Management",
+ "name": "Schemewise Pump Hour Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
