@@ -1,216 +1,136 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  DynamicForm,
-  TabbedLayout,
-} from "@/components/DynamicFormComponent";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { LinkField } from "@/components/LinkField";
+import { PumpHoursPivotTable, PumpHourRow } from "@/components/PumpHoursPivotTable";
+import { ChevronLeft, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE = "http://103.219.1.138:4412/api/resource";
+const DOCTYPE = "Schemewise Pump Hours";
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 export default function NewSchemewisePumpHoursPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { apiKey, apiSecret } = useAuth();
   const [isSaving, setIsSaving] = React.useState(false);
-  const doctypeName = "Schemewise Pump Hours";
+  const [pumpHoursFlat, setPumpHoursFlat] = React.useState<Omit<PumpHourRow,"name">[]>([]);
 
-  const duplicateData = React.useMemo(() => {
-    const duplicateParam = searchParams.get('duplicate');
-    if (!duplicateParam) return null;
-    try {
-      const decodedData = JSON.parse(atob(decodeURIComponent(duplicateParam)));
-      return decodedData;
-    } catch (error) {
-      toast.error("Failed to parse duplicate data", { duration: Infinity });
-      return null;
-    }
-  }, [searchParams]);
+  const { control, watch, register, handleSubmit, formState: { errors } } = useForm({
+    defaultValues: { lis_name: "", stage: "", year: "", month: "" },
+  });
 
-  const notificationShown = React.useRef(false);
-  React.useEffect(() => {
-    if (duplicateData && !notificationShown.current) {
-      toast.success("Form populated with duplicate data. Modify as needed and save.");
-      notificationShown.current = true;
-    }
-  }, [duplicateData]);
+  const lisName = watch("lis_name");
+  const stage = watch("stage");
+  const month = watch("month");
+  const year = watch("year");
 
-  const formTabs: TabbedLayout[] = React.useMemo(() => {
-    const getValue = (fieldName: string, defaultValue: any = undefined) => {
-      return duplicateData?.[fieldName] ?? defaultValue;
-    };
-
-    return [
-      {
-        name: "Details",
-        fields: [
-          {
-            name: "lis_name",
-            label: "LIS Name",
-            type: "Link",
-            required: true,
-            linkTarget: "Lift Irrigation Scheme",
-            defaultValue: getValue("lis_name"),
-          },
-          {
-            name: "stage",
-            label: "Stage",
-            type: "Link",
-            required: true,
-            linkTarget: "Stage No",
-            defaultValue: getValue("stage"),
-            filterMapping: [
-              { sourceField: "lis_name", targetField: "lis_name" }
-            ]
-          },
-          {
-            name: "year",
-            label: "Year",
-            type: "Link",
-            required: true,
-            linkTarget: "Year",
-            defaultValue: getValue("year"),
-          },
-          {
-            name: "month",
-            label: "Month",
-            type: "Select",
-            required: true,
-            options: [
-              { label: "January", value: "January" },
-              { label: "February", value: "February" },
-              { label: "March", value: "March" },
-              { label: "April", value: "April" },
-              { label: "May", value: "May" },
-              { label: "June", value: "June" },
-              { label: "July", value: "July" },
-              { label: "August", value: "August" },
-              { label: "September", value: "September" },
-              { label: "October", value: "October" },
-              { label: "November", value: "November" },
-              { label: "December", value: "December" },
-            ],
-            defaultValue: getValue("month"),
-          },
-
-          {
-            name: "pump_hours",
-            label: "Pump Hours",
-            type: "Table",
-            columns: [
-              {
-                name: "pump",
-                label: "Pump",
-                type: "Link",
-                linkTarget: "Asset",
-                required: true,
-                filters: (getCompositeValue) => {
-                  const filters: Record<string, any> = {};
-                  const stage = getCompositeValue("parent.stage");
-                  const lisName = getCompositeValue("parent.lis_name");
-                  if (stage) filters.custom_stage_no = stage;
-                  if (lisName) filters.custom_lis_name = lisName;
-                  filters.asset_category = "Pump";
-                  return filters;
-                }
-              },
-              {
-                name: "reading_date",
-                label: "Reading Date",
-                type: "Date",
-                required: true,
-              },
-              {
-                name: "hours",
-                label: "Hours",
-                type: "Float",
-                required: true,
-                precision: 2,
-              }
-            ],
-            defaultValue: getValue("pump_hours", []),
-          }
-        ],
-      }
-    ];
-  }, [duplicateData]);
-
-  const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-    const hasValidData = isDirty || (duplicateData && data.lis_name);
-
-    if (!hasValidData) {
-      toast.info("Please fill out the form.");
+  const onSubmit = async (data: any) => {
+    if (!data.lis_name || !data.stage || !data.year || !data.month) {
+      toast.error("Please fill all required fields.");
       return;
     }
-
     setIsSaving(true);
-
     try {
-      const payload: Record<string, any> = { ...data };
-      delete payload.section_break_ba5b;
-      payload.doctype = doctypeName;
-
-      // Convert child table float values
-      if (Array.isArray(payload.pump_hours)) {
-        payload.pump_hours = payload.pump_hours.map((row: any) => ({
-          ...row,
-          hours: Number(row.hours) || 0,
-        }));
-      }
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
+      const payload = {
+        doctype: DOCTYPE,
+        lis_name: data.lis_name,
+        stage: data.stage,
+        year: data.year,
+        month: data.month,
+        pump_hours: pumpHoursFlat.map((r) => ({ pump: r.pump, reading_date: r.reading_date, hours: Number(r.hours) || 0 })),
       };
-
-      const resp = await fetch(`${API_BASE_URL}/${doctypeName}`, {
-        method: 'POST',
-        headers: headers,
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-
-      const responseData = await resp.json();
-      if (!resp.ok) {
-        console.error("Full server error:", responseData);
-        throw new Error(responseData.exception || responseData._server_messages || "Failed to create document");
-      }
-
-      const docName = responseData.data.name;
-      toast.success("Schemewise Pump Hours created successfully!");
-      router.push(`/lis-management/doctype/schemewise_pump_hours/${encodeURIComponent(docName)}`);
-    } catch (err: any) {
-      console.error("Save error:", err);
-      if (err.message?.includes("DuplicateEntryError")) {
-        toast.error("Duplicate Entry Error", {
-          description: "This Schemewise Pump Hours record may already exist.",
-          duration: Infinity
-        });
-      } else {
-        toast.error("Failed to create Schemewise Pump Hours", {
-          description: err.message || "Check console for details.",
-          duration: Infinity
-        });
-      }
+      const headers: HeadersInit = { "Content-Type": "application/json", Authorization: `token ${apiKey}:${apiSecret}` };
+      const resp = await fetch(`${API_BASE}/${DOCTYPE}`, { method: "POST", headers, credentials: "include", body: JSON.stringify(payload) });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.exception || json._server_messages || "Failed to create");
+      toast.success("Schemewise Pump Hours created!");
+      router.push(`/lis-management/doctype/schemewise_pump_hours/${encodeURIComponent(json.data.name)}`);
+    } catch (e: any) {
+      toast.error("Failed to create", { description: e.message, duration: Infinity });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleCancel = () => router.back();
-
   return (
-    <DynamicForm
-      tabs={formTabs}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      title="New Schemewise Pump Hours"
-      description="Create a new Schemewise Pump Hours record"
-      submitLabel={isSaving ? "Saving..." : "Create"}
-      cancelLabel="Cancel"
-    />
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "1.5rem" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1.5rem" }}>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => router.back()}>
+          <ChevronLeft style={{ width: 16, height: 16 }} />
+        </button>
+        <div>
+          <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>New Schemewise Pump Hours</h2>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>Create a new monthly pump hours record</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Fields Card */}
+        <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
+          <div className="form-panel__body">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+              {/* LIS Name */}
+              <LinkField
+                control={control}
+                field={{ name: "lis_name", label: "LIS Name", type: "Link", linkTarget: "Lift Irrigation Scheme", required: true, defaultValue: "" }}
+                error={errors.lis_name}
+              />
+              {/* Stage */}
+              <LinkField
+                control={control}
+                field={{ name: "stage", label: "Stage", type: "Link", linkTarget: "Stage No", required: true, defaultValue: "" }}
+                error={errors.stage}
+                filters={lisName ? { lis_name: lisName } : {}}
+              />
+              {/* Year */}
+              <LinkField
+                control={control}
+                field={{ name: "year", label: "Year", type: "Link", linkTarget: "Year", required: true, defaultValue: "" }}
+                error={errors.year}
+              />
+              {/* Month */}
+              <div className="form-group">
+                <label className="form-label">Month <span className="text-red-500">*</span></label>
+                <select className="form-control" {...register("month", { required: "Month is required" })}>
+                  <option value="">Select Month</option>
+                  {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                {errors.month && <div className="text-red-500 text-xs mt-1">{String(errors.month.message)}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pivot Table Card */}
+        <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
+          <div className="form-panel__header" style={{ padding: "0.9rem 1.2rem", borderBottom: "1px solid var(--color-border)" }}>
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Pump Hours Matrix</h3>
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Enter hours for each pump per date</p>
+          </div>
+          <div className="form-panel__body" style={{ padding: "1rem" }}>
+            <PumpHoursPivotTable
+              lisName={lisName}
+              stage={stage}
+              month={month}
+              year={year}
+              onChange={setPumpHoursFlat}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+          <button type="button" className="btn btn--secondary" onClick={() => router.back()}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSaving}>
+            {isSaving ? <><Loader2 style={{ width: 14, height: 14, display: "inline", marginRight: 6 }} className="animate-spin" />Saving…</> : "Create"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

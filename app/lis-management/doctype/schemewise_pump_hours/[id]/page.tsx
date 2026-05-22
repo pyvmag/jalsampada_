@@ -3,30 +3,26 @@
 import * as React from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
-import {
-  DynamicForm,
-  TabbedLayout,
-  FormField,
-} from "@/components/DynamicFormComponent";
+import { useForm } from "react-hook-form";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { getApiMessages } from "@/lib/utils";
+import { LinkField } from "@/components/LinkField";
+import { PumpHoursPivotTable, PumpHourRow } from "@/components/PumpHoursPivotTable";
 import DocumentActivity from "@/components/DocumentActivity";
+import { ChevronLeft, Loader2, Save, CheckCircle, XCircle } from "lucide-react";
+import { getApiMessages } from "@/lib/utils";
 
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE = "http://103.219.1.138:4412/api/resource";
+const DOCTYPE = "Schemewise Pump Hours";
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-interface SchemewisePumpHoursData {
+interface SPHRecord {
   name: string;
   lis_name?: string;
   stage?: string;
   year?: string;
   month?: string;
-  pump_hours?: Array<{
-    name?: string;
-    pump?: string;
-    reading_date?: string;
-    hours?: number;
-  }>;
+  pump_hours?: PumpHourRow[];
   docstatus: 0 | 1 | 2;
   modified: string;
   owner?: string;
@@ -37,434 +33,249 @@ export default function SchemewisePumpHoursDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { apiKey, apiSecret, isAuthenticated, isInitialized } = useAuth();
-
   const docname = params.id as string;
-  const doctypeName = "Schemewise Pump Hours";
 
-  const [record, setRecord] = React.useState<SchemewisePumpHoursData | null>(null);
+  const [record, setRecord] = React.useState<SPHRecord | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
-  const isProgrammaticUpdate = React.useRef(false);
-  const [formVersion, setFormVersion] = React.useState(0);
-  const [formInstance, setFormInstance] = React.useState<any>(null);
+  const [pumpHoursFlat, setPumpHoursFlat] = React.useState<Omit<PumpHourRow, "name">[]>([]);
+  const [pivotKey, setPivotKey] = React.useState(0); // force re-mount on load
 
-  const [activeButton, setActiveButton] = React.useState<"SAVE" | "SUBMIT" | "CANCEL" | null>(null);
-  const [formDirty, setFormDirty] = React.useState(false);
+  const { control, watch, register, reset, formState: { errors, isDirty } } = useForm({
+    defaultValues: { lis_name: "", stage: "", year: "", month: "" },
+  });
 
+  const lisName = watch("lis_name");
+  const stage = watch("stage");
+  const month = watch("month");
+  const year = watch("year");
+
+  // ── Fetch record ────────────────────────────────────────────────────────────
   React.useEffect(() => {
-    const fetchRecord = async () => {
-      if (!isInitialized || !isAuthenticated || !apiKey || !apiSecret || !docname) {
-        setLoading(false);
-        return;
+    if (!isInitialized || !isAuthenticated || !apiKey || !docname) { setLoading(false); return; }
+    setLoading(true);
+    axios.get(`${API_BASE}/${encodeURIComponent(DOCTYPE)}/${encodeURIComponent(docname)}`, {
+      headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+      withCredentials: true,
+    }).then((resp) => {
+      const data: SPHRecord = resp.data.data;
+      setRecord(data);
+      reset({ lis_name: data.lis_name || "", stage: data.stage || "", year: data.year || "", month: data.month || "" });
+      if (data.pump_hours?.length) {
+        setPumpHoursFlat(data.pump_hours.map((r) => ({ pump: r.pump, reading_date: r.reading_date, hours: r.hours })));
+        setPivotKey((k) => k + 1);
       }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const resp = await axios.get(
-          `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
-          {
-            headers: {
-              Authorization: `token ${apiKey}:${apiSecret}`,
-              "Content-Type": "application/json",
-            },
-            withCredentials: true,
-          }
-        );
-
-        const data = resp.data.data as SchemewisePumpHoursData;
-        setRecord(data);
-
-        if (data.docstatus === 0) {
-          setActiveButton("SUBMIT");
-        } else if (data.docstatus === 1) {
-          setActiveButton("CANCEL");
-        }
-
-        setFormDirty(false);
-      } catch (err: any) {
-        console.error("API Error:", err);
-        const messages = getApiMessages(
-          null,
-          err,
-          "Record loaded successfully",
-          "Failed to load record",
-          (error) => {
-            if (error.response?.status === 404) return "Schemewise Pump Hours not found";
-            if (error.response?.status === 403) return "Unauthorized";
-            return "Failed to load record";
-          }
-        );
-        setError(messages.description || messages.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecord();
+    }).catch((e) => {
+      const msg = getApiMessages(null, e, "", "Failed to load record");
+      setFetchError(msg.description || msg.message);
+    }).finally(() => setLoading(false));
   }, [docname, apiKey, apiSecret, isAuthenticated, isInitialized]);
 
-  React.useEffect(() => {
-    if (!formInstance) return;
+  const isReadOnly = record?.docstatus !== 0;
 
-    const subscription = formInstance.watch((value: any, { name }: { name?: string }) => {
-      if (name && !isProgrammaticUpdate.current) {
-        setFormDirty(true);
-        if (record?.docstatus === 0) {
-          setActiveButton("SAVE");
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [formInstance, record?.docstatus]);
-
-  const handleFormInit = React.useCallback((form: any) => {
-    setFormInstance(form);
-  }, []);
-
-  const formTabs: TabbedLayout[] = React.useMemo(() => {
-    if (!record) return [];
-
-    const fields = (list: FormField[]): FormField[] =>
-      list.map((f) => ({
-        ...f,
-        defaultValue:
-          f.name in record
-            ? record[f.name as keyof SchemewisePumpHoursData]
-            : f.defaultValue,
-      }));
-
-    return [
-      {
-        name: "Details",
-        fields: fields([
-          {
-            name: "lis_name",
-            label: "LIS Name",
-            type: "Link",
-            required: true,
-            linkTarget: "Lift Irrigation Scheme",
-          },
-          {
-            name: "stage",
-            label: "Stage",
-            type: "Link",
-            required: true,
-            linkTarget: "Stage No",
-            filterMapping: [
-              { sourceField: "lis_name", targetField: "lis_name" }
-            ]
-          },
-          {
-            name: "year",
-            label: "Year",
-            type: "Link",
-            required: true,
-            linkTarget: "Year",
-          },
-          {
-            name: "month",
-            label: "Month",
-            type: "Select",
-            required: true,
-            options: [
-              { label: "January", value: "January" },
-              { label: "February", value: "February" },
-              { label: "March", value: "March" },
-              { label: "April", value: "April" },
-              { label: "May", value: "May" },
-              { label: "June", value: "June" },
-              { label: "July", value: "July" },
-              { label: "August", value: "August" },
-              { label: "September", value: "September" },
-              { label: "October", value: "October" },
-              { label: "November", value: "November" },
-              { label: "December", value: "December" },
-            ],
-          },
-
-          {
-            name: "pump_hours",
-            label: "Pump Hours",
-            type: "Table",
-            columns: [
-              {
-                name: "pump",
-                label: "Pump",
-                type: "Link",
-                linkTarget: "Asset",
-                filters: (getCompositeValue) => {
-                  const filters: Record<string, any> = {};
-                  const stage = getCompositeValue("parent.stage");
-                  const lisName = getCompositeValue("parent.lis_name");
-                  if (stage) filters.custom_stage_no = stage;
-                  if (lisName) filters.custom_lis_name = lisName;
-                  filters.asset_category = "Pump";
-                  return filters;
-                }
-              },
-              {
-                name: "reading_date",
-                label: "Reading Date",
-                type: "Date",
-
-              },
-              {
-                name: "hours",
-                label: "Hours",
-                type: "Float",
-
-                precision: 2,
-              }
-            ],
-          }
-        ]),
-      }
-    ];
-  }, [record]);
-
-  const handleSubmit = async (data: Record<string, any>, isDirty: boolean) => {
-    if (!isDirty) {
-      toast.info("No changes to save.");
-      return;
-    }
-
-    if (!record) {
-      toast.error("Record not loaded. Cannot save.", { duration: Infinity });
-      return;
-    }
-
-    setIsSaving(true);
-    isProgrammaticUpdate.current = true;
-
-    try {
-      const payload: Record<string, any> = JSON.parse(JSON.stringify(data));
-      delete payload.section_break_ba5b;
-
-      payload.modified = record.modified;
-      payload.docstatus = record.docstatus;
-
-      if (Array.isArray(payload.pump_hours)) {
-        payload.pump_hours = payload.pump_hours.map((row: any) => ({
-          ...row,
-          hours: Number(row.hours) || 0,
-        }));
-      }
-
-      const resp = await axios.put(
-        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
-        payload,
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-
-      const messages = getApiMessages(resp, null, "Changes saved!", "Failed to save");
-
-      if (messages.success) {
-        toast.success(messages.message, { description: messages.description });
-      } else {
-        toast.error(messages.message, { description: messages.description, duration: Infinity });
-      }
-
-      if (resp.data && resp.data.data) {
-        const updatedData = resp.data.data as SchemewisePumpHoursData;
-        setRecord(updatedData);
-        setFormDirty(false);
-
-        if (updatedData.docstatus === 0) {
-          setActiveButton("SUBMIT");
-        }
-        setFormVersion((v) => v + 1);
-      }
-    } catch (err: any) {
-      console.error("Save error:", err);
-      const messages = getApiMessages(null, err, "Changes saved!", "Failed to save");
-      toast.error(messages.message, { description: messages.description, duration: Infinity });
-    } finally {
-      setIsSaving(false);
-      isProgrammaticUpdate.current = false;
-    }
-  };
-
-  const handleSubmitDocument = async () => {
+  // ── Save ─────────────────────────────────────────────────────────────────────
+  const handleSave = async (data: any) => {
     if (!record) return;
-
     setIsSaving(true);
-
-    try {
-      const payload: Record<string, any> = { ...record };
-      payload.docstatus = 1;
-
-      if (Array.isArray(payload.pump_hours)) {
-        payload.pump_hours = payload.pump_hours.map((row: any) => ({
-          ...row,
-          hours: Number(row.hours) || 0,
-        }));
-      }
-
-      const response = await axios.put(
-        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
-        payload,
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      toast.success("Document submitted successfully!");
-
-      const updatedData = response.data.data as SchemewisePumpHoursData;
-      setRecord(updatedData);
-      setFormDirty(false);
-      setActiveButton("CANCEL");
-      setFormVersion((v) => v + 1);
-    } catch (err: any) {
-      console.error("Submit error:", err);
-      const messages = getApiMessages(null, err, "Document submitted successfully!", "Submit failed");
-      toast.error(messages.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancelDocument = async () => {
-    if (!record) return;
-
-    if (!window.confirm("Are you sure you want to cancel this record? This action cannot be undone.")) {
-      return;
-    }
-
-    setIsSaving(true);
-
     try {
       const payload = {
-        docstatus: 2,
-        modified: record.modified
+        lis_name: data.lis_name,
+        stage: data.stage,
+        year: data.year,
+        month: data.month,
+        pump_hours: pumpHoursFlat.map((r) => ({ pump: r.pump, reading_date: r.reading_date, hours: Number(r.hours) || 0 })),
+        modified: record.modified,
+        docstatus: record.docstatus,
       };
-
       const resp = await axios.put(
-        `${API_BASE_URL}/${encodeURIComponent(doctypeName)}/${encodeURIComponent(docname)}`,
+        `${API_BASE}/${encodeURIComponent(DOCTYPE)}/${encodeURIComponent(docname)}`,
         payload,
-        {
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json"
-          }
-        }
+        { headers: { Authorization: `token ${apiKey}:${apiSecret}`, "Content-Type": "application/json" }, withCredentials: true }
       );
-
-      toast.success("Document cancelled successfully!");
-
-      const updatedRecord = resp.data.data as SchemewisePumpHoursData;
-      setRecord(updatedRecord);
-      setActiveButton(null);
-    } catch (err: any) {
-      console.error("Cancel error:", err);
-      const messages = getApiMessages(null, err, "Document cancelled successfully!", "Cancel failed");
-      toast.error(messages.message);
+      const updated: SPHRecord = resp.data.data;
+      setRecord(updated);
+      if (updated.pump_hours?.length) {
+        setPumpHoursFlat(updated.pump_hours.map((r) => ({ pump: r.pump, reading_date: r.reading_date, hours: r.hours })));
+        setPivotKey((k) => k + 1);
+      }
+      toast.success("Changes saved!");
+    } catch (e: any) {
+      const msg = getApiMessages(null, e, "", "Failed to save");
+      toast.error(msg.message, { description: msg.description, duration: Infinity });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="module active" style={{ padding: "2rem", textAlign: "center" }}>
-        <p>Loading details...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="module active" style={{ padding: "2rem" }}>
-        <p style={{ color: "var(--color-error)" }}>{error}</p>
-        <button className="btn btn--primary" onClick={() => window.location.reload()}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!record) {
-    return (
-      <div className="module active" style={{ padding: "2rem" }}>
-        <p>Record not found.</p>
-      </div>
-    );
-  }
-
-  const getSubmitLabel = () => {
-    if (isSaving) {
-      switch (activeButton) {
-        case "SAVE": return "Saving...";
-        case "SUBMIT": return "Submitting...";
-        case "CANCEL": return "Cancelling...";
-        default: return "Processing...";
-      }
-    }
-
-    switch (activeButton) {
-      case "SAVE": return "Save";
-      case "SUBMIT": return "Submit";
-      case "CANCEL": return "Cancel";
-      default: return undefined;
+  // ── Submit ────────────────────────────────────────────────────────────────────
+  const handleSubmitDoc = async () => {
+    if (!record) return;
+    setIsSaving(true);
+    try {
+      const resp = await axios.put(
+        `${API_BASE}/${encodeURIComponent(DOCTYPE)}/${encodeURIComponent(docname)}`,
+        { ...record, docstatus: 1 },
+        { headers: { Authorization: `token ${apiKey}:${apiSecret}`, "Content-Type": "application/json" } }
+      );
+      setRecord(resp.data.data);
+      toast.success("Document submitted!");
+    } catch (e: any) {
+      toast.error("Submit failed", { description: e.message });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const isSubmitted = record.docstatus === 1;
-  const isDraft = record.docstatus === 0;
+  // ── Cancel doc ────────────────────────────────────────────────────────────────
+  const handleCancelDoc = async () => {
+    if (!record || !window.confirm("Cancel this document? This cannot be undone.")) return;
+    setIsSaving(true);
+    try {
+      const resp = await axios.put(
+        `${API_BASE}/${encodeURIComponent(DOCTYPE)}/${encodeURIComponent(docname)}`,
+        { docstatus: 2, modified: record.modified },
+        { headers: { Authorization: `token ${apiKey}:${apiSecret}`, "Content-Type": "application/json" } }
+      );
+      setRecord(resp.data.data);
+      toast.success("Document cancelled.");
+    } catch (e: any) {
+      toast.error("Cancel failed", { description: e.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  const formKey = `${record.name}-${record.docstatus}-${formVersion}`;
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!window.confirm(`Permanently delete ${docname}?`)) return;
+    try {
+      await axios.delete(`${API_BASE}/${encodeURIComponent(DOCTYPE)}/${encodeURIComponent(docname)}`, {
+        headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+      });
+      toast.success("Deleted.");
+      router.push("/lis-management/doctype/schemewise_pump_hours");
+    } catch (e: any) {
+      toast.error("Delete failed", { description: e.message });
+    }
+  };
+
+  // ── UI guards ─────────────────────────────────────────────────────────────────
+  if (loading) return <div className="module active" style={{ padding: "2rem", textAlign: "center" }}>Loading…</div>;
+  if (fetchError) return (
+    <div className="module active" style={{ padding: "2rem" }}>
+      <p style={{ color: "var(--color-error)" }}>{fetchError}</p>
+      <button className="btn btn--primary" onClick={() => window.location.reload()}>Retry</button>
+    </div>
+  );
+  if (!record) return <div className="module active" style={{ padding: "2rem" }}>Record not found.</div>;
+
+  const isDraft = record.docstatus === 0;
+  const isSubmitted = record.docstatus === 1;
+  const isCancelled = record.docstatus === 2;
+
+  const statusBadge = isDraft
+    ? { label: "Draft", color: "#f59e0b", bg: "#fffbeb" }
+    : isSubmitted
+    ? { label: "Submitted", color: "#10b981", bg: "#ecfdf5" }
+    : { label: "Cancelled", color: "#ef4444", bg: "#fef2f2" };
 
   return (
-    <div className="space-y-6 pb-24 bg-gray-50/30 min-h-screen">
-      <DynamicForm
-        key={formKey}
-        tabs={formTabs}
-        onSubmit={activeButton === "SAVE" ? handleSubmit : async () => { }}
-        onSubmitDocument={activeButton === "SUBMIT" ? handleSubmitDocument : undefined}
-        onCancelDocument={activeButton === "CANCEL" ? handleCancelDocument : undefined}
-        onCancel={() => router.back()}
-        title={`${doctypeName}: ${record.name}`}
-        description={`Update details for record ID: ${docname}`}
-        isSubmittable={activeButton === "SUBMIT"}
-        docstatus={record.docstatus}
-        initialStatus={isDraft ? "Draft" : isSubmitted ? "Submitted" : "Cancelled"}
-        onFormInit={handleFormInit}
-        submitLabel={getSubmitLabel()}
-        deleteConfig={{
-          doctypeName: doctypeName,
-          docName: docname,
-          redirectUrl: "/lis-management/doctype/schemewise_pump_hours",
-        }}
-      />
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "1.5rem" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => router.back()}>
+            <ChevronLeft style={{ width: 16, height: 16 }} />
+          </button>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>{DOCTYPE}: {record.name}</h2>
+              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: "0.75rem", fontWeight: 600, background: statusBadge.bg, color: statusBadge.color, border: `1px solid ${statusBadge.color}30` }}>
+                {statusBadge.label}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Last modified: {record.modified}</p>
+          </div>
+        </div>
 
-      <div className="w-full px-4 md:px-8">
-        <DocumentActivity
-          doctype={doctypeName}
-          docname={docname}
-          baseUrl={API_BASE_URL.replace("/api/resource", "")}
-          apiKey={apiKey || ""}
-          apiSecret={apiSecret || ""}
-          isInitialized={isInitialized}
-          currentUserEmail={record.owner}
-          modifiedStr={record.modified}
-          modifiedBy={record.modified_by}
-        />
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {isDraft && (
+            <>
+              <button type="button" className="btn btn--secondary btn--sm" onClick={handleDelete} style={{ color: "#ef4444" }}>Delete</button>
+              <button type="button" className="btn btn--secondary btn--sm" onClick={handleSubmitDoc} disabled={isSaving}>
+                {isSaving ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <CheckCircle style={{ width: 14, height: 14 }} />}
+                &nbsp;Submit
+              </button>
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => document.getElementById("sph-save-btn")?.click()} disabled={isSaving}>
+                {isSaving ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Save style={{ width: 14, height: 14 }} />}
+                &nbsp;Save
+              </button>
+            </>
+          )}
+          {isSubmitted && (
+            <button type="button" className="btn btn--secondary btn--sm" onClick={handleCancelDoc} disabled={isSaving} style={{ color: "#ef4444" }}>
+              <XCircle style={{ width: 14, height: 14 }} /> &nbsp;Cancel
+            </button>
+          )}
+        </div>
       </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); const data = { lis_name: lisName, stage, year, month }; handleSave(data); }}>
+        <button id="sph-save-btn" type="submit" style={{ display: "none" }} />
+
+        {/* Fields Card */}
+        <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
+          <div className="form-panel__body">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+              <LinkField control={control} field={{ name: "lis_name", label: "LIS Name", type: "Link", linkTarget: "Lift Irrigation Scheme", required: true, defaultValue: record.lis_name || "" }} error={errors.lis_name} disabled={isReadOnly} />
+              <LinkField control={control} field={{ name: "stage", label: "Stage", type: "Link", linkTarget: "Stage No", required: true, defaultValue: record.stage || "" }} error={errors.stage} filters={lisName ? { lis_name: lisName } : {}} disabled={isReadOnly} />
+              <LinkField control={control} field={{ name: "year", label: "Year", type: "Link", linkTarget: "Year", required: true, defaultValue: record.year || "" }} error={errors.year} disabled={isReadOnly} />
+              <div className="form-group">
+                <label className="form-label">Month <span className="text-red-500">*</span></label>
+                <select className="form-control" {...register("month", { required: true })} disabled={isReadOnly}>
+                  <option value="">Select Month</option>
+                  {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pivot Table Card */}
+        <div className="form-panel" style={{ marginBottom: "1.5rem" }}>
+          <div className="form-panel__header" style={{ padding: "0.9rem 1.2rem", borderBottom: "1px solid var(--color-border)" }}>
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Pump Hours Matrix</h3>
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Rows = dates, Columns = pumps. Enter operational hours per pump per day.</p>
+          </div>
+          <div className="form-panel__body" style={{ padding: "1rem" }}>
+            <PumpHoursPivotTable
+              key={`${record.name}-${pivotKey}-${lisName}-${stage}-${month}-${year}`}
+              lisName={lisName || record.lis_name || ""}
+              stage={stage || record.stage || ""}
+              month={month || record.month || ""}
+              year={year || record.year || ""}
+              existingData={record.pump_hours}
+              onChange={setPumpHoursFlat}
+              readOnly={isReadOnly}
+            />
+          </div>
+        </div>
+      </form>
+
+      {/* Document Activity */}
+      <DocumentActivity
+        doctype={DOCTYPE}
+        docname={docname}
+        baseUrl="http://103.219.1.138:4412"
+        apiKey={apiKey || ""}
+        apiSecret={apiSecret || ""}
+        isInitialized={isInitialized}
+        currentUserEmail={record.owner}
+        modifiedStr={record.modified}
+        modifiedBy={record.modified_by}
+      />
     </div>
   );
 }
