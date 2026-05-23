@@ -18,12 +18,14 @@ import {
   ListChecks,
   Thermometer,
   Clock,
+  Calendar,
 } from "lucide-react";
 
 
 const masterDoctypes: Doctype[] = [
   // Master
   { name: "temperature", title: "Temperature", doctype: "Temperature Readings", icon: Thermometer },
+  { name: "year", title: "Year", doctype: "Year", icon: Calendar },
   { name: "gate", title: "Gate", icon: DoorOpen },
   { name: "item", title: "Item", icon: Box },
   { name: "warehouse", title: "Store Location", doctype: "Warehouse", icon: Warehouse },
