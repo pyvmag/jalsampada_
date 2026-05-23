@@ -463,7 +463,7 @@ export function FieldError({ error }: { error?: any }) {
 const formatSlug = (slug: string) => {
   if (!slug) return "";
   return slug
-    .split("-")
+    .split(/[-_]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 };
@@ -1157,22 +1157,37 @@ export function DynamicForm({
     const moduleUrl = `/${segments.slice(0, doctypeIndex).join("/")}`;
     const listUrl = `/${segments.slice(0, doctypeIndex + 2).join("/")}`;
     return (
-      <div className="flex flex-wrap items-center gap-2 text-xl font-bold">
-        <Link
-          href={moduleUrl}
-          className="text-muted-foreground hover:text-primary hover:underline transition-colors"
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div
+          className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-teal-700"
+          style={{
+            fontSize: "1.125rem",
+            lineHeight: "1.45rem",
+          }}
         >
-          {moduleName}
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link
-          href={listUrl}
-          className="text-muted-foreground hover:text-primary hover:underline transition-colors"
+          <Link
+            href={moduleUrl}
+            className="hover:text-teal-900 hover:underline transition-colors"
+          >
+            {moduleName}
+          </Link>
+          <span className="text-slate-400">/</span>
+          <Link
+            href={listUrl}
+            className="hover:text-teal-900 hover:underline transition-colors"
+          >
+            {doctypeName}
+          </Link>
+          <span className="text-slate-400">/</span>
+        </div>
+       <span
+          className="min-w-0 truncate text-base font-bold text-slate-900"
+          style={{
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            lineHeight: "1.25rem",
+          }}
         >
-          {doctypeName}
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="text-foreground font-semibold text-primary">
           {title}
         </span>
       </div>
@@ -1776,38 +1791,19 @@ export function DynamicForm({
         }}>
           {/* Header */}
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
+            className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-teal-50/40 px-4 py-3 shadow-sm"
           >
             {/* Title Section */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div className="min-w-[260px] flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 {/* Render Breadcrumbs */}
                 {renderHeaderContent()}
-                <span
-                  className={`status-badge text-xs whitespace-nowrap ${currentStatus === "Not Saved" ? "status-badge-danger" : "status-badge-draft"
-                    }`}
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    backgroundColor: currentStatus === "Not Saved" ? "#fee2e2" : "#dbeafe",
-                    color: currentStatus === "Not Saved" ? "#dc2626" : "#2563eb",
-                    border: `1px solid ${currentStatus === "Not Saved" ? "#fca5a5" : "#93c5fd"}`
-                  }}
-                >
-                  {currentStatus}
-                </span>
               </div>
               {description ? (
                 <p
+                  className="truncate text-sm"
                   style={{
-                    margin: "4px 0 0 0",
+                    margin: "3px 0 0 0",
                     color: "var(--color-text-muted, #6b7280)",
                   }}
                 >
@@ -1816,7 +1812,22 @@ export function DynamicForm({
               ) : null}
             </div>
             {/* Actions Section */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <span
+                className={`status-badge w-fit shrink-0 text-xs whitespace-nowrap ${currentStatus === "Not Saved" ? "status-badge-danger" : "status-badge-draft"
+                  }`}
+                style={{
+                  padding: "5px 9px",
+                  borderRadius: "999px",
+                  fontSize: "0.75rem",
+                  fontWeight: "600",
+                  backgroundColor: currentStatus === "Not Saved" ? "#fee2e2" : "#dbeafe",
+                  color: currentStatus === "Not Saved" ? "#dc2626" : "#2563eb",
+                  border: `1px solid ${currentStatus === "Not Saved" ? "#fca5a5" : "#93c5fd"}`
+                }}
+              >
+                {currentStatus}
+              </span>
               {/* Show different buttons based on docstatus and isSubmittable */}
               {isSubmittable && docstatus === 0 && (
                 <>
