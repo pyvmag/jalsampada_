@@ -16,7 +16,8 @@ import {
   FilePlus,
   ArrowDownUp,
   ListChecks,
-  Thermometer
+  Thermometer,
+  Clock,
 } from "lucide-react";
 
 
@@ -35,6 +36,7 @@ const operationLogsDoctypes: Doctype[] = [
   { name: "gate-operation-logbook", title: "Gate Operation Logbook", doctype: "Gate Operation Logbook", icon: ClipboardList },
   { name: "repair-work-requirement", title: "Repair Work Requirement", doctype: "Repair Work Requirement", icon: Wrench },
   { name: "lis-incident-record", title: "LIS Incident Record", doctype: "Issue", icon: AlertTriangle },
+  { name: "schemewise_pump_hours", title: "Schemewise Pump Hours", icon: Clock }
 ];
 
 
