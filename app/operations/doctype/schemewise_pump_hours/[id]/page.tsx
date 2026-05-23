@@ -16,7 +16,7 @@ import { getApiMessages } from "@/lib/utils";
 import { toast } from "sonner";
 
 const API_BASE = "http://103.219.3.169:2223/api/resource";
-const API_BASE_URL = "http://103.219.1.138:4412/api/resource";
+const API_BASE_URL = "http://103.219.3.169:2223/api/resource";
 const DOCTYPE = "Schemewise Pump Hours";
 const MONTHS = [
   "January",
