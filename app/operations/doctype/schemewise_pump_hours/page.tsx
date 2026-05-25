@@ -330,7 +330,7 @@ export default function SchemewisePumpHoursPage() {
   const title = "Schemewise Pump Hours";
 
   const handleCardClick = (id: string) => {
-    router.push(`/lis-management/doctype/schemewise_pump_hours/${encodeURIComponent(id)}`);
+    router.push(`/operations/doctype/schemewise_pump_hours/${encodeURIComponent(id)}`);
   };
 
   const renderListView = () => (
@@ -462,7 +462,7 @@ export default function SchemewisePumpHoursPage() {
             isDeleting={isDeleting}
           />
         ) : (
-          <Link href="/lis-management/doctype/schemewise_pump_hours/new" passHref>
+          <Link href="/operations/doctype/schemewise_pump_hours/new" passHref>
             <button className="btn btn--primary flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add {title}
             </button>

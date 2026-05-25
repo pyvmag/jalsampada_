@@ -401,8 +401,9 @@ const stickyHead: React.CSSProperties = {
   color: "#fff",
   minWidth: 140,
   fontWeight: 700,
-  textAlign: "center",
+  textAlign: "left",
   padding: "10px 16px",
+  paddingLeft: "20px",
   borderRight: "1px solid var(--color-border, #e5e7eb)",
   whiteSpace: "nowrap",
 };
@@ -420,6 +421,6 @@ const pumpHead: React.CSSProperties = {
 
 const stickyCell: React.CSSProperties = {
   position: "sticky", left: 0, zIndex: 5,
-  fontWeight: 500, fontSize: "0.82rem", textAlign: "center",
-  padding: "6px 12px", borderRight: "1px solid var(--color-border, #e5e7eb)", whiteSpace: "nowrap",
+  fontWeight: 500, fontSize: "0.82rem", textAlign: "left",
+  padding: "6px 12px", paddingLeft: "20px",borderRight: "1px solid var(--color-border, #e5e7eb)", whiteSpace: "nowrap",
 };

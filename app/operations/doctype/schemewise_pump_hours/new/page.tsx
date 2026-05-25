@@ -106,14 +106,7 @@ export default function NewSchemewisePumpHoursPage() {
             filterMapping: [{ sourceField: "lis_name", targetField: "lis_name" }],
             description: "Select the stage for the selected scheme",
           },
-          {
-            name: "year",
-            label: "Year",
-            type: "Link",
-            linkTarget: "Year",
-            required: true,
-          },
-          {
+           {
             name: "month",
             label: "Month",
             type: "Select",
@@ -121,6 +114,14 @@ export default function NewSchemewisePumpHoursPage() {
             options: MONTHS.map((month) => ({ label: month, value: month })),
             placeholder: "Select Month",
           },
+          {
+            name: "year",
+            label: "Year",
+            type: "Link",
+            linkTarget: "Year",
+            required: true,
+          },
+         
           {
             name: "pump_hours",
             label: "",
@@ -173,7 +174,7 @@ export default function NewSchemewisePumpHoursPage() {
 
       toast.success("Schemewise Pump Hours created!");
       router.push(
-        `/lis-management/doctype/schemewise_pump_hours/${encodeURIComponent(responseData.data.name)}`
+        `/operations/doctype/schemewise_pump_hours/${encodeURIComponent(responseData.data.name)}`
       );
     } catch (err: any) {
       toast.error("Failed to create", {

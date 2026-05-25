@@ -179,14 +179,7 @@ export default function SchemewisePumpHoursDetailPage() {
             filterMapping: [{ sourceField: "lis_name", targetField: "lis_name" }],
             description: "Select the stage for the selected scheme",
           },
-          {
-            name: "year",
-            label: "Year",
-            type: "Link",
-            linkTarget: "Year",
-            required: true,
-          },
-          {
+           {
             name: "month",
             label: "Month",
             type: "Select",
@@ -194,6 +187,14 @@ export default function SchemewisePumpHoursDetailPage() {
             options: MONTHS.map((month) => ({ label: month, value: month })),
             placeholder: "Select Month",
           },
+          {
+            name: "year",
+            label: "Year",
+            type: "Link",
+            linkTarget: "Year",
+            required: true,
+          },
+         
           {
             name: "pump_hours",
             label: "",
@@ -345,7 +346,7 @@ export default function SchemewisePumpHoursDetailPage() {
         deleteConfig={{
           doctypeName: DOCTYPE,
           docName: docname,
-          redirectUrl: "/lis-management/doctype/schemewise_pump_hours",
+          redirectUrl: "/operations/doctype/schemewise_pump_hours",
         }}
       />
 
